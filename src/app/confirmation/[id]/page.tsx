@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, AlertCircle, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConfirmationPage() {
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -36,14 +37,40 @@ export default function ConfirmationPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12 flex justify-center">
-        <Card className="w-full max-w-2xl animate-pulse">
-            <CardHeader><div className="h-8 w-3/4 bg-muted rounded"></div></CardHeader>
-            <CardContent className="space-y-4 mt-4">
-                <div className="h-4 bg-muted rounded w-full"></div>
-                <div className="h-4 bg-muted rounded w-full"></div>
-                <div className="h-4 bg-muted rounded w-2/3"></div>
+      <div className="container mx-auto px-4 py-8 sm:py-12 flex justify-center">
+        <Card className="w-full max-w-2xl">
+            <CardHeader className="text-center bg-muted/30 rounded-t-lg items-center">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <Skeleton className="h-7 w-3/4 mt-4" />
+                <Skeleton className="h-4 w-full mt-2" />
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-6 w-1/3" />
+                    <Skeleton className="h-7 w-24 rounded-full" />
+                </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                 </div>
+                 <Separator/>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                 </div>
+                 <Separator/>
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                 </div>
             </CardContent>
+            <CardFooter className="flex justify-center p-6 bg-muted/30 rounded-b-lg">
+                <Skeleton className="h-11 w-40" />
+            </CardFooter>
         </Card>
       </div>
     );

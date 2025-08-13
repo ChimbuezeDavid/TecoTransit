@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Booking } from "@/lib/types";
 
@@ -18,6 +18,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
+
+function DashboardSkeleton() {
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex flex-row items-start justify-between">
+                    <div>
+                        <Skeleton className="h-7 w-48" />
+                        <Skeleton className="h-4 w-72 mt-2" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-9 w-32" />
+                        <Skeleton className="h-9 w-9" />
+                    </div>
+                </div>
+                 <div className="flex items-center gap-2 pt-4">
+                    <Skeleton className="h-4 w-4" />
+                    <Skeleton className="h-10 w-44" />
+                 </div>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                            <TableHead className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableHead>
+                            <TableHead className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableHead>
+                            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                            <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {[...Array(5)].map((_, i) => (
+                             <TableRow key={i}>
+                                <TableCell>
+                                    <Skeleton className="h-5 w-32" />
+                                    <Skeleton className="h-4 w-40 mt-2" />
+                                </TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                    <Skeleton className="h-5 w-24" />
+                                    <Skeleton className="h-4 w-32 mt-2" />
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
+                                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -29,27 +84,31 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   
   const { toast } = useToast();
+  
+  const bookingsQuery = useMemo(() => {
+    const baseQuery = collection(db, "bookings");
+    if (statusFilter === 'All') {
+        return query(baseQuery, orderBy("createdAt", "desc"));
+    } else {
+        return query(baseQuery, where("status", "==", statusFilter), orderBy("createdAt", "desc"));
+    }
+  }, [statusFilter]);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-        let q;
-        if (statusFilter === 'All') {
-            q = query(collection(db, "bookings"));
-        } else {
-            q = query(collection(db, "bookings"), where("status", "==", statusFilter));
-        }
-
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(bookingsQuery);
         const bookingsData: Booking[] = [];
         querySnapshot.forEach((doc) => {
-            bookingsData.push({ ...doc.data(), id: doc.id } as Booking);
+            const data = doc.data();
+            bookingsData.push({ 
+                ...data, 
+                id: doc.id,
+                createdAt: (data.createdAt as Timestamp).toMillis()
+            } as Booking);
         });
-
-        bookingsData.sort((a, b) => b.createdAt - a.createdAt);
         setBookings(bookingsData);
-
     } catch (err) {
         console.error("Error fetching bookings: ", err);
         const defaultError = "Could not fetch bookings. Please check your connection and Firestore security rules.";
@@ -58,37 +117,35 @@ export default function AdminDashboard() {
     } finally {
         setLoading(false);
     }
-  }, [statusFilter, toast]);
+  }, [bookingsQuery, toast]);
 
 
   useEffect(() => {
-    let q;
-    if (statusFilter === 'All') {
-        q = query(collection(db, "bookings"));
-    } else {
-        q = query(collection(db, "bookings"), where("status", "==", statusFilter));
-    }
-    
     setLoading(true);
     setError(null);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData: Booking[] = [];
       querySnapshot.forEach((doc) => {
-        bookingsData.push({ ...doc.data(), id: doc.id } as Booking);
+        const data = doc.data();
+        bookingsData.push({ 
+            ...data, 
+            id: doc.id,
+            createdAt: (data.createdAt as Timestamp).toMillis()
+        } as Booking);
       });
-      bookingsData.sort((a, b) => b.createdAt - a.createdAt);
       setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
         console.error("Error with snapshot listener: ", err);
-        const defaultError = "Could not fetch bookings. Please check your connection and Firestore security rules.";
+        const defaultError = "Could not fetch bookings. This might be due to a connection issue or missing Firestore security rules.";
         setError(defaultError);
+        toast({ variant: "destructive", title: "Error Fetching Data", description: "Please check your connection and ensure Firestore rules are deployed. See helpme.txt for instructions.", duration: 10000 });
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [statusFilter]);
+  }, [bookingsQuery, toast]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -194,9 +251,6 @@ export default function AdminDashboard() {
   const VehicleIcon = selectedBooking?.vehicleType.includes('Bus') ? Bus : Car;
 
   const renderTableContent = () => {
-    if (loading) {
-      return <TableRow><TableCell colSpan={5} className="text-center py-10">Loading bookings...</TableCell></TableRow>;
-    }
     if (error) {
       return (
         <TableRow>
@@ -204,7 +258,7 @@ export default function AdminDashboard() {
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
-                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">{error}</p>
              </div>
           </TableCell>
         </TableRow>
@@ -231,7 +285,10 @@ export default function AdminDashboard() {
       </TableRow>
     ));
   };
-
+  
+  if (loading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <Card>

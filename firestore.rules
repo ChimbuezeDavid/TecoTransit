@@ -1,31 +1,33 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Bookings:
-    // - Anyone can create a booking request.
-    // - Only authenticated users (admins) can read, update, or delete bookings.
-    match /bookings/{bookingId} {
-      allow read, update, delete: if request.auth != null;
-      allow create: if request.auth == null;
+    // Helper functions
+    function isAdmin() {
+      return request.auth.uid != null;
     }
 
-    // Prices:
-    // - Anyone can read the price list for the booking form.
-    // - Only authenticated users (admins) can manage prices.
+    // Publicly readable collections
     match /prices/{priceId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
-    // Alerts:
-    // - Anyone can read the current alert.
-    // - Only authenticated users (admins) can write/update alerts.
     match /alerts/{alertId} {
-        allow read: if true;
-        allow write: if request.auth != null;
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Restricted collections
+    match /bookings/{bookingId} {
+      allow create: if true; // Anyone can create a booking
+      allow read, update, delete: if isAdmin(); // Only admins can manage bookings
+    }
+
+    // Default deny all other collections/documents
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

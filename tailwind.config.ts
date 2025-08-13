@@ -17,16 +17,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['PT Sans', 'sans-serif'],
-        code: ['monospace'],
-        sans: ['ui-sans-serif', 'system-ui'],
-        serif: ['ui-serif', 'Georgia'],
-        mono: ['ui-monospace', 'SFMono-Regular'],
-        'playfair': ['Playfair Display', 'serif'],
-        'roboto-mono': ['Roboto Mono', 'monospace'],
-        'lobster': ['Lobster', 'cursive'],
-        'pacifico': ['Pacifico', 'cursive'],
+        body: ['var(--font-pt-sans)', 'sans-serif'],
+        headline: ['var(--font-pt-sans)', 'sans-serif'],
+        sans: ['var(--font-pt-sans)', 'sans-serif'],
+        playfair: ['var(--font-playfair-display)', 'serif'],
+        'roboto-mono': ['var(--font-roboto-mono)', 'monospace'],
+        lobster: ['var(--font-lobster)', 'cursive'],
+        pacifico: ['var(--font-pacifico)', 'cursive'],
       },
       colors: {
         background: 'hsl(var(--background))',

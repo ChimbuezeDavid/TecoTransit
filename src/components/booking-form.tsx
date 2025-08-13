@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import type { Booking, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -164,6 +164,7 @@ export default function BookingForm() {
             if (currentLuggages > maxLuggages) {
                 setValue('luggageCount', maxLuggages);
             }
+            trigger('luggageCount');
        }
     });
     return () => subscription.unsubscribe();
@@ -180,7 +181,7 @@ export default function BookingForm() {
     
     const newBooking = {
       ...data,
-      createdAt: Date.now(),
+      createdAt: Timestamp.now(),
       status: 'Pending' as const,
       totalFare,
       vehicleType: allVehicleOptions[vehicleKey].name,
@@ -189,6 +190,7 @@ export default function BookingForm() {
     const finalBooking: Booking = {
         ...newBooking,
         id: bookingId,
+        createdAt: newBooking.createdAt.toMillis(),
         intendedDate: format(data.intendedDate, 'PPP'),
         alternativeDate: format(data.alternativeDate, 'PPP'),
     };

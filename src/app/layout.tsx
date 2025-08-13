@@ -2,13 +2,44 @@
 
 'use client';
 
-import {usePathname} from 'next/navigation';
-import {Toaster} from '@/components/ui/toaster';
-import {AuthProvider} from '@/context/auth-context';
+import { usePathname } from 'next/navigation';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/context/auth-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico } from 'next/font/google';
+
+const ptSans = PT_Sans({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-pt-sans',
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-playfair-display',
+});
+
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-roboto-mono',
+});
+
+const lobster = Lobster({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-lobster',
+});
+
+const pacifico = Pacifico({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-pacifico',
+});
 
 export default function RootLayout({
   children,
@@ -20,19 +51,10 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Lobster&family=Pacifico&display=swap"
-          rel="stylesheet"
-        ></link>
-      </head>
-      <body className="font-body antialiased flex flex-col h-full bg-muted/20">
+      <head />
+      <body
+        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -41,9 +63,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             {isAdminPage ? (
-              <>
-                {children}
-              </>
+              <>{children}</>
             ) : (
               <div className="flex flex-col min-h-screen">
                 <Header />

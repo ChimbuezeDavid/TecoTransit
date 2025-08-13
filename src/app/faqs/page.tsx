@@ -7,6 +7,7 @@ import {
 
 const faqs = [
     {
+        id: "stop",
         question: "Where is the final stop?",
         answer: (
             <ul className="list-disc pl-6 space-y-2">
@@ -20,18 +21,22 @@ const faqs = [
         )
     },
     {
+        id: "time",
         question: "Departure time from school?",
         answer: "On or before 7:00am."
     },
     {
+        id: "assembly",
         question: "Assembly point?",
         answer: "The field outside the ABUAD school gate."
     },
     {
+        id: "driver",
         question: "How would you get the driver's number?",
         answer: "A group chat would be made for those traveling together in which the driver's details would be communicated there the day before departure date."
     },
     {
+        id: "luggage",
         question: "Number of luggages allowed for each person?",
         answer: (
             <ul className="list-disc pl-6 space-y-2">
@@ -53,8 +58,8 @@ export default function FaqsPage() {
             <p className="text-muted-foreground mt-1">Find answers to common questions about our service.</p>
         </div>
         <Accordion type="single" collapsible className="w-full">
-            {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`}>
+            {faqs.map((faq) => (
+                <AccordionItem key={faq.id} value={faq.id}>
                     <AccordionTrigger className="text-lg font-semibold text-left">{faq.question}</AccordionTrigger>
                     <AccordionContent className="text-base text-muted-foreground pt-2">
                         {faq.answer}

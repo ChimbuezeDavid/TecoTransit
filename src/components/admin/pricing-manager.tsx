@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2, Edit, X } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -29,6 +30,79 @@ const formSchema = z.object({
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
 });
+
+function PricingManagerSkeleton() {
+    return (
+        <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-1">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-48" />
+                        <Skeleton className="h-4 w-full mt-2" />
+                        <Skeleton className="h-4 w-3/4 mt-1" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                         <div className="space-y-2">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Skeleton className="h-10 w-32" />
+                    </CardFooter>
+                </Card>
+            </div>
+             <div className="md:col-span-2">
+                <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-40" />
+                        <Skeleton className="h-4 w-64 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                    <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                             <TableBody>
+                                {[...Array(3)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell>
+                                            <Skeleton className="h-5 w-20" />
+                                            <Skeleton className="h-4 w-28 mt-2" />
+                                        </TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                        <TableCell className="text-right flex justify-end gap-2">
+                                            <Skeleton className="h-8 w-8" />
+                                            <Skeleton className="h-8 w-8" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}
 
 export default function PricingManager() {
   const { toast } = useToast();
@@ -53,12 +127,12 @@ export default function PricingManager() {
       querySnapshot.forEach((doc) => {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
-      prices.sort((a,b) => a.pickup.localeCompare(b.pickup));
+      prices.sort((a,b) => a.pickup.localeCompare(b.pickup) || a.destination.localeCompare(b.destination));
       setPriceList(prices);
       setLoading(false);
     }, (error) => {
       console.error("Error fetching prices:", error);
-      toast({ variant: "destructive", title: "Error", description: "Could not fetch price list." });
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch price list. Please ensure Firestore rules are correctly set up." });
       setLoading(false);
     });
     return () => unsubscribe();
@@ -178,6 +252,9 @@ export default function PricingManager() {
     }
   }
 
+  if (loading) {
+    return <PricingManagerSkeleton />;
+  }
 
   return (
     <div className="grid md:grid-cols-3 gap-8">
@@ -265,9 +342,7 @@ export default function PricingManager() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                         {loading ? (
-                            <TableRow><TableCell colSpan={4} className="text-center py-10">Loading prices...</TableCell></TableRow>
-                        ) : priceList.length === 0 ? (
+                        {priceList.length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                         ) : (
                             priceList.map((rule) => (
