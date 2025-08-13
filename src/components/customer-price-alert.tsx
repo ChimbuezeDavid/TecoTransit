@@ -48,7 +48,9 @@ export default function CustomerPriceAlert() {
         <AlertDescription className={cn(
           "prose prose-sm max-w-none text-muted-foreground",
            alert.font,
-           alert.fontSize
+           alert.fontSize,
+           alert.bold && "font-bold",
+           alert.italic && "italic",
         )}>
            {alert.content}
         </AlertDescription>

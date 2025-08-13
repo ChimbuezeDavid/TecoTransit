@@ -29,5 +29,7 @@ export type PriceAlert = {
     display: boolean;
     font: string;
     fontSize: string;
+    bold: boolean;
+    italic: boolean;
     updatedAt: number;
 }

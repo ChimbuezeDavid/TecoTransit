@@ -23,6 +23,8 @@ const formSchema = z.object({
   display: z.boolean().default(true),
   font: z.string(),
   fontSize: z.string(),
+  bold: z.boolean().default(false),
+  italic: z.boolean().default(false),
 });
 
 export default function PriceAlertManager() {
@@ -36,6 +38,8 @@ export default function PriceAlertManager() {
       display: true,
       font: "font-body",
       fontSize: "text-sm",
+      bold: false,
+      italic: false,
     }
   });
 
@@ -118,10 +122,10 @@ export default function PriceAlertManager() {
                 
                 <div className="space-y-4">
                     <CardTitle className="text-xl">Alert Styling</CardTitle>
-                     <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <FormField control={form.control} name="font" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Font Style</FormLabel>
+                            <FormLabel>Font Family</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger><SelectValue placeholder="Select a font" /></SelectTrigger>
@@ -129,7 +133,9 @@ export default function PriceAlertManager() {
                               <SelectContent>
                                 <SelectItem value="font-body">PT Sans (Default)</SelectItem>
                                 <SelectItem value="font-headline">PT Sans (Headline)</SelectItem>
-                                <SelectItem value="font-code">Monospace</SelectItem>
+                                <SelectItem value="font-sans">System Sans-Serif</SelectItem>
+                                <SelectItem value="font-serif">System Serif</SelectItem>
+                                <SelectItem value="font-mono">System Monospace</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -153,6 +159,42 @@ export default function PriceAlertManager() {
                           </FormItem>
                         )} />
                     </div>
+                     <div className="grid grid-cols-2 gap-4 pt-4">
+                         <FormField
+                            control={form.control}
+                            name="bold"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                    <FormLabel>Bold</FormLabel>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                            />
+                        <FormField
+                            control={form.control}
+                            name="italic"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <div className="space-y-0.5">
+                                    <FormLabel>Italic</FormLabel>
+                                </div>
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                </FormItem>
+                            )}
+                            />
+                     </div>
                 </div>
 
                 <Separator/>
