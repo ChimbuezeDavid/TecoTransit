@@ -29,7 +29,7 @@ export default function RootLayout({
             crossOrigin="anonymous"
           />
           <link
-            href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap"
+            href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Lobster&family=Pacifico&display=swap"
             rel="stylesheet"
           ></link>
         </head>
@@ -58,7 +58,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap"
+         href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Lobster&family=Pacifico&display=swap"
           rel="stylesheet"
         ></link>
       </head>

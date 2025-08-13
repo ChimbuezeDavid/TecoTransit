@@ -23,6 +23,10 @@ export default {
         sans: ['ui-sans-serif', 'system-ui'],
         serif: ['ui-serif', 'Georgia'],
         mono: ['ui-monospace', 'SFMono-Regular'],
+        'playfair': ['Playfair Display', 'serif'],
+        'roboto-mono': ['Roboto Mono', 'monospace'],
+        'lobster': ['Lobster', 'cursive'],
+        'pacifico': ['Pacifico', 'cursive'],
       },
       colors: {
         background: 'hsl(var(--background))',

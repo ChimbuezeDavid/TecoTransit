@@ -10,12 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { PriceAlert } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { CardDescription } from "../ui/card";
 
 
 const formSchema = z.object({
@@ -129,10 +130,12 @@ export default function PriceAlertManager() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="font-body">PT Sans (Default)</SelectItem>
-                                <SelectItem value="font-headline">PT Sans (Headline)</SelectItem>
                                 <SelectItem value="font-sans">System Sans-Serif</SelectItem>
                                 <SelectItem value="font-serif">System Serif</SelectItem>
-                                <SelectItem value="font-mono">System Monospace</SelectItem>
+                                <SelectItem value="font-playfair">Playfair Display (Serif)</SelectItem>
+                                <SelectItem value="font-roboto-mono">Roboto Mono (Monospace)</SelectItem>
+                                <SelectItem value="font-lobster">Lobster (Cursive)</SelectItem>
+                                <SelectItem value="font-pacifico">Pacifico (Handwriting)</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -150,6 +153,7 @@ export default function PriceAlertManager() {
                                 <SelectItem value="text-sm">Small (Default)</SelectItem>
                                 <SelectItem value="text-base">Medium</SelectItem>
                                 <SelectItem value="text-lg">Large</SelectItem>
+                                <SelectItem value="text-xl">Extra Large</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -219,11 +223,11 @@ export default function PriceAlertManager() {
               </>
             )}
           </CardContent>
-          <CardFooter>
+          <div className="px-6 pb-6">
             <Button type="submit" disabled={form.formState.isSubmitting || loading}>
-              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
     </Card>
