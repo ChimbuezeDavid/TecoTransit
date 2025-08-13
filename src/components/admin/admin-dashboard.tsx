@@ -44,9 +44,9 @@ export default function AdminDashboard() {
     setLoading(true);
     let q;
     if (statusFilter === 'All') {
-        q = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
+        q = query(collection(db, "bookings"));
     } else {
-        q = query(collection(db, "bookings"), where("status", "==", statusFilter), orderBy("createdAt", "desc"));
+        q = query(collection(db, "bookings"), where("status", "==", statusFilter));
     }
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -54,11 +54,13 @@ export default function AdminDashboard() {
       querySnapshot.forEach((doc) => {
         bookingsData.push({ ...doc.data(), id: doc.id } as Booking);
       });
+      // Sort by createdAt client-side to avoid composite index
+      bookingsData.sort((a, b) => b.createdAt - a.createdAt);
       setBookings(bookingsData);
       setLoading(false);
     }, (error) => {
         console.error("Error fetching bookings: ", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch bookings." });
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch bookings. Check Firestore security rules or required indexes." });
         setLoading(false);
     });
 
