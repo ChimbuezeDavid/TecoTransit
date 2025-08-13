@@ -1,10 +1,50 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public creation of bookings, but only authenticated admins can read, list, update, or delete them.
     match /bookings/{bookingId} {
-      allow create: if true;
-      allow list, get, update, delete: if request.auth != null;
+      // Helper function to convert date string (e.g., "Sep 20, 2024") to a timestamp
+      function toTimestamp(dateStr) {
+        let parts = dateStr.split(' ');
+        let monthStr = parts[0];
+        let day = int(parts[1].replace(',', ''));
+        let year = int(parts[2]);
+        let months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+        return timestamp.date(year, months[monthStr], day);
+      }
+      
+      // Helper function to get max allowed luggage for a vehicle type
+      function maxLuggages(vehicleType) {
+        let vehicleRules = {
+          '4-Seater Sienna': 4,
+          '5-Seater Sienna': 2,
+          '7-Seater Bus': 2
+        };
+        return vehicleRules[vehicleType];
+      }
+
+      // Allow anyone to create a booking, but validate the data
+      allow create: if request.resource.data.name is string &&
+                      request.resource.data.name.size() > 1 &&
+                      request.resource.data.email is string &&
+                      request.resource.data.email.matches('.+@.+\\..+') &&
+                      request.resource.data.phone is string &&
+                      request.resource.data.phone.size() > 9 &&
+                      request.resource.data.pickup is string &&
+                      request.resource.data.destination is string &&
+                      request.resource.data.intendedDate is string &&
+                      request.resource.data.alternativeDate is string &&
+                      toTimestamp(request.resource.data.alternativeDate) > toTimestamp(request.resource.data.intendedDate) &&
+                      request.resource.data.vehicleType is string &&
+                      request.resource.data.vehicleType in ['4-Seater Sienna', '5-Seater Sienna', '7-Seater Bus'] &&
+                      request.resource.data.luggageCount is number &&
+                      request.resource.data.luggageCount >= 0 &&
+                      request.resource.data.luggageCount <= maxLuggages(request.resource.data.vehicleType) &&
+                      request.resource.data.status == 'Pending' &&
+                      request.resource.data.createdAt == request.time.toMillis();
+      
+      // Allow authenticated admins to read, update (status), and delete bookings
+      allow get, list, update, delete: if request.auth != null;
     }
   }
 }
