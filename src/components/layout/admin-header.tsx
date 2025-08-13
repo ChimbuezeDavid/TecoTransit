@@ -27,18 +27,6 @@ export default function AdminHeader() {
     { href: "/admin/price-alert", icon: Megaphone, label: "Site Alert" },
   ];
 
-  const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => (
-    <SheetClose asChild>
-      <Link href={href} className={cn(
-          "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
-          pathname === href ? "text-primary" : "text-muted-foreground"
-        )}>
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </Link>
-    </SheetClose>
-  )
-
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4">
@@ -50,7 +38,15 @@ export default function AdminHeader() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-            {navLinks.map(link => <NavLink key={link.href} {...link} />)}
+             {navLinks.map(({ href, icon: Icon, label }) => (
+                <Link key={href} href={href} className={cn(
+                    "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
+                    pathname === href ? "text-primary" : "text-muted-foreground"
+                    )}>
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                </Link>
+             ))}
           </nav>
            <div className="hidden md:flex">
              <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -71,29 +67,33 @@ export default function AdminHeader() {
               <SheetContent side="right" className="w-[240px]">
                  <div className="flex flex-col h-full">
                     <div className="flex-grow">
-                        <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
-                            <Route className="h-6 w-6" />
-                            <span className="font-headline">RouteWise Admin</span>
-                        </Link>
+                        <SheetClose asChild>
+                            <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
+                                <Route className="h-6 w-6" />
+                                <span className="font-headline">RouteWise Admin</span>
+                            </Link>
+                        </SheetClose>
                         <nav className="flex flex-col gap-6">
-                            {navLinks.map(link => (
-                                <SheetClose asChild key={link.href}>
-                                    <Link href={link.href} className={cn(
+                            {navLinks.map(({ href, icon: Icon, label }) => (
+                                <SheetClose asChild key={href}>
+                                    <Link href={href} className={cn(
                                         "flex items-center gap-3 text-base font-medium transition-colors hover:text-primary",
-                                        pathname === link.href ? "text-primary" : "text-muted-foreground"
+                                        pathname === href ? "text-primary" : "text-muted-foreground"
                                     )}>
-                                        <link.icon className="h-5 w-5" />
-                                        <span>{link.label}</span>
+                                        <Icon className="h-5 w-5" />
+                                        <span>{label}</span>
                                     </Link>
                                 </SheetClose>
                             ))}
                         </nav>
                     </div>
                      <div className="mt-auto">
-                        <Button variant="ghost" className="w-full justify-start" size="sm" onClick={handleLogout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Logout
-                        </Button>
+                        <SheetClose asChild>
+                            <Button variant="ghost" className="w-full justify-start" size="sm" onClick={handleLogout}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Logout
+                            </Button>
+                        </SheetClose>
                     </div>
                  </div>
               </SheetContent>
