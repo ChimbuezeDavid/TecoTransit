@@ -44,7 +44,7 @@ export default function CustomerPriceAlert() {
     <div className="max-w-3xl mx-auto mb-12">
       <Alert>
         <Megaphone className="h-4 w-4" />
-        <AlertTitle>An Important Update from RouteWise!</AlertTitle>
+        <AlertTitle>An Important Update from TecoTransit!</AlertTitle>
         <AlertDescription className={cn(
           "prose prose-sm max-w-none text-muted-foreground",
            alert.font,

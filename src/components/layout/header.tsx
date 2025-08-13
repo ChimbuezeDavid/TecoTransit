@@ -44,7 +44,7 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
             <Route className="h-6 w-6" />
-            <span className="font-headline">RouteWise</span>
+            <span className="font-headline">TecoTransit</span>
           </Link>
           
           {/* Desktop Navigation */}
@@ -64,7 +64,7 @@ export default function Header() {
               <SheetContent side="left" className="w-[240px]">
                 <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
                     <Route className="h-6 w-6" />
-                    <span className="font-headline">RouteWise</span>
+                    <span className="font-headline">TecoTransit</span>
                 </Link>
                 <nav className="flex flex-col gap-6">
                     {navLinks.map(link => (

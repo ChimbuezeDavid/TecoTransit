@@ -8,10 +8,10 @@ export default function Footer() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
                         <Route className="h-6 w-6" />
-                        <span className="font-headline">RouteWise</span>
+                        <span className="font-headline">TecoTransit</span>
                     </Link>
                     <p className="text-sm text-muted-foreground text-center sm:text-left">
-                        © {new Date().getFullYear()} RouteWise. All rights reserved.
+                        © {new Date().getFullYear()} TecoTransit. All rights reserved.
                     </p>
                 </div>
             </div>

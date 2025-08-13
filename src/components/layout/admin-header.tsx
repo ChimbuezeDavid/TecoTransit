@@ -4,12 +4,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Megaphone, Menu } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Megaphone, Menu, SheetClose } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "../ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -33,7 +33,7 @@ export default function AdminHeader() {
         <div className="flex justify-between items-center h-16">
           <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary">
             <Route className="h-6 w-6" />
-            <span className="font-headline hidden sm:inline">RouteWise Admin</span>
+            <span className="font-headline hidden sm:inline">TecoTransit Admin</span>
           </Link>
           
           {/* Desktop Navigation */}
@@ -70,7 +70,7 @@ export default function AdminHeader() {
                         <SheetClose asChild>
                             <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                                 <Route className="h-6 w-6" />
-                                <span className="font-headline">RouteWise Admin</span>
+                                <span className="font-headline">TecoTransit Admin</span>
                             </Link>
                         </SheetClose>
                         <nav className="flex flex-col gap-6">

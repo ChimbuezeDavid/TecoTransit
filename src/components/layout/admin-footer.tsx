@@ -6,7 +6,7 @@ export default function AdminFooter() {
             <div className="container mx-auto px-4 py-4">
                 <div className="flex justify-center items-center">
                     <p className="text-sm text-muted-foreground">
-                        © {new Date().getFullYear()} RouteWise Admin Panel
+                        © {new Date().getFullYear()} TecoTransit Admin Panel
                     </p>
                 </div>
             </div>
