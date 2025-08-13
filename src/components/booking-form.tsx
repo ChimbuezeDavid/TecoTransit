@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const luggageFee = 500; // Example fee per luggage item
+const luggageFee = 0; // No fee per luggage item
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
