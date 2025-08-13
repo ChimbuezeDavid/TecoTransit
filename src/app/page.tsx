@@ -10,7 +10,7 @@ export default function Home() {
           Book Your Trip with TecoTransit
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground mt-2 max-w-2xl mx-auto">
-          Your Journey, Simplified. Select your ride, set your dates, and get ready to travel with ease and comfort.
+          Fast, reliable, and comfortable rides to your destination.
         </p>
       </div>
       <div className="max-w-3xl mx-auto">
