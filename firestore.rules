@@ -1,12 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow public creation of bookings, but only authenticated admins can read, list, update, or delete them.
     match /bookings/{bookingId} {
-      // Allow anyone to create a booking (submit the form)
       allow create: if true;
-
-      // Only allow authenticated users (admins) to read, update, or delete bookings
-      allow read, update, delete: if request.auth != null;
+      allow list, get, update, delete: if request.auth != null;
     }
   }
 }

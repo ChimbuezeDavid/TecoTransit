@@ -1,6 +1,6 @@
 # How to Deploy Your Firestore Security Rules
 
-This guide will walk you through deploying the security rules located in `firestore.rules` to your Firebase project. These rules are essential for protecting your application's data.
+This guide will walk you through deploying the security rules located in `firestore.rules` to your Firebase project. These rules are essential for protecting your application's data and enabling the admin dashboard to function correctly.
 
 ## Step 1: Install the Firebase CLI
 
@@ -25,7 +25,7 @@ Your project is named "routewise-t6cdq". To ensure the CLI deploys the rules to 
 ```bash
 firebase use --add routewise-t6cdq
 ```
-Follow the prompts to select the project from the list.
+Follow the prompts to select your project from the list.
 
 ## Step 4: Deploy the Firestore Rules
 
@@ -35,4 +35,4 @@ Finally, from the root directory of your project (where `firestore.rules` is loc
 firebase deploy --only firestore:rules
 ```
 
-After the command finishes, you will see a "Deploy complete!" message. Your Firestore database is now protected by the new security rules.
+After the command finishes, you will see a "Deploy complete!" message. Your Firestore database is now protected by the new security rules, and your admin dashboard should load correctly.
