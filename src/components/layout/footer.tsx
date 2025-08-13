@@ -10,13 +10,9 @@ export default function Footer() {
                         <Route className="h-6 w-6" />
                         <span className="font-headline">RouteWise</span>
                     </Link>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground text-center sm:text-left">
                         © {new Date().getFullYear()} RouteWise. All rights reserved.
                     </p>
-                    <nav className="flex items-center gap-4">
-                        <Link href="/" className="text-sm text-muted-foreground hover:text-primary">Book a Trip</Link>
-                        <Link href="/faqs" className="text-sm text-muted-foreground hover:text-primary">FAQs</Link>
-                    </nav>
                 </div>
             </div>
         </footer>
