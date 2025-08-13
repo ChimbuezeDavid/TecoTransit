@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -147,8 +148,11 @@ export default function AdminDashboard() {
                     <DialogDescription>{selectedBooking.pickup} to {selectedBooking.destination}</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
-                    <p><strong>Status:</strong> <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge></p>
-                    <p><strong>Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</p>
+                    <div className="flex items-center gap-2">
+                        <strong>Status:</strong>
+                        <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
+                    </div>
+                    <div><strong>Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</div>
                     
                     {selectedBooking.status === 'Pending' && (
                         <div>
