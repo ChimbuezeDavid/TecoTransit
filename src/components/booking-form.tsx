@@ -18,8 +18,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, User, Mail, Phone, Briefcase, Car, Bus, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -153,13 +151,6 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Number of Bags</FormLabel>
-                    <FormControl><div className="relative"><Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" min="0" max="10" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
                 <FormField control={form.control} name="pickup" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
@@ -183,6 +174,34 @@ export default function BookingForm() {
                         </FormControl>
                         <SelectContent>
                         {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                 <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Vehicle Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Number of Bags</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {[...Array(11).keys()].map(i => <SelectItem key={i} value={String(i)}>{i}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -219,25 +238,6 @@ export default function BookingForm() {
                     </FormItem>
                 )} />
             </div>
-
-            <FormField control={form.control} name="vehicleType" render={({ field }) => (
-              <FormItem className="space-y-3">
-                <FormLabel>Select Vehicle Type</FormLabel>
-                <FormControl><RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid md:grid-cols-3 gap-4">
-                  {Object.entries(vehicleOptions).map(([key, { name, icon: Icon, baseFare }]) => (
-                    <FormItem key={key}>
-                      <RadioGroupItem value={key} id={key} className="peer sr-only" />
-                      <Label htmlFor={key} className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                        <Icon className="mb-3 h-8 w-8 text-primary" />
-                        {name}
-                        <span className="font-normal text-sm text-muted-foreground mt-1">From ${baseFare}</span>
-                      </Label>
-                    </FormItem>
-                  ))}
-                </RadioGroup></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
