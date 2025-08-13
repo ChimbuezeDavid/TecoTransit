@@ -68,15 +68,15 @@ export default function PriceAlertManager() {
     try {
       await setDoc(alertRef, alertData, { merge: true });
       toast({
-        title: "Price Alert Saved",
-        description: "The alert has been successfully saved.",
+        title: "Alert Settings Saved",
+        description: "The alert configuration has been successfully updated.",
       });
     } catch (error) {
       console.error("Error saving alert:", error);
       toast({
         variant: "destructive",
         title: "Save Failed",
-        description: "Could not save the alert. Please try again.",
+        description: "Could not save the alert settings. Please try again.",
       });
     }
   }
@@ -86,9 +86,9 @@ export default function PriceAlertManager() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
-            <CardTitle>Update Customer Price Alert</CardTitle>
+            <CardTitle>Customer Alert Management</CardTitle>
             <CardDescription>
-              Write a message and customize its appearance. This will be displayed prominently on the customer booking page.
+              Create and manage the site-wide alert shown to customers. Use the switch to control visibility.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -178,7 +178,7 @@ export default function PriceAlertManager() {
           </CardContent>
           <CardFooter>
             <Button type="submit" disabled={form.formState.isSubmitting || loading}>
-              {form.formState.isSubmitting ? "Saving..." : "Save and Publish Alert"}
+              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </CardFooter>
         </form>
