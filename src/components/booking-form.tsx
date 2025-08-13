@@ -19,14 +19,10 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Briefcase, Car, Bus, ArrowRight } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const vehicleOptions = {
-  '4-seater': { name: '4-Seater Sienna', icon: Car },
-  '5-seater': { name: '5-Seater Sienna', icon: Car },
-  '7-seater': { name: '7-Seater Bus', icon: Bus },
-};
+
 const luggageFee = 5;
 const baseFare = 50;
 
@@ -40,18 +36,24 @@ const locations = [
   "Warri Delta state"
 ];
 
+const vehicleOptions = {
+    '4-seater': { name: '4-Seater Sienna' },
+    '5-seater': { name: '5-Seater Sienna' },
+    '7-seater': { name: '7-Seater Bus' },
+};
+
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
+  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
+  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
   vehicleType: z.enum(['4-seater', '5-seater', '7-seater'], {
     required_error: 'You need to select a vehicle type.',
   }),
   luggageCount: z.coerce.number().min(0).max(10),
-  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
-  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
 });
 
 export default function BookingForm() {
@@ -129,114 +131,119 @@ export default function BookingForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8 pt-6">
-            <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="John Doe" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="you@example.com" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="phone" render={({ field }) => (
+            <div className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="name" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="John Doe" {...field} className="pl-9" /></div></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="email" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="you@example.com" {...field} className="pl-9" /></div></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                 <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="pickup" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="destination" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a destination" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="intendedDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Intended Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                        <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                    </PopoverContent></Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Alternative Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                        <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                    </PopoverContent></Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Number of Bags</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
+
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="pickup" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Pickup Location</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="destination" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Destination</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a destination" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Intended Departure</FormLabel>
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                        </PopoverContent></Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="alternativeDate" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Alternative Departure</FormLabel>
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                        </PopoverContent></Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Vehicle Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Number of Bags</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
@@ -254,5 +261,3 @@ export default function BookingForm() {
     </Card>
   );
 }
-
-    

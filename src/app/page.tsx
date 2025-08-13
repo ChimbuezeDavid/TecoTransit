@@ -11,7 +11,7 @@ export default function Home() {
           Your Journey, Simplified. Select your ride, set your dates, and get ready to travel with ease and comfort.
         </p>
       </div>
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <BookingForm />
       </div>
     </div>
