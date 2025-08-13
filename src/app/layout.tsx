@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/context/auth-context';
 import Header from '@/components/layout/header';
 import './globals.css';
 
@@ -23,10 +24,12 @@ export default function RootLayout({
           rel="stylesheet"
         ></link>
       </head>
-      <body className="font-body antialiased flex flex-col h-full">
+      <body className="font-body antialiased flex flex-col h-full bg-muted/20">
+        <AuthProvider>
           <Header />
           <main className="flex-grow">{children}</main>
           <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
