@@ -103,7 +103,6 @@ export default function PricingManager() {
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const priceId = `${data.pickup}_${data.destination}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
     
-    // Prevent adding a duplicate if not in edit mode
     if (!editMode && priceList.some(p => p.id === priceId)) {
         toast({
             variant: "destructive",
@@ -113,7 +112,6 @@ export default function PricingManager() {
         return;
     }
 
-    // If in edit mode, but the combination was changed to one that already exists
     if (editMode && editMode.id !== priceId && priceList.some(p => p.id === priceId)) {
        toast({
             variant: "destructive",
@@ -138,7 +136,6 @@ export default function PricingManager() {
       await setDoc(priceRef, data, { merge: true });
       await setDoc(reciprocalPriceRef, reciprocalData, { merge: true });
       
-      // If we were editing, and the ID changed, delete the old rule and its reciprocal
       if (editMode && editMode.id !== priceId) {
           const oldReciprocalId = `${editMode.destination}_${editMode.pickup}_${editMode.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
           await deleteDoc(doc(db, "prices", editMode.id));

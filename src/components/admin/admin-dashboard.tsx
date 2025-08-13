@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle } from "lucide-react";
 
 function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -34,6 +34,7 @@ function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [confirmedDate, setConfirmedDate] = useState<string>('');
@@ -43,6 +44,7 @@ export default function AdminDashboard() {
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
         let q;
         if (statusFilter === 'All') {
@@ -60,9 +62,11 @@ export default function AdminDashboard() {
         bookingsData.sort((a, b) => b.createdAt - a.createdAt);
         setBookings(bookingsData);
 
-    } catch (error) {
-        console.error("Error fetching bookings: ", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch bookings. Check Firestore security rules or required indexes." });
+    } catch (err) {
+        console.error("Error fetching bookings: ", err);
+        const defaultError = "Could not fetch bookings. Please check your connection and Firestore security rules.";
+        setError(defaultError);
+        toast({ variant: "destructive", title: "Error", description: defaultError });
     } finally {
         setLoading(false);
     }
@@ -70,14 +74,15 @@ export default function AdminDashboard() {
 
 
   useEffect(() => {
-    fetchBookings();
-    
     let q;
     if (statusFilter === 'All') {
         q = query(collection(db, "bookings"));
     } else {
         q = query(collection(db, "bookings"), where("status", "==", statusFilter));
     }
+    
+    setLoading(true);
+    setError(null);
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const bookingsData: Booking[] = [];
@@ -87,13 +92,15 @@ export default function AdminDashboard() {
       bookingsData.sort((a, b) => b.createdAt - a.createdAt);
       setBookings(bookingsData);
       setLoading(false);
-    }, (error) => {
-        console.error("Error fetching bookings with snapshot: ", error);
+    }, (err) => {
+        console.error("Error with snapshot listener: ", err);
+        const defaultError = "Could not fetch bookings. Please check your connection and Firestore security rules.";
+        setError(defaultError);
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [statusFilter, fetchBookings]);
+  }, [statusFilter]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -198,6 +205,46 @@ export default function AdminDashboard() {
   
   const VehicleIcon = selectedBooking?.vehicleType.includes('Bus') ? Bus : Car;
 
+  const renderTableContent = () => {
+    if (loading) {
+      return <TableRow><TableCell colSpan={5} className="text-center py-10">Loading bookings...</TableCell></TableRow>;
+    }
+    if (error) {
+      return (
+        <TableRow>
+          <TableCell colSpan={5} className="text-center py-10 text-destructive">
+             <div className="flex flex-col items-center gap-2">
+                <AlertCircle className="h-8 w-8" />
+                <span className="font-semibold">An Error Occurred</span>
+                <p className="text-sm text-muted-foreground">{error}</p>
+             </div>
+          </TableCell>
+        </TableRow>
+      );
+    }
+    if (bookings.length === 0) {
+      return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
+    }
+    return bookings.map((booking) => (
+      <TableRow key={booking.id}>
+        <TableCell>
+          <div className="font-medium">{booking.name}</div>
+          <div className="text-sm text-muted-foreground">{booking.email}</div>
+        </TableCell>
+        <TableCell className="hidden md:table-cell">
+          <div className="font-medium">{booking.pickup}</div>
+          <div className="text-sm text-muted-foreground">to {booking.destination}</div>
+        </TableCell>
+        <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
+        <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
+        <TableCell className="text-right">
+          <Button variant="outline" size="sm" onClick={() => openDialog(booking)}>Manage</Button>
+        </TableCell>
+      </TableRow>
+    ));
+  };
+
+
   return (
     <Card>
       <CardHeader>
@@ -238,29 +285,7 @@ export default function AdminDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">Loading bookings...</TableCell></TableRow>
-            ) : bookings.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>
-            ) : (
-              bookings.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell>
-                    <div className="font-medium">{booking.name}</div>
-                    <div className="text-sm text-muted-foreground">{booking.email}</div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="font-medium">{booking.pickup}</div>
-                    <div className="text-sm text-muted-foreground">to {booking.destination}</div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
-                  <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => openDialog(booking)}>Manage</Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            {renderTableContent()}
           </TableBody>
         </Table>
       </CardContent>
