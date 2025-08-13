@@ -1,19 +1,42 @@
+
 "use client";
 
+import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route } from "lucide-react";
+import { Route, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 export default function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Don't render the header on admin pages
   if (pathname.startsWith('/admin')) {
     return null;
   }
+
+  const navLinks = [
+    { href: "/", label: "Book a Trip" },
+    { href: "/faqs", label: "FAQs" },
+  ];
+
+  if (user) {
+    navLinks.push({ href: "/admin", label: "Admin" });
+  }
+  
+  const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
+      <Link href={href} className={cn(
+          "font-medium transition-colors hover:text-primary",
+          pathname === href ? "text-primary" : "text-muted-foreground",
+          className
+       )}>
+        {label}
+      </Link>
+  );
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
@@ -23,28 +46,36 @@ export default function Header() {
             <Route className="h-6 w-6" />
             <span className="font-headline">RouteWise</span>
           </Link>
-          <nav className="flex items-center gap-6">
-             <Link href="/" className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === '/' ? "text-primary" : "text-muted-foreground"
-              )}>
-                Book a Trip
-              </Link>
-             <Link href="/faqs" className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === '/faqs' ? "text-primary" : "text-muted-foreground"
-             )}>
-                FAQs
-             </Link>
-              {user && (
-                 <Link href="/admin" className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
-                    pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
-                 )}>
-                    Admin
-                 </Link>
-              )}
+          
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+             {navLinks.map(link => <NavLink key={link.href} {...link}/>)}
           </nav>
+
+          {/* Mobile Navigation */}
+          <div className="md:hidden">
+            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+              <SheetTrigger asChild>
+                 <Button variant="outline" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[240px]">
+                <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
+                    <Route className="h-6 w-6" />
+                    <span className="font-headline">RouteWise</span>
+                </Link>
+                <nav className="flex flex-col gap-6">
+                    {navLinks.map(link => (
+                        <SheetClose asChild key={link.href}>
+                             <NavLink {...link} className="text-lg"/>
+                        </SheetClose>
+                    ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>
