@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, Settings, LayoutDashboard } from "lucide-react";
+import { LogOut, Route, BadgeDollarSign, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
@@ -37,7 +37,7 @@ export default function AdminHeader() {
                 "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
                  pathname === '/admin/pricing' ? "text-primary" : "text-muted-foreground"
              )}>
-                <Settings className="h-4 w-4" />
+                <BadgeDollarSign className="h-4 w-4" />
                 <span>Pricing</span>
              </Link>
           </nav>
