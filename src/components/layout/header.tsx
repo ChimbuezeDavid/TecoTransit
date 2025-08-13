@@ -18,10 +18,10 @@ export default function Header() {
             <span className="font-headline">RouteWise</span>
           </Link>
           <nav className="flex items-center gap-2">
-             <Button variant={pathname === '/trips' ? "secondary" : "ghost"} asChild>
-              <Link href="/trips">My Trips</Link>
+             <Button variant="ghost" asChild>
+              <Link href="/trips" className={cn(pathname === '/trips' && "text-primary")}>My Trips</Link>
             </Button>
-            <Button variant={pathname === '/' ? "default" : "outline"} asChild>
+            <Button asChild>
               <Link href="/">Book A Trip</Link>
             </Button>
           </nav>
