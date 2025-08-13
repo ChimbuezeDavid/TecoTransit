@@ -155,20 +155,6 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                    <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Number of Bags</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
                     <FormField control={form.control} name="pickup" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Pickup Location</FormLabel>
@@ -258,6 +244,23 @@ export default function BookingForm() {
                         </FormItem>
                     )}
                 />
+
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Number of Bags</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
