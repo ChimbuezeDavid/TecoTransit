@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where, orderBy, WhereFilterOp } from "firebase/firestore";
+import { useState, useEffect, useCallback } from "react";
+import { collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Booking } from "@/lib/types";
 
@@ -11,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2 } from "lucide-react";
 
 function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -40,32 +41,59 @@ export default function AdminDashboard() {
   
   const { toast } = useToast();
 
-  useEffect(() => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
+    try {
+        let q;
+        if (statusFilter === 'All') {
+            q = query(collection(db, "bookings"));
+        } else {
+            q = query(collection(db, "bookings"), where("status", "==", statusFilter));
+        }
+
+        const querySnapshot = await getDocs(q);
+        const bookingsData: Booking[] = [];
+        querySnapshot.forEach((doc) => {
+            bookingsData.push({ ...doc.data(), id: doc.id } as Booking);
+        });
+
+        bookingsData.sort((a, b) => b.createdAt - a.createdAt);
+        setBookings(bookingsData);
+
+    } catch (error) {
+        console.error("Error fetching bookings: ", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch bookings. Check Firestore security rules or required indexes." });
+    } finally {
+        setLoading(false);
+    }
+  }, [statusFilter, toast]);
+
+
+  useEffect(() => {
+    fetchBookings();
+    
     let q;
     if (statusFilter === 'All') {
         q = query(collection(db, "bookings"));
     } else {
         q = query(collection(db, "bookings"), where("status", "==", statusFilter));
     }
-    
+
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const bookingsData: Booking[] = [];
       querySnapshot.forEach((doc) => {
         bookingsData.push({ ...doc.data(), id: doc.id } as Booking);
       });
-      // Sort by createdAt client-side to avoid composite index
       bookingsData.sort((a, b) => b.createdAt - a.createdAt);
       setBookings(bookingsData);
       setLoading(false);
     }, (error) => {
-        console.error("Error fetching bookings: ", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch bookings. Check Firestore security rules or required indexes." });
+        console.error("Error fetching bookings with snapshot: ", error);
         setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [statusFilter, toast]);
+  }, [statusFilter, fetchBookings]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -105,6 +133,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteBooking = async () => {
+    if (!selectedBooking) return;
+    try {
+      await deleteDoc(doc(db, "bookings", selectedBooking.id));
+      toast({
+        title: "Booking Deleted",
+        description: `Booking has been permanently deleted.`,
+      });
+      setIsDialogOpen(false);
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Could not delete the booking. Please try again.",
+      });
+    }
+  };
+
+  const downloadCSV = () => {
+    if (bookings.length === 0) {
+        toast({ title: "No data to export" });
+        return;
+    }
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
+    const csvContent = [
+        headers.join(','),
+        ...bookings.map(b => [
+            b.id,
+            `"${b.name.replace(/"/g, '""')}"`,
+            b.email,
+            b.phone,
+            `"${b.pickup.replace(/"/g, '""')}"`,
+            `"${b.destination.replace(/"/g, '""')}"`,
+            b.intendedDate,
+            b.alternativeDate,
+            `"${b.vehicleType.replace(/"/g, '""')}"`,
+            b.luggageCount,
+            b.totalFare,
+            b.status,
+            b.confirmedDate || "",
+            new Date(b.createdAt).toISOString()
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bookings-${statusFilter.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const getStatusVariant = (status: Booking['status']) => {
     switch (status) {
       case 'Confirmed': return 'default';
@@ -118,12 +200,18 @@ export default function AdminDashboard() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-            <CardTitle>Booking Requests</CardTitle>
-            <CardDescription>A list of all trip requests from customers.</CardDescription>
+      <CardHeader>
+        <div className="flex flex-row items-start justify-between">
+            <div>
+                <CardTitle>Booking Requests</CardTitle>
+                <CardDescription>A list of all trip requests from customers.</CardDescription>
+            </div>
+             <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
+                <Button variant="outline" size="icon" onClick={fetchBookings}><RefreshCw className="h-4 w-4" /></Button>
+            </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-4">
             <Filter className="h-4 w-4 text-muted-foreground" />
              <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
                 <SelectTrigger className="w-[180px]">
@@ -226,21 +314,38 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate}</span></div>
                     )}
                 </div>
-                <DialogFooter>
-                    {selectedBooking.status === 'Pending' && (
-                        <>
-                            <Button variant="destructive" onClick={() => handleUpdateBooking('Cancelled')}>Cancel Booking</Button>
-                            <Button onClick={() => handleUpdateBooking('Confirmed')}>Confirm Booking</Button>
-                        </>
-                    )}
-                     {selectedBooking.status !== 'Pending' && (
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
-                    )}
+                <DialogFooter className="sm:justify-between">
+                    <div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteBooking}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                    <div className="flex gap-2">
+                        {selectedBooking.status === 'Pending' ? (
+                            <>
+                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')}>Cancel Booking</Button>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')}>Confirm Booking</Button>
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                        )}
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
       )}
     </Card>
   );
-
-    
+}
