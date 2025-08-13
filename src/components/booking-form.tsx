@@ -237,27 +237,13 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                     <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Number of Bags</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value)} disabled={!selectedVehicleType}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
                 </div>
                 
                  <FormField
                     control={form.control}
                     name="vehicleType"
                     render={({ field }) => (
-                        <FormItem className="space-y-3">
+                        <FormItem className="space-y-3 pt-4">
                         <FormLabel>Select Vehicle Type</FormLabel>
                         <FormControl>
                             <RadioGroup
@@ -283,6 +269,20 @@ export default function BookingForm() {
                         </FormItem>
                     )}
                 />
+                 <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Number of Bags</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value)} disabled={!selectedVehicleType}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
