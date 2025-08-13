@@ -23,11 +23,11 @@ export default function Header() {
               )}>
                 Book a Trip
               </Link>
-             <Link href="/trips" className={cn(
+             <Link href="/faqs" className={cn(
                 "text-sm font-medium transition-colors hover:text-primary",
-                pathname === '/trips' ? "text-primary" : "text-muted-foreground"
+                pathname === '/faqs' ? "text-primary" : "text-muted-foreground"
              )}>
-                My Trips
+                FAQs
              </Link>
           </nav>
         </div>

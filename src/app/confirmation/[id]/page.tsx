@@ -6,7 +6,7 @@ import Link from 'next/link';
 import type { Booking } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, DollarSign, AlertCircle } from 'lucide-react';
+import { CheckCircle, User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, DollarSign, AlertCircle, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
@@ -117,7 +117,7 @@ export default function ConfirmationPage() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-center p-6 bg-muted/30 rounded-b-lg">
-             <Button asChild><Link href="/trips">View All My Trips</Link></Button>
+             <Button asChild><Link href="/"><Home className="mr-2 h-4 w-4" />Go to Homepage</Link></Button>
           </CardFooter>
         </Card>
       </div>
