@@ -91,9 +91,6 @@ export default function PriceAlertManager() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
             <CardTitle>Site Alert Settings</CardTitle>
-            <CardDescription>
-              Create, style, and manage the site-wide alert shown to customers.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {loading ? (
