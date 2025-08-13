@@ -230,7 +230,7 @@ export default function BookingForm() {
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
-        <CardTitle className="font-headline text-3xl text-primary">Book Your Ride With Ease</CardTitle>
+        <CardTitle className="font-headline text-3xl text-primary">Booking Details</CardTitle>
         <CardDescription>Fill out the form below to secure your spot.</CardDescription>
       </CardHeader>
       <Form {...form}>
