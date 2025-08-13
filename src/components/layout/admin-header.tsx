@@ -2,11 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, BadgeDollarSign, LayoutDashboard } from "lucide-react";
+import { LogOut, Route, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+
+function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M7 18V6h10"/>
+      <path d="M17 18L7 6"/>
+      <path d="M17 6L7 18"/>
+      <path d="M6 12h12"/>
+    </svg>
+  );
+}
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -37,7 +48,7 @@ export default function AdminHeader() {
                 "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
                  pathname === '/admin/pricing' ? "text-primary" : "text-muted-foreground"
              )}>
-                <BadgeDollarSign className="h-4 w-4" />
+                <NairaIcon className="h-4 w-4" />
                 <span>Pricing</span>
              </Link>
           </nav>
