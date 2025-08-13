@@ -14,3 +14,11 @@ export type Booking = {
   createdAt: number;
   confirmedDate?: string;
 };
+
+export type PriceRule = {
+    id: string;
+    pickup: string;
+    destination: string;
+    vehicleType: string;
+    price: number;
+}

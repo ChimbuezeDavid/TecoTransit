@@ -33,8 +33,9 @@ export default function AdminHeader() {
                 <LayoutDashboard className="h-4 w-4" />
                 <span>Dashboard</span>
               </Link>
-             <Link href="#" className={cn(
-                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary cursor-not-allowed text-muted-foreground/50"
+             <Link href="/admin/pricing" className={cn(
+                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
+                 pathname === '/admin/pricing' ? "text-primary" : "text-muted-foreground"
              )}>
                 <Settings className="h-4 w-4" />
                 <span>Pricing</span>

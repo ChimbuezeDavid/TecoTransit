@@ -7,10 +7,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDoc, doc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import type { Booking } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { locations, vehicleOptions } from '@/lib/constants';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,23 +24,6 @@ import { CalendarIcon, User, Mail, Phone, ArrowRight, Car, Bus } from 'lucide-re
 import { cn } from '@/lib/utils';
 
 const luggageFee = 5;
-const baseFare = 50;
-
-const locations = [
-  "ABUAD",
-  "Ojota Lagos",
-  "Iyana Paja Lagos",
-  "FESTAC Lagos",
-  "Ibadan",
-  "Ajah Lagos",
-  "Warri Delta state"
-];
-
-const vehicleOptions = {
-    '4-seater': { name: '4-Seater Sienna', icon: Car, maxLuggages: 4 },
-    '5-seater': { name: '5-Seater Sienna', icon: Car, maxLuggages: 2 },
-    '7-seater': { name: '7-Seater Bus', icon: Bus, maxLuggages: 2 },
-};
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -49,16 +33,26 @@ const bookingSchema = z.object({
   destination: z.string({ required_error: 'Please select a destination.' }),
   intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
   alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
-  vehicleType: z.enum(['4-seater', '5-seater', '7-seater'], {
+  vehicleType: z.enum(Object.keys(vehicleOptions) as [string, ...string[]], {
     required_error: 'You need to select a vehicle type.',
   }),
   luggageCount: z.coerce.number().min(0).max(10),
+}).refine(data => {
+    if (data.intendedDate && data.alternativeDate) {
+        return data.alternativeDate > data.intendedDate;
+    }
+    return true;
+}, {
+    message: "Alternative date must be after the intended date.",
+    path: ["alternativeDate"],
 });
+
 
 export default function BookingForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [totalFare, setTotalFare] = useState(0);
+  const [baseFare, setBaseFare] = useState(0);
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -70,27 +64,44 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue } = form;
+  const { watch, getValues, setValue, trigger } = form;
   const intendedDate = watch('intendedDate');
   const selectedVehicleType = watch('vehicleType');
   const luggageCount = watch('luggageCount');
+  const pickup = watch('pickup');
+  const destination = watch('destination');
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+        const vehicleTypeName = selectedVehicleType ? vehicleOptions[selectedVehicleType].name : null;
+        if (pickup && destination && vehicleTypeName) {
+             const priceId = `${pickup}_${destination}_${vehicleTypeName}`.toLowerCase().replace(/\s+/g, '-');
+             const priceDoc = await getDoc(doc(db, "prices", priceId));
+             if (priceDoc.exists()) {
+                 setBaseFare(priceDoc.data().price);
+             } else {
+                 setBaseFare(0); // or a default value
+                 toast({ variant: 'destructive', title: "Route Not Available", description: "This route is not currently available for the selected vehicle." });
+             }
+        }
+    }
+    fetchPrice();
+  }, [pickup, destination, selectedVehicleType, toast]);
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
-       const { vehicleType, luggageCount } = values;
+       const { luggageCount } = values;
        
        const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
        setTotalFare(newTotalFare);
        
        if (name === 'intendedDate' && values.intendedDate) {
-            const currentAlternative = getValues('alternativeDate');
-            if (currentAlternative && currentAlternative <= values.intendedDate) {
-                setValue('alternativeDate', undefined as any);
-            }
+            setValue('alternativeDate', undefined as any);
+            trigger('alternativeDate');
        }
 
-       if (name === 'vehicleType' && vehicleType) {
-            const maxLuggages = vehicleOptions[vehicleType].maxLuggages;
+       if (name === 'vehicleType' && values.vehicleType) {
+            const maxLuggages = vehicleOptions[values.vehicleType].maxLuggages;
             const currentLuggages = getValues('luggageCount');
             if (currentLuggages > maxLuggages) {
                 setValue('luggageCount', maxLuggages);
@@ -98,29 +109,44 @@ export default function BookingForm() {
        }
     });
     return () => subscription.unsubscribe();
-  }, [watch, getValues, setValue]);
+  }, [watch, getValues, setValue, baseFare, trigger]);
 
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
+    if (baseFare === 0) {
+        toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
+        return;
+    }
+
     const bookingId = uuidv4();
     const finalFare = baseFare + (data.luggageCount || 0) * luggageFee;
-    const newBooking: Booking = {
-      ...data,
-      id: bookingId,
-      intendedDate: format(data.intendedDate, 'PPP'),
-      alternativeDate: format(data.alternativeDate, 'PPP'),
-      vehicleType: vehicleOptions[data.vehicleType].name as Booking['vehicleType'],
-      totalFare: finalFare,
-      status: 'Pending',
-      createdAt: Date.now(),
+    
+    // Reformat dates to YYYY-MM-DD for Firestore rules
+    const newBooking: Omit<Booking, 'id' | 'status' | 'createdAt'> & { intendedDate: string, alternativeDate: string } = {
+        ...data,
+        intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
+        alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
+        vehicleType: vehicleOptions[data.vehicleType].name,
+        totalFare: finalFare,
     };
+    
+    // Create the final object with display-formatted dates
+    const finalBooking: Booking = {
+        ...newBooking,
+        id: bookingId,
+        status: 'Pending',
+        createdAt: Date.now(),
+        intendedDate: format(data.intendedDate, 'PPP'),
+        alternativeDate: format(data.alternativeDate, 'PPP'),
+    };
+
 
     try {
       // Store in Local Storage
       const existingBookings = JSON.parse(localStorage.getItem('routewise-bookings') || '[]');
-      existingBookings.push(newBooking);
+      existingBookings.push(finalBooking);
       localStorage.setItem('routewise-bookings', JSON.stringify(existingBookings));
 
-      // Store in Firebase
+      // Store in Firebase with YYYY-MM-DD dates for rules
       await addDoc(collection(db, 'bookings'), newBooking);
       
       toast({
@@ -202,7 +228,7 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField
+                 <FormField
                     control={form.control}
                     name="vehicleType"
                     render={({ field }) => (
@@ -255,7 +281,7 @@ export default function BookingForm() {
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
                     <FormItem className="md:col-span-2">
                     <FormLabel>Number of Bags (Max {selectedVehicleType ? vehicleOptions[selectedVehicleType].maxLuggages : 'N/A'})</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value)} disabled={!selectedVehicleType}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!selectedVehicleType}>
                         <FormControl>
                         <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
                         </FormControl>
@@ -273,7 +299,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toFixed(2)}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || baseFare === 0}>
               {form.formState.isSubmitting ? "Submitting..." : "Book My Trip"}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -283,5 +309,3 @@ export default function BookingForm() {
     </Card>
   );
 }
-
-    

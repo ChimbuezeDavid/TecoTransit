@@ -2,44 +2,63 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /bookings/{bookingId} {
-      
-      function validateBookingData() {
-        let vehicleRules = {
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    
+    function getRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isBookingDataValid(data) {
+      let vehicleLuggageMap = {
           '4-Seater Sienna': 4,
           '5-Seater Sienna': 2,
           '7-Seater Bus': 2
-        };
-        let maxLuggage = vehicleRules[request.resource.data.vehicleType];
-        
-        return request.resource.data.name is string &&
-               request.resource.data.name.size() > 1 &&
-               request.resource.data.email is string &&
-               request.resource.data.email.matches('.*@.*\\..*') &&
-               request.resource.data.phone is string &&
-               request.resource.data.phone.size() > 9 &&
-               request.resource.data.pickup is string &&
-               request.resource.data.destination is string &&
-               request.resource.data.intendedDate is string &&
-               request.resource.data.alternativeDate is string &&
-               request.resource.data.vehicleType is string &&
-               request.resource.data.vehicleType in vehicleRules &&
-               request.resource.data.luggageCount is number &&
-               request.resource.data.luggageCount >= 0 &&
-               request.resource.data.luggageCount <= maxLuggage &&
-               request.resource.data.totalFare is number &&
-               request.resource.data.status == 'Pending' &&
-               request.resource.data.createdAt is number;
-      }
-
-      // Allow anyone to create a booking if the data is valid.
-      allow create: if validateBookingData();
+      };
       
-      // Allow anyone to read a single booking (for the confirmation page).
-      allow get: if true;
+      // Validate dates
+      let intendedDate = timestamp.date(
+        int(data.intendedDate.split('-')[0]),
+        int(data.intendedDate.split('-')[1]),
+        int(data.intendedDate.split('-')[2])
+      );
+      let alternativeDate = timestamp.date(
+        int(data.alternativeDate.split('-')[0]),
+        int(data.alternativeDate.split('-')[1]),
+        int(data.alternativeDate.split('-')[2])
+      );
 
-      // Allow only authenticated admins to list, update, or delete bookings.
-      allow list, update, delete: if request.auth != null;
+      return data.name is string && data.name.size() > 1 &&
+             data.email is string && data.email.matches('.+@.+\..+') &&
+             data.phone is string && data.phone.size() > 9 &&
+             data.pickup is string && data.pickup.size() > 0 &&
+             data.destination is string && data.destination.size() > 0 &&
+             data.vehicleType is string && data.vehicleType in vehicleLuggageMap.keys() &&
+             data.luggageCount is number && data.luggageCount >= 0 && data.luggageCount <= vehicleLuggageMap[data.vehicleType] &&
+             alternativeDate > intendedDate;
+    }
+
+    match /bookings/{bookingId} {
+        // Anyone can create a booking if the data is valid.
+        allow create: if isBookingDataValid(request.resource.data);
+        
+        // Anyone can read a single booking (for confirmation page). Admins can read all.
+        allow get: if true;
+        
+        // Only admins can list, update, or delete bookings.
+        allow list, update, delete: if isAuth();
+    }
+    
+    match /prices/{priceId} {
+        // Only admins can read and write price rules.
+        allow read, write: if isAuth();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuth() && request.auth.uid == userId;
     }
   }
 }
