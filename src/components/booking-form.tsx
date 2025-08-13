@@ -201,7 +201,7 @@ export default function BookingForm() {
                         <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {[...Array(11).keys()].map(i => <SelectItem key={i} value={String(i)}>{i}</SelectItem>)}
+                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
