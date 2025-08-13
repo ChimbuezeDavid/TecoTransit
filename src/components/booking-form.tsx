@@ -125,7 +125,7 @@ export default function BookingForm() {
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">Plan Your Trip</CardTitle>
+        <CardTitle className="font-headline text-2xl">Book a Trip</CardTitle>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -180,6 +180,34 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
+                <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Vehicle Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Number of Bags</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Intended Departure</FormLabel>
@@ -207,34 +235,6 @@ export default function BookingForm() {
                     <PopoverContent className="w-auto p-0" align="start">
                         <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
                     </PopoverContent></Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Number of Bags</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
                     <FormMessage />
                     </FormItem>
                 )} />
