@@ -19,15 +19,20 @@ export default function AdminLayout({
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !user && pathname !== "/admin/login") {
       router.push("/admin/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, pathname]);
 
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/admin/login");
   };
+  
+  // If we are on the login page, don't render the layout
+  if (pathname === "/admin/login") {
+      return <>{children}</>;
+  }
 
   if (loading) {
     return (
