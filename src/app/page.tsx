@@ -1,8 +1,10 @@
 import BookingForm from '@/components/booking-form';
+import CustomerPriceAlert from '@/components/customer-price-alert';
 
 export default function Home() {
   return (
     <div className="container mx-auto px-4 py-8 sm:py-12">
+      <CustomerPriceAlert />
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary tracking-tight">
           RouteWise

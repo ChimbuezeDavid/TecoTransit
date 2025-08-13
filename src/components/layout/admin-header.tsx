@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
@@ -39,6 +39,13 @@ export default function AdminHeader() {
              )}>
                 <span className="font-bold text-base">₦</span>
                 <span>Pricing</span>
+             </Link>
+             <Link href="/admin/price-alert" className={cn(
+                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
+                 pathname === '/admin/price-alert' ? "text-primary" : "text-muted-foreground"
+             )}>
+                <Megaphone className="h-4 w-4" />
+                <span>Price Alert</span>
              </Link>
           </nav>
            <Button variant="ghost" size="sm" onClick={handleLogout}>

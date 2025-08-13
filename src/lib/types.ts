@@ -23,3 +23,8 @@ export type PriceRule = {
     vehicleType: string;
     price: number;
 }
+
+export type PriceAlert = {
+    content: string;
+    updatedAt: number;
+}
