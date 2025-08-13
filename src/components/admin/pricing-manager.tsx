@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit, X } from "lucide-react";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -34,10 +34,14 @@ export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState<PriceRule | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+        pickup: "",
+        destination: "",
+        vehicleType: "",
         price: 0,
     }
   });
@@ -74,10 +78,51 @@ export default function PricingManager() {
       field.onChange(rawValue ? Number(rawValue) : '');
     }
   };
+  
+  const handleEdit = (rule: PriceRule) => {
+    setEditMode(rule);
+    form.reset({
+        pickup: rule.pickup,
+        destination: rule.destination,
+        vehicleType: rule.vehicleType,
+        price: rule.price
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditMode(null);
+    form.reset({
+        pickup: "",
+        destination: "",
+        vehicleType: "",
+        price: 0
+    });
+  };
 
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const priceId = `${data.pickup}_${data.destination}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+    
+    // Prevent adding a duplicate if not in edit mode
+    if (!editMode && priceList.some(p => p.id === priceId)) {
+        toast({
+            variant: "destructive",
+            title: "Duplicate Rule",
+            description: "A price rule for this route and vehicle already exists. Please edit the existing one.",
+        });
+        return;
+    }
+
+    // If in edit mode, but the combination was changed to one that already exists
+    if (editMode && editMode.id !== priceId && priceList.some(p => p.id === priceId)) {
+       toast({
+            variant: "destructive",
+            title: "Duplicate Rule",
+            description: "This combination already exists. Please edit that rule instead.",
+        });
+        return;
+    }
+
     const reciprocalPriceId = `${data.destination}_${data.pickup}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
     
     const priceRef = doc(db, "prices", priceId);
@@ -92,16 +137,19 @@ export default function PricingManager() {
     try {
       await setDoc(priceRef, data, { merge: true });
       await setDoc(reciprocalPriceRef, reciprocalData, { merge: true });
+      
+      // If we were editing, and the ID changed, delete the old rule and its reciprocal
+      if (editMode && editMode.id !== priceId) {
+          const oldReciprocalId = `${editMode.destination}_${editMode.pickup}_${editMode.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+          await deleteDoc(doc(db, "prices", editMode.id));
+          await deleteDoc(doc(db, "prices", oldReciprocalId));
+      }
+
       toast({
-        title: "Price Rules Saved",
-        description: "The prices for the trip and its return have been saved.",
+        title: `Price Rule ${editMode ? 'Updated' : 'Saved'}`,
+        description: `The prices for the trip and its return have been ${editMode ? 'updated' : 'saved'}.`,
       });
-      form.reset({
-        pickup: '',
-        destination: '',
-        vehicleType: '',
-        price: 0
-      });
+      cancelEdit();
     } catch (error) {
       console.error("Error saving price:", error);
       toast({
@@ -121,6 +169,9 @@ export default function PricingManager() {
         title: "Price Rules Deleted",
         description: "The price rule and its reciprocal have been removed.",
       });
+      if (editMode && editMode.id === rule.id) {
+          cancelEdit();
+      }
     } catch (error) {
        toast({
         variant: "destructive",
@@ -136,8 +187,8 @@ export default function PricingManager() {
       <div className="md:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Add New Price Rule</CardTitle>
-            <CardDescription>Set a fare for a specific route and vehicle. A return price will be created automatically.</CardDescription>
+            <CardTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</CardTitle>
+            <CardDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</CardDescription>
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -188,10 +239,13 @@ export default function PricingManager() {
                     </FormItem>
                 )} />
               </CardContent>
-              <CardFooter>
+              <CardFooter className="flex justify-between">
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? "Saving..." : "Save Price"}
+                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Price" : "Save Price")}
                 </Button>
+                {editMode && (
+                    <Button type="button" variant="ghost" onClick={cancelEdit}><X className="mr-2 h-4 w-4" />Cancel</Button>
+                )}
               </CardFooter>
             </form>
           </Form>
@@ -210,7 +264,7 @@ export default function PricingManager() {
                             <TableHead>Route</TableHead>
                             <TableHead>Vehicle</TableHead>
                             <TableHead>Price</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -220,7 +274,7 @@ export default function PricingManager() {
                             <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                         ) : (
                             priceList.map((rule) => (
-                                <TableRow key={rule.id}>
+                                <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
                                     <TableCell>
                                         <div className="font-medium">{rule.pickup}</div>
                                         <div className="text-sm text-muted-foreground">to {rule.destination}</div>
@@ -228,6 +282,7 @@ export default function PricingManager() {
                                     <TableCell>{rule.vehicleType}</TableCell>
                                     <TableCell>₦{rule.price.toLocaleString()}</TableCell>
                                     <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
                                          <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
