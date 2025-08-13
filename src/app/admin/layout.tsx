@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter } from "@/components/ui/sidebar";
@@ -16,6 +16,7 @@ export default function AdminLayout({
 }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,12 +29,16 @@ export default function AdminLayout({
     router.push("/admin/login");
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
         <div className="flex items-center justify-center h-screen">
             <div className="h-12 w-12 border-4 border-t-primary border-transparent rounded-full animate-spin"></div>
         </div>
     );
+  }
+  
+  if (!user) {
+    return null;
   }
 
   return (
@@ -45,7 +50,7 @@ export default function AdminLayout({
             <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton onClick={() => router.push('/admin')} tooltip="Dashboard" isActive={true}>
+                        <SidebarMenuButton onClick={() => router.push('/admin')} tooltip="Dashboard" isActive={pathname === '/admin'}>
                             <LayoutDashboard />
                             <span>Dashboard</span>
                         </SidebarMenuButton>
