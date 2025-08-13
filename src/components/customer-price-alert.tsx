@@ -6,6 +6,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import type { PriceAlert } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Megaphone } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function CustomerPriceAlert() {
   const [alert, setAlert] = useState<PriceAlert | null>(null);
@@ -35,8 +36,8 @@ export default function CustomerPriceAlert() {
     );
   }
 
-  if (!alert || !alert.content) {
-    return null; // Don't render anything if there's no alert
+  if (!alert || !alert.content || !alert.display) {
+    return null; // Don't render if no alert, no content, or display is off
   }
 
   return (
@@ -44,8 +45,12 @@ export default function CustomerPriceAlert() {
       <Alert>
         <Megaphone className="h-4 w-4" />
         <AlertTitle>An Important Update from RouteWise!</AlertTitle>
-        <AlertDescription className="prose prose-sm max-w-none text-muted-foreground">
-            {alert.content}
+        <AlertDescription className={cn(
+          "prose prose-sm max-w-none text-muted-foreground",
+           alert.font,
+           alert.fontSize
+        )}>
+           {alert.content}
         </AlertDescription>
       </Alert>
     </div>

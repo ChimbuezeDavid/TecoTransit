@@ -26,5 +26,8 @@ export type PriceRule = {
 
 export type PriceAlert = {
     content: string;
+    display: boolean;
+    font: string;
+    fontSize: string;
     updatedAt: number;
 }
