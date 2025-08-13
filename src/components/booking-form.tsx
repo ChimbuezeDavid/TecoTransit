@@ -148,17 +148,27 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                </div>
-                
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="phone" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Phone Number</FormLabel>
+                        <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Number of Bags</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
                     <FormField control={form.control} name="pickup" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Pickup Location</FormLabel>
@@ -187,57 +197,7 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                </div>
-
-                 <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
-                        <FormItem className="space-y-3">
-                        <FormLabel>Select Vehicle Type</FormLabel>
-                        <FormControl>
-                            <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                            >
-                            {Object.entries(vehicleOptions).map(([key, { name, icon: Icon }]) => (
-                                <FormItem key={key} className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                    <RadioGroupItem value={key} className="sr-only" />
-                                </FormControl>
-                                <FormLabel className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground w-full cursor-pointer [&:has([data-state=checked])]:border-primary">
-                                    <Icon className="mb-3 h-6 w-6" />
-                                    {name}
-                                </FormLabel>
-                                </FormItem>
-                            ))}
-                            </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                    <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Number of Bags</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} defaultValue={String(field.value)}>
-                            <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                     <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                    <FormField control={form.control} name="intendedDate" render={({ field }) => (
                         <FormItem className="flex flex-col">
                         <FormLabel>Intended Departure</FormLabel>
                         <Popover><PopoverTrigger asChild><FormControl>
@@ -268,6 +228,36 @@ export default function BookingForm() {
                         </FormItem>
                     )} />
                 </div>
+                
+                 <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                        <FormLabel>Select Vehicle Type</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                            >
+                            {Object.entries(vehicleOptions).map(([key, { name, icon: Icon }]) => (
+                                <FormItem key={key} className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                    <RadioGroupItem value={key} className="sr-only" />
+                                </FormControl>
+                                <FormLabel className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground w-full cursor-pointer [&:has([data-state=checked])]:border-primary">
+                                    <Icon className="mb-3 h-6 w-6" />
+                                    {name}
+                                </FormLabel>
+                                </FormItem>
+                            ))}
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
