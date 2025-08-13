@@ -63,7 +63,12 @@ export default function PricingManager() {
         title: "Price Rule Saved",
         description: "The price has been successfully added or updated.",
       });
-      form.reset();
+      form.reset({
+        pickup: '',
+        destination: '',
+        vehicleType: '',
+        price: undefined
+      });
     } catch (error) {
       console.error("Error saving price:", error);
       toast({
@@ -104,7 +109,7 @@ export default function PricingManager() {
                 <FormField control={form.control} name="pickup" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
                       <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
                     </Select>
@@ -114,7 +119,7 @@ export default function PricingManager() {
                 <FormField control={form.control} name="destination" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
                       <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
                     </Select>
@@ -124,7 +129,7 @@ export default function PricingManager() {
                 <FormField control={form.control} name="vehicleType" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
                       <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
                     </Select>
@@ -135,7 +140,7 @@ export default function PricingManager() {
                     <FormItem>
                         <FormLabel>Price (NGN)</FormLabel>
                         <FormControl>
-                            <Input type="number" placeholder="50000" {...field} />
+                            <Input type="text" inputMode="decimal" placeholder="50000" {...field} onChange={e => field.onChange(e.target.value.replace(/[^0-9.]/g, ''))} value={field.value ?? ''} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -179,7 +184,7 @@ export default function PricingManager() {
                                         <div className="text-sm text-muted-foreground">to {rule.destination}</div>
                                     </TableCell>
                                     <TableCell>{rule.vehicleType}</TableCell>
-                                    <TableCell>₦{rule.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                    <TableCell>₦{rule.price.toLocaleString()}</TableCell>
                                     <TableCell className="text-right">
                                          <AlertDialog>
                                             <AlertDialogTrigger asChild>
