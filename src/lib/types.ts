@@ -7,7 +7,7 @@ export type Booking = {
   destination: string;
   intendedDate: string;
   alternativeDate: string;
-  vehicleType: '4-seater' | '5-seater' | '7-seater';
+  vehicleType: string;
   luggageCount: number;
   totalFare: number;
   status: 'Pending' | 'Confirmed' | 'Cancelled';
