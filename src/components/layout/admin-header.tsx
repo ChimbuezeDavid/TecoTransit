@@ -10,6 +10,7 @@ import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "../ui/sheet";
+import { ThemeToggle } from "../theme-toggle";
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -48,7 +49,8 @@ export default function AdminHeader() {
                 </Link>
              ))}
           </nav>
-           <div className="hidden md:flex">
+           <div className="hidden md:flex items-center gap-2">
+             <ThemeToggle />
              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
@@ -56,7 +58,8 @@ export default function AdminHeader() {
            </div>
           
           {/* Mobile Navigation */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" size="icon">

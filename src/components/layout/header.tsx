@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { ThemeToggle } from '../theme-toggle';
 
 export default function Header() {
   const pathname = usePathname();
@@ -50,10 +51,12 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
              {navLinks.map(link => <NavLink key={link.href} {...link}/>)}
+             <ThemeToggle />
           </nav>
 
           {/* Mobile Navigation */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
             <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
               <SheetTrigger asChild>
                  <Button variant="outline" size="icon">
