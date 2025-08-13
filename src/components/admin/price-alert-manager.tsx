@@ -88,7 +88,7 @@ export default function PriceAlertManager() {
           <CardHeader>
             <CardTitle>Customer Alert Management</CardTitle>
             <CardDescription>
-              Create and manage the site-wide alert shown to customers. Use the switch to control visibility.
+              Create, style, and manage the site-wide alert shown to customers.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -117,26 +117,7 @@ export default function PriceAlertManager() {
                 <Separator />
                 
                 <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="display"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                          <div className="space-y-0.5">
-                            <FormLabel className="text-base">Display Alert</FormLabel>
-                            <CardDescription>
-                              Turn this on to show the alert to customers.
-                            </CardDescription>
-                          </div>
-                          <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                    <CardTitle className="text-xl">Alert Styling</CardTitle>
                      <div className="grid grid-cols-2 gap-4">
                        <FormField control={form.control} name="font" render={({ field }) => (
                           <FormItem>
@@ -173,6 +154,29 @@ export default function PriceAlertManager() {
                         )} />
                     </div>
                 </div>
+
+                <Separator/>
+                
+                <FormField
+                  control={form.control}
+                  name="display"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Display Alert to Customers</FormLabel>
+                        <CardDescription>
+                          Turn this on to make the alert visible on the customer homepage.
+                        </CardDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </>
             )}
           </CardContent>
