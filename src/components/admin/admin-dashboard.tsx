@@ -148,7 +148,7 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <p><strong>Status:</strong> <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge></p>
-                    <p><strong>Fare:</strong> ${selectedBooking.totalFare.toFixed(2)}</p>
+                    <p><strong>Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</p>
                     
                     {selectedBooking.status === 'Pending' && (
                         <div>
@@ -187,3 +187,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    

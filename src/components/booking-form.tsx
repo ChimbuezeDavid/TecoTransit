@@ -125,7 +125,7 @@ export default function BookingForm() {
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
-        <CardTitle className="font-headline text-3xl">Book Your Ride With Ease</CardTitle>
+        <CardTitle className="font-headline text-3xl text-primary">Book Your Ride With Ease</CardTitle>
         <CardDescription>Fill out the form below to secure your spot.</CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -147,14 +147,15 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                </div>
-                 <FormField control={form.control} name="phone" render={({ field }) => (
+                     <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
                     <FormMessage />
                     </FormItem>
                 )} />
+                </div>
+               
 
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                     <FormField control={form.control} name="pickup" render={({ field }) => (
@@ -182,6 +183,38 @@ export default function BookingForm() {
                             {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                </div>
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                     <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Intended Departure</FormLabel>
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                             <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                        </PopoverContent></Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="alternativeDate" render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                        <FormLabel>Alternative Departure</FormLabel>
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                             <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                        </PopoverContent></Popover>
                         <FormMessage />
                         </FormItem>
                     )} />
@@ -213,43 +246,13 @@ export default function BookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                     <FormField control={form.control} name="intendedDate" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel>Intended Departure</FormLabel>
-                        <Popover><PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                        </PopoverContent></Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                        <FormLabel>Alternative Departure</FormLabel>
-                        <Popover><PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                        </PopoverContent></Popover>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
                 </div>
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
-                <p className="text-2xl font-bold text-primary">${totalFare.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">₦{totalFare.toFixed(2)}</p>
             </div>
             <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? "Submitting..." : "Book My Trip"}
@@ -261,3 +264,4 @@ export default function BookingForm() {
     </Card>
   );
 }
+    
