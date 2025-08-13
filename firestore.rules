@@ -1,45 +1,44 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    function isBookingDataValid(data) {
-      // Vehicle type to max luggage mapping
-      let vehicleLuggages = {
-        '4-Seater Sienna': 4,
-        '5-Seater Sienna': 2,
-        '7-Seater Bus': 2
-      };
-
-      // Basic type and length checks
-      let isDataStructureValid = data.name is string && data.name.size() >= 2 &&
-                                 data.email is string && data.email.matches('.*@.*') &&
-                                 data.phone is string && data.phone.size() >= 10 &&
-                                 data.pickup is string && data.pickup.size() > 0 &&
-                                 data.destination is string && data.destination.size() > 0 &&
-                                 data.intendedDate is string &&
-                                 data.alternativeDate is string &&
-                                 data.vehicleType is string && data.vehicleType in vehicleLuggages &&
-                                 data.luggageCount is number && data.luggageCount >= 0 &&
-                                 data.luggageCount <= vehicleLuggages[data.vehicleType] &&
-                                 data.totalFare is number &&
-                                 data.status == 'Pending' &&
-                                 data.createdAt is number;
-
-      // Firestore has no native date parsing, so we rely on client-side format.
-      // A more robust solution might involve storing dates as timestamps.
-      let areDatesValid = data.alternativeDate > data.intendedDate;
-
-      return isDataStructureValid && areDatesValid;
-    }
-    
     match /bookings/{bookingId} {
-      // Anyone can read a specific booking document (for confirmation page)
+      
+      function validateBookingData() {
+        let vehicleRules = {
+          '4-Seater Sienna': 4,
+          '5-Seater Sienna': 2,
+          '7-Seater Bus': 2
+        };
+        let maxLuggage = vehicleRules[request.resource.data.vehicleType];
+        
+        return request.resource.data.name is string &&
+               request.resource.data.name.size() > 1 &&
+               request.resource.data.email is string &&
+               request.resource.data.email.matches('.*@.*\\..*') &&
+               request.resource.data.phone is string &&
+               request.resource.data.phone.size() > 9 &&
+               request.resource.data.pickup is string &&
+               request.resource.data.destination is string &&
+               request.resource.data.intendedDate is string &&
+               request.resource.data.alternativeDate is string &&
+               request.resource.data.vehicleType is string &&
+               request.resource.data.vehicleType in vehicleRules &&
+               request.resource.data.luggageCount is number &&
+               request.resource.data.luggageCount >= 0 &&
+               request.resource.data.luggageCount <= maxLuggage &&
+               request.resource.data.totalFare is number &&
+               request.resource.data.status == 'Pending' &&
+               request.resource.data.createdAt is number;
+      }
+
+      // Allow anyone to create a booking if the data is valid.
+      allow create: if validateBookingData();
+      
+      // Allow anyone to read a single booking (for the confirmation page).
       allow get: if true;
 
-      // Anyone can create a new booking if the data is valid
-      allow create: if isBookingDataValid(request.resource.data);
-      
-      // Only authenticated admins can list, update or delete bookings
+      // Allow only authenticated admins to list, update, or delete bookings.
       allow list, update, delete: if request.auth != null;
     }
   }
