@@ -13,7 +13,7 @@ import type { Booking } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -23,11 +23,12 @@ import { CalendarIcon, User, Mail, Phone, Briefcase, Car, Bus, ArrowRight } from
 import { cn } from '@/lib/utils';
 
 const vehicleOptions = {
-  '4-seater': { name: '4-Seater Sienna', icon: Car, baseFare: 50 },
-  '5-seater': { name: '5-Seater Sienna', icon: Car, baseFare: 60 },
-  '7-seater': { name: '7-Seater Bus', icon: Bus, baseFare: 80 },
+  '4-seater': { name: '4-Seater Sienna', icon: Car },
+  '5-seater': { name: '5-Seater Sienna', icon: Car },
+  '7-seater': { name: '7-Seater Bus', icon: Bus },
 };
 const luggageFee = 5;
+const baseFare = 50;
 
 const locations = [
   "ABUAD",
@@ -45,12 +46,12 @@ const bookingSchema = z.object({
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
-  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
-  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
   vehicleType: z.enum(['4-seater', '5-seater', '7-seater'], {
     required_error: 'You need to select a vehicle type.',
   }),
   luggageCount: z.coerce.number().min(0).max(10),
+  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
+  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
 });
 
 export default function BookingForm() {
@@ -73,12 +74,9 @@ export default function BookingForm() {
   useEffect(() => {
     const subscription = watch((values, { name }) => {
       if (name === 'vehicleType' || name === 'luggageCount') {
-        const { vehicleType, luggageCount } = getValues();
-        if (vehicleType) {
-          const baseFare = vehicleOptions[vehicleType].baseFare;
-          const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
-          setTotalFare(newTotalFare);
-        }
+        const { luggageCount } = getValues();
+        const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
+        setTotalFare(newTotalFare);
       }
     });
     return () => subscription.unsubscribe();
@@ -124,8 +122,9 @@ export default function BookingForm() {
 
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">Book a Trip</CardTitle>
+       <CardHeader className="text-center">
+        <CardTitle className="font-headline text-3xl text-primary">Book Your Ride With Ease</CardTitle>
+        <CardDescription>Fill out the form below to secure your spot.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -180,34 +179,6 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Number of Bags</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Intended Departure</FormLabel>
@@ -238,6 +209,34 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
+                 <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Vehicle Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {Object.entries(vehicleOptions).map(([key, { name }]) => <SelectItem key={key} value={key}>{name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Number of Bags</FormLabel>
+                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select number of bags" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {[...Array(7).keys()].map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )} />
             </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
@@ -255,3 +254,5 @@ export default function BookingForm() {
     </Card>
   );
 }
+
+    
