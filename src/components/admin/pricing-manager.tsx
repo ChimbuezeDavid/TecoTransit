@@ -25,6 +25,9 @@ const formSchema = z.object({
   destination: z.string({ required_error: 'Please select a destination.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   price: z.coerce.number().positive({ message: "Price must be a positive number." }),
+}).refine(data => data.pickup !== data.destination, {
+  message: "Pickup and destination cannot be the same.",
+  path: ["destination"],
 });
 
 export default function PricingManager() {
@@ -34,6 +37,9 @@ export default function PricingManager() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+        price: 0,
+    }
   });
 
   useEffect(() => {
@@ -43,6 +49,7 @@ export default function PricingManager() {
       querySnapshot.forEach((doc) => {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
+      prices.sort((a,b) => a.pickup.localeCompare(b.pickup));
       setPriceList(prices);
       setLoading(false);
     }, (error) => {
@@ -53,62 +60,76 @@ export default function PricingManager() {
     return () => unsubscribe();
   }, [toast]);
 
+  const formatNumberWithCommas = (value: string | number) => {
+    const num = String(value).replace(/,/g, '');
+    if (num === '' || isNaN(Number(num))) return '';
+    const parts = num.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+  
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+    const rawValue = e.target.value.replace(/,/g, '');
+    if (/^\d*\.?\d*$/.test(rawValue)) {
+      field.onChange(rawValue ? Number(rawValue) : '');
+    }
+  };
+
+
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const priceId = `${data.pickup}_${data.destination}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+    const reciprocalPriceId = `${data.destination}_${data.pickup}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+    
     const priceRef = doc(db, "prices", priceId);
+    const reciprocalPriceRef = doc(db, "prices", reciprocalPriceId);
+
+    const reciprocalData = {
+        ...data,
+        pickup: data.destination,
+        destination: data.pickup,
+    };
 
     try {
       await setDoc(priceRef, data, { merge: true });
+      await setDoc(reciprocalPriceRef, reciprocalData, { merge: true });
       toast({
-        title: "Price Rule Saved",
-        description: "The price has been successfully added or updated.",
+        title: "Price Rules Saved",
+        description: "The prices for the trip and its return have been saved.",
       });
       form.reset({
         pickup: '',
         destination: '',
         vehicleType: '',
-        price: undefined
+        price: 0
       });
     } catch (error) {
       console.error("Error saving price:", error);
       toast({
         variant: "destructive",
         title: "Save Failed",
-        description: "Could not save the price rule. Please try again.",
+        description: "Could not save the price rules. Please try again.",
       });
     }
   }
 
-  async function handleDelete(priceId: string) {
+  async function handleDelete(rule: PriceRule) {
+    const reciprocalId = `${rule.destination}_${rule.pickup}_${rule.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
     try {
-      await deleteDoc(doc(db, "prices", priceId));
+      await deleteDoc(doc(db, "prices", rule.id));
+      await deleteDoc(doc(db, "prices", reciprocalId));
       toast({
-        title: "Price Rule Deleted",
-        description: "The price rule has been removed.",
+        title: "Price Rules Deleted",
+        description: "The price rule and its reciprocal have been removed.",
       });
     } catch (error) {
        toast({
         variant: "destructive",
         title: "Delete Failed",
-        description: "Could not delete the price rule. Please try again.",
+        description: "Could not delete the price rules. Please try again.",
       });
     }
   }
 
-  const formatNumber = (value: string) => {
-    const num = value.replace(/,/g, '').match(/\d*(\.\d*)?/g)?.[0] || '';
-    if (num === '') return '';
-    const parts = num.split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
-  };
-
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
-    const rawValue = e.target.value.replace(/,/g, '');
-    if (/^\d*$/.test(rawValue)) {
-      field.onChange(rawValue ? Number(rawValue) : '');
-    }
-  };
 
   return (
     <div className="grid md:grid-cols-3 gap-8">
@@ -116,7 +137,7 @@ export default function PricingManager() {
         <Card>
           <CardHeader>
             <CardTitle>Add New Price Rule</CardTitle>
-            <CardDescription>Set a fare for a specific route and vehicle.</CardDescription>
+            <CardDescription>Set a fare for a specific route and vehicle. A return price will be created automatically.</CardDescription>
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -136,7 +157,7 @@ export default function PricingManager() {
                     <FormLabel>Destination</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
-                      <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                      <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
@@ -158,8 +179,8 @@ export default function PricingManager() {
                             <Input 
                                 type="text"
                                 inputMode="decimal" 
-                                placeholder="50000"
-                                value={field.value ? formatNumber(String(field.value)) : ''}
+                                placeholder="50,000"
+                                value={field.value ? formatNumberWithCommas(field.value) : ''}
                                 onChange={(e) => handlePriceChange(e, field)}
                             />
                         </FormControl>
@@ -215,12 +236,12 @@ export default function PricingManager() {
                                                 <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    This will permanently delete the price rule for this route and vehicle. This action cannot be undone.
+                                                    This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
                                                 </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(rule.id)}>Delete</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
