@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /bookings/{bookingId} {
+      // Allow anyone to create a booking (submit the form)
+      allow create: if true;
+
+      // Only allow authenticated users (admins) to read, update, or delete bookings
+      allow read, update, delete: if request.auth != null;
+    }
+  }
+}
