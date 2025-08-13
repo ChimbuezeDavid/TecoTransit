@@ -57,6 +57,9 @@ export default function BookingForm() {
   const [baseFare, setBaseFare] = useState(0);
   const [availableVehicles, setAvailableVehicles] = useState<typeof allVehicleOptions>({});
   const [isFetchingVehicles, setIsFetchingVehicles] = useState(false);
+  const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
+  const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
+
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -231,7 +234,7 @@ export default function BookingForm() {
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
         <CardTitle className="font-headline text-3xl text-primary">Booking Details</CardTitle>
-        <CardDescription>Fill out the form below to secure your spot.</CardDescription>
+        <CardDescription>Fill out the form below to secure your seat.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -316,30 +319,52 @@ export default function BookingForm() {
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Intended Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                        <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                    </PopoverContent></Popover>
+                    <Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}>
+                        <PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsIntendedDatePopoverOpen(false);
+                                }}
+                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
+                                initialFocus 
+                            />
+                        </PopoverContent>
+                    </Popover>
                     <FormMessage />
                     </FormItem>
                 )} />
                 <FormField control={form.control} name="alternativeDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Alternative Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                        <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!intendedDate}>
-                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date <= (intendedDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus />
-                    </PopoverContent></Popover>
+                    <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
+                        <PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!intendedDate}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsAlternativeDatePopoverOpen(false);
+                                }}
+                                disabled={(date) => date <= (intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
+                                initialFocus 
+                            />
+                        </PopoverContent>
+                    </Popover>
                     <FormMessage />
                     </FormItem>
                 )} />
