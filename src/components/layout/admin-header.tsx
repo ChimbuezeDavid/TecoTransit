@@ -45,7 +45,7 @@ export default function AdminHeader() {
                  pathname === '/admin/price-alert' ? "text-primary" : "text-muted-foreground"
              )}>
                 <Megaphone className="h-4 w-4" />
-                <span>Price Alert</span>
+                <span>Site Alert</span>
              </Link>
           </nav>
            <Button variant="ghost" size="sm" onClick={handleLogout}>
