@@ -95,6 +95,21 @@ export default function PricingManager() {
     }
   }
 
+  const formatNumber = (value: string) => {
+    const num = value.replace(/,/g, '').match(/\d*(\.\d*)?/g)?.[0] || '';
+    if (num === '') return '';
+    const parts = num.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>, field: any) => {
+    const rawValue = e.target.value.replace(/,/g, '');
+    if (/^\d*$/.test(rawValue)) {
+      field.onChange(rawValue ? Number(rawValue) : '');
+    }
+  };
+
   return (
     <div className="grid md:grid-cols-3 gap-8">
       <div className="md:col-span-1">
@@ -140,7 +155,13 @@ export default function PricingManager() {
                     <FormItem>
                         <FormLabel>Price (NGN)</FormLabel>
                         <FormControl>
-                            <Input type="text" inputMode="decimal" placeholder="50000" {...field} onChange={e => field.onChange(e.target.value.replace(/[^0-9.]/g, ''))} value={field.value ?? ''} />
+                            <Input 
+                                type="text"
+                                inputMode="decimal" 
+                                placeholder="50000"
+                                value={field.value ? formatNumber(String(field.value)) : ''}
+                                onChange={(e) => handlePriceChange(e, field)}
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
