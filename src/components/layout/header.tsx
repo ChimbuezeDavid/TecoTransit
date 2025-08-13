@@ -17,9 +17,6 @@ export default function Header() {
             <Button variant="ghost" asChild>
               <Link href="/trips">My Trips</Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/admin">Admin Portal</Link>
-            </Button>
           </nav>
         </div>
       </div>
