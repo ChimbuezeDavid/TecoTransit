@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Route } from "lucide-react";
+import { Route, Eye, EyeOff } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -24,6 +24,7 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,6 +55,39 @@ export function LoginForm() {
     }
   }
 
+  const handlePasswordReset = async () => {
+    const email = form.getValues("email");
+    if (!email) {
+      form.setError("email", { type: "manual", message: "Please enter your email to reset the password." });
+      return;
+    }
+     // Zod validation for email format
+    const emailSchema = z.string().email();
+    const validation = emailSchema.safeParse(email);
+    if (!validation.success) {
+      form.setError("email", { type: "manual", message: "Please enter a valid email address." });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your inbox for instructions to reset your password.",
+      });
+    } catch (error) {
+      console.error("Password reset error:", error);
+       toast({
+        variant: "destructive",
+        title: "Error Sending Email",
+        description: "Could not send password reset email. Please try again.",
+      });
+    } finally {
+        setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardHeader className="text-center">
@@ -82,10 +116,31 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
-                  </FormControl>
+                    <div className="flex items-center justify-between">
+                        <FormLabel>Password</FormLabel>
+                        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handlePasswordReset} disabled={loading}>
+                            Forgot password?
+                        </Button>
+                    </div>
+                    <FormControl>
+                        <div className="relative">
+                            <Input 
+                                type={showPassword ? "text" : "password"} 
+                                placeholder="••••••••" 
+                                {...field} 
+                            />
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                <span className="sr-only">{showPassword ? 'Hide password' : 'Show password'}</span>
+                            </Button>
+                        </div>
+                    </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
