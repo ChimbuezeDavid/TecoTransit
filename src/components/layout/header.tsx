@@ -4,9 +4,16 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { Route } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 
 export default function Header() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  // Don't render the header on admin pages
+  if (pathname.startsWith('/admin')) {
+    return null;
+  }
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
@@ -29,12 +36,14 @@ export default function Header() {
              )}>
                 FAQs
              </Link>
-             <Link href="/admin" className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
-             )}>
-                Admin
-             </Link>
+              {user && (
+                 <Link href="/admin" className={cn(
+                    "text-sm font-medium transition-colors hover:text-primary",
+                    pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
+                 )}>
+                    Admin
+                 </Link>
+              )}
           </nav>
         </div>
       </div>

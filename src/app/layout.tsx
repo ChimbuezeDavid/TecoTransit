@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import Header from '@/components/layout/header';
+import Footer from '@/components/layout/footer';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -26,8 +27,11 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased flex flex-col h-full bg-muted/20">
         <AuthProvider>
-          <Header />
-          <main className="flex-grow">{children}</main>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+          </div>
           <Toaster />
         </AuthProvider>
       </body>
