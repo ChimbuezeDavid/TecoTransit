@@ -43,11 +43,6 @@ export default function RootLayout({
     );
   }
 
-  const metadata: Metadata = {
-    title: 'RouteWise',
-    description: 'Your Journey, Simplified. Book your ride in minutes.',
-  };
-
   return (
     <html lang="en" className="h-full">
       <head>

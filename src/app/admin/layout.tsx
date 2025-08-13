@@ -40,7 +40,7 @@ export default function AdminLayout({
   return (
     <div className="flex flex-col min-h-screen">
       <AdminHeader />
-      <main className="flex-grow p-4 sm:p-6 lg:p-8 bg-muted/40 overflow-auto">
+      <main className="flex-grow p-4 sm:p-6 lg:p-8 bg-muted/40">
         {children}
       </main>
       <AdminFooter />
