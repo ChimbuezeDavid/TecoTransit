@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,17 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
-
-function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M7 18V6h10"/>
-      <path d="M17 18L7 6"/>
-      <path d="M17 6L7 18"/>
-      <path d="M6 12h12"/>
-    </svg>
-  );
-}
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -143,12 +133,9 @@ export default function PricingManager() {
                 )} />
                 <FormField control={form.control} name="price" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Price</FormLabel>
+                        <FormLabel>Price (NGN)</FormLabel>
                         <FormControl>
-                            <div className="relative">
-                                <NairaIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input type="number" step="0.01" placeholder="50.00" {...field} className="pl-9" />
-                            </div>
+                            <Input type="number" placeholder="50000" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -192,7 +179,7 @@ export default function PricingManager() {
                                         <div className="text-sm text-muted-foreground">to {rule.destination}</div>
                                     </TableCell>
                                     <TableCell>{rule.vehicleType}</TableCell>
-                                    <TableCell>₦{rule.price.toFixed(2)}</TableCell>
+                                    <TableCell>₦{rule.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                     <TableCell className="text-right">
                                          <AlertDialog>
                                             <AlertDialogTrigger asChild>
