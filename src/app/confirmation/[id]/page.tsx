@@ -10,17 +10,6 @@ import { CheckCircle, User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar a
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M7 18V6h10"/>
-      <path d="M17 18L7 6"/>
-      <path d="M17 6L7 18"/>
-      <path d="M6 12h12"/>
-    </svg>
-  );
-}
-
 export default function ConfirmationPage({ params }: { params: { id: string } }) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +113,7 @@ export default function ConfirmationPage({ params }: { params: { id: string } })
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {booking.vehicleType}</span></div>
                 <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {booking.luggageCount}</span></div>
-                <div className="flex items-center gap-3"><NairaIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Total Fare:</strong> ₦{booking.totalFare.toFixed(2)}</span></div>
+                <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{booking.totalFare.toFixed(2)}</span></div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-center p-6 bg-muted/30 rounded-b-lg">

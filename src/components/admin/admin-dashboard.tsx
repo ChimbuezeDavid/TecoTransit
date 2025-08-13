@@ -19,18 +19,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle } from "lucide-react";
 
-function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M7 18V6h10"/>
-      <path d="M17 18L7 6"/>
-      <path d="M17 6L7 18"/>
-      <path d="M6 12h12"/>
-    </svg>
-  );
-}
-
-
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -316,7 +304,7 @@ export default function AdminDashboard() {
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
                         <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                        <div className="flex items-center gap-3"><NairaIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</span></div>
+                        <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</span></div>
                     </div>
 
                     {selectedBooking.status === 'Pending' && (
