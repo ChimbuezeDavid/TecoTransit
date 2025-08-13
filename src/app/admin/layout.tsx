@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import AdminHeader from "@/components/layout/admin-header";
-import AdminFooter from "@/components/layout/admin-footer";
 
 export default function AdminLayout({
   children,
@@ -43,7 +42,6 @@ export default function AdminLayout({
       <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-muted/40 overflow-auto">
         {children}
       </main>
-      <AdminFooter />
     </div>
   );
 }
