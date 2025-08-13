@@ -7,7 +7,7 @@ export default function Home() {
       <CustomerPriceAlert />
       <div className="text-center mb-12">
         <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary tracking-tight">
-          RouteWise
+          Book Your Trip with TecoTransit
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground mt-2 max-w-2xl mx-auto">
           Your Journey, Simplified. Select your ride, set your dates, and get ready to travel with ease and comfort.
