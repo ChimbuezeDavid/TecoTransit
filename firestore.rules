@@ -2,49 +2,46 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /bookings/{bookingId} {
-      // Helper function to convert date string (e.g., "Sep 20, 2024") to a timestamp
-      function toTimestamp(dateStr) {
-        let parts = dateStr.split(' ');
-        let monthStr = parts[0];
-        let day = int(parts[1].replace(',', ''));
-        let year = int(parts[2]);
-        let months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
-        return timestamp.date(year, months[monthStr], day);
-      }
-      
-      // Helper function to get max allowed luggage for a vehicle type
-      function maxLuggages(vehicleType) {
-        let vehicleRules = {
-          '4-Seater Sienna': 4,
-          '5-Seater Sienna': 2,
-          '7-Seater Bus': 2
-        };
-        return vehicleRules[vehicleType];
-      }
+    
+    // Helper function to validate luggage count based on vehicle type
+    function isValidLuggageCount(vehicleType, luggageCount) {
+      return (vehicleType == '4-Seater Sienna' && luggageCount >= 0 && luggageCount <= 4) ||
+             (vehicleType == '5-Seater Sienna' && luggageCount >= 0 && luggageCount <= 2) ||
+             (vehicleType == '7-Seater Bus' && luggageCount >= 0 && luggageCount <= 2);
+    }
+    
+    // Helper function to check if a string is a valid date format (e.g., "Jul 1, 2024")
+    // This is a basic check and can be made more robust if needed.
+    function isDateString(dateStr) {
+      return dateStr.matches('^[A-Z][a-z]{2}, \\d{1,2}, \\d{4}$');
+    }
 
-      // Allow anyone to create a booking, but validate the data
-      allow create: if request.resource.data.name is string &&
-                      request.resource.data.name.size() > 1 &&
-                      request.resource.data.email is string &&
-                      request.resource.data.email.matches('.+@.+\\..+') &&
-                      request.resource.data.phone is string &&
-                      request.resource.data.phone.size() > 9 &&
-                      request.resource.data.pickup is string &&
-                      request.resource.data.destination is string &&
-                      request.resource.data.intendedDate is string &&
-                      request.resource.data.alternativeDate is string &&
-                      toTimestamp(request.resource.data.alternativeDate) > toTimestamp(request.resource.data.intendedDate) &&
-                      request.resource.data.vehicleType is string &&
-                      request.resource.data.vehicleType in ['4-Seater Sienna', '5-Seater Sienna', '7-Seater Bus'] &&
-                      request.resource.data.luggageCount is number &&
-                      request.resource.data.luggageCount >= 0 &&
-                      request.resource.data.luggageCount <= maxLuggages(request.resource.data.vehicleType) &&
-                      request.resource.data.status == 'Pending' &&
-                      request.resource.data.createdAt == request.time.toMillis();
-      
-      // Allow authenticated admins to read, update (status), and delete bookings
-      allow get, list, update, delete: if request.auth != null;
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null;
+      allow create: if 
+          request.resource.data.name is string && request.resource.data.name.size() > 1 &&
+          request.resource.data.email is string && request.resource.data.email.matches('.+@.+\\..+') &&
+          request.resource.data.phone is string && request.resource.data.phone.size() > 9 &&
+          request.resource.data.pickup is string && request.resource.data.pickup.size() > 0 &&
+          request.resource.data.destination is string && request.resource.data.destination.size() > 0 &&
+          isDateString(request.resource.data.intendedDate) &&
+          isDateString(request.resource.data.alternativeDate) &&
+          isValidLuggageCount(request.resource.data.vehicleType, request.resource.data.luggageCount) &&
+          request.resource.data.status == 'Pending' &&
+          request.resource.data.createdAt == request.time.toMillis();
+          
+      allow update: if request.auth != null && (
+          // Admin can update status and confirmedDate
+          (
+            'status' in request.resource.data && (request.resource.data.status == 'Confirmed' || request.resource.data.status == 'Cancelled') &&
+            ('confirmedDate' in request.resource.data ? isDateString(request.resource.data.confirmedDate) : true) &&
+            request.resource.data.diff(request.data).affectedKeys().hasOnly(['status', 'confirmedDate'])
+          )
+      );
+
+      allow delete: if request.auth != null;
     }
   }
 }
+
+    

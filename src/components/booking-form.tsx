@@ -92,7 +92,7 @@ export default function BookingForm() {
        if (name === 'vehicleType' && vehicleType) {
             const maxLuggages = vehicleOptions[vehicleType].maxLuggages;
             const currentLuggages = getValues('luggageCount');
-            if (currentLuggages && currentLuggages > maxLuggages) {
+            if (currentLuggages > maxLuggages) {
                 setValue('luggageCount', maxLuggages);
             }
        }
@@ -141,7 +141,7 @@ export default function BookingForm() {
   
   const luggageOptions = selectedVehicleType ? 
     [...Array(vehicleOptions[selectedVehicleType].maxLuggages + 1).keys()] : 
-    [0];
+    [];
 
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
@@ -247,7 +247,7 @@ export default function BookingForm() {
                         </Button>
                     </FormControl></PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date <= (intendedDate ? intendedDate : new Date(new Date().setHours(0,0,0,0)))} initialFocus />
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date <= (intendedDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus />
                     </PopoverContent></Popover>
                     <FormMessage />
                     </FormItem>
@@ -283,3 +283,5 @@ export default function BookingForm() {
     </Card>
   );
 }
+
+    
