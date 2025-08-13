@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Car, Bus } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Car, Bus, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
@@ -122,6 +122,8 @@ export default function BookingForm() {
       });
     }
   }
+
+  const selectedVehicle = watch('vehicleType');
 
   return (
     <Card className="w-full shadow-2xl shadow-primary/10">
@@ -232,7 +234,8 @@ export default function BookingForm() {
                                 <FormControl>
                                     <RadioGroupItem value={key} className="sr-only" />
                                 </FormControl>
-                                <FormLabel className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground w-full cursor-pointer [&:has([data-state=checked])]:border-primary">
+                                <FormLabel className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground w-full cursor-pointer relative", selectedVehicle === key && "border-primary")}>
+                                    {selectedVehicle === key && <CheckCircle className="h-5 w-5 text-primary absolute top-2 right-2" />}
                                     <Icon className="mb-3 h-6 w-6" />
                                     {name}
                                 </FormLabel>
