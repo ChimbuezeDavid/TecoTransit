@@ -1,47 +1,46 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to validate luggage count based on vehicle type
-    function isValidLuggageCount(vehicleType, luggageCount) {
-      return (vehicleType == '4-Seater Sienna' && luggageCount >= 0 && luggageCount <= 4) ||
-             (vehicleType == '5-Seater Sienna' && luggageCount >= 0 && luggageCount <= 2) ||
-             (vehicleType == '7-Seater Bus' && luggageCount >= 0 && luggageCount <= 2);
+    function isBookingDataValid(data) {
+      // Vehicle type to max luggage mapping
+      let vehicleLuggages = {
+        '4-Seater Sienna': 4,
+        '5-Seater Sienna': 2,
+        '7-Seater Bus': 2
+      };
+
+      // Basic type and length checks
+      let isDataStructureValid = data.name is string && data.name.size() >= 2 &&
+                                 data.email is string && data.email.matches('.*@.*') &&
+                                 data.phone is string && data.phone.size() >= 10 &&
+                                 data.pickup is string && data.pickup.size() > 0 &&
+                                 data.destination is string && data.destination.size() > 0 &&
+                                 data.intendedDate is string &&
+                                 data.alternativeDate is string &&
+                                 data.vehicleType is string && data.vehicleType in vehicleLuggages &&
+                                 data.luggageCount is number && data.luggageCount >= 0 &&
+                                 data.luggageCount <= vehicleLuggages[data.vehicleType] &&
+                                 data.totalFare is number &&
+                                 data.status == 'Pending' &&
+                                 data.createdAt is number;
+
+      // Firestore has no native date parsing, so we rely on client-side format.
+      // A more robust solution might involve storing dates as timestamps.
+      let areDatesValid = data.alternativeDate > data.intendedDate;
+
+      return isDataStructureValid && areDatesValid;
     }
     
-    // Helper function to check if a string is a valid date format (e.g., "Jul 1, 2024")
-    // This is a basic check and can be made more robust if needed.
-    function isDateString(dateStr) {
-      return dateStr.matches('^[A-Z][a-z]{2}, \\d{1,2}, \\d{4}$');
-    }
-
     match /bookings/{bookingId} {
-      allow read: if request.auth != null;
-      allow create: if 
-          request.resource.data.name is string && request.resource.data.name.size() > 1 &&
-          request.resource.data.email is string && request.resource.data.email.matches('.+@.+\\..+') &&
-          request.resource.data.phone is string && request.resource.data.phone.size() > 9 &&
-          request.resource.data.pickup is string && request.resource.data.pickup.size() > 0 &&
-          request.resource.data.destination is string && request.resource.data.destination.size() > 0 &&
-          isDateString(request.resource.data.intendedDate) &&
-          isDateString(request.resource.data.alternativeDate) &&
-          isValidLuggageCount(request.resource.data.vehicleType, request.resource.data.luggageCount) &&
-          request.resource.data.status == 'Pending' &&
-          request.resource.data.createdAt == request.time.toMillis();
-          
-      allow update: if request.auth != null && (
-          // Admin can update status and confirmedDate
-          (
-            'status' in request.resource.data && (request.resource.data.status == 'Confirmed' || request.resource.data.status == 'Cancelled') &&
-            ('confirmedDate' in request.resource.data ? isDateString(request.resource.data.confirmedDate) : true) &&
-            request.resource.data.diff(request.data).affectedKeys().hasOnly(['status', 'confirmedDate'])
-          )
-      );
+      // Anyone can read a specific booking document (for confirmation page)
+      allow get: if true;
 
-      allow delete: if request.auth != null;
+      // Anyone can create a new booking if the data is valid
+      allow create: if isBookingDataValid(request.resource.data);
+      
+      // Only authenticated admins can list, update or delete bookings
+      allow list, update, delete: if request.auth != null;
     }
   }
 }
-
-    
