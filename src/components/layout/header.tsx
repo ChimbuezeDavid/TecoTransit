@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import { Route } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export default function Header() {
@@ -17,13 +16,19 @@ export default function Header() {
             <Route className="h-6 w-6" />
             <span className="font-headline">RouteWise</span>
           </Link>
-          <nav className="flex items-center gap-2">
-             <Button variant="ghost" asChild>
-              <Link href="/trips" className={cn(pathname === '/trips' && "text-primary")}>My Trips</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/">Book A Trip</Link>
-            </Button>
+          <nav className="flex items-center gap-6">
+             <Link href="/" className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname === '/' ? "text-primary" : "text-muted-foreground"
+              )}>
+                Book a Trip
+              </Link>
+             <Link href="/trips" className={cn(
+                "text-sm font-medium transition-colors hover:text-primary",
+                pathname === '/trips' ? "text-primary" : "text-muted-foreground"
+             )}>
+                My Trips
+             </Link>
           </nav>
         </div>
       </div>
