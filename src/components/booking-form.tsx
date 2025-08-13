@@ -122,117 +122,100 @@ export default function BookingForm() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-8">
-            {/* Personal Details */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-primary">Your Details</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="John Doe" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="you@example.com" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-            {/* Trip Details */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-primary">Trip Details</h3>
-              <div className="grid md:grid-cols-2 gap-4 items-center">
-                 <FormField control={form.control} name="pickup" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <FormControl><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="City, State or Address" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                 <FormField control={form.control} name="destination" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Destination</FormLabel>
-                    <FormControl><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="City, State or Address" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="intendedDate" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Intended Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                      <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                    </PopoverContent></Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Alternative Departure</FormLabel>
-                    <Popover><PopoverTrigger asChild><FormControl>
-                      <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl></PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
-                    </PopoverContent></Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-            {/* Vehicle & Luggage */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg text-primary">Vehicle & Luggage</h3>
-              <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Select Vehicle Type</FormLabel>
-                  <FormControl><RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid md:grid-cols-3 gap-4">
-                    {Object.entries(vehicleOptions).map(([key, { name, icon: Icon, baseFare }]) => (
-                      <FormItem key={key}>
-                        <RadioGroupItem value={key} id={key} className="peer sr-only" />
-                        <Label htmlFor={key} className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
-                          <Icon className="mb-3 h-8 w-8 text-primary" />
-                          {name}
-                          <span className="font-normal text-sm text-muted-foreground mt-1">From ${baseFare}</span>
-                        </Label>
-                      </FormItem>
-                    ))}
-                  </RadioGroup></FormControl>
+          <CardContent className="space-y-8 pt-6">
+            <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+              <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="John Doe" {...field} className="pl-9" /></div></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email Address</FormLabel>
+                  <FormControl><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="you@example.com" {...field} className="pl-9" /></div></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="pickup" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Pickup Location</FormLabel>
+                  <FormControl><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="City, State or Address" {...field} className="pl-9" /></div></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="destination" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Destination</FormLabel>
+                  <FormControl><div className="relative"><MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="City, State or Address" {...field} className="pl-9" /></div></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Intended Departure</FormLabel>
+                  <Popover><PopoverTrigger asChild><FormControl>
+                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                      {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl></PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                  </PopoverContent></Popover>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="alternativeDate" render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Alternative Departure</FormLabel>
+                  <Popover><PopoverTrigger asChild><FormControl>
+                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                      {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl></PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                  </PopoverContent></Popover>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                <FormItem className="max-w-xs">
+                <FormItem>
                   <FormLabel>Number of Bags</FormLabel>
                   <FormControl><div className="relative"><Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" min="0" max="10" {...field} className="pl-9" /></div></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
             </div>
+
+            <FormField control={form.control} name="vehicleType" render={({ field }) => (
+              <FormItem className="space-y-3">
+                <FormLabel>Select Vehicle Type</FormLabel>
+                <FormControl><RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid md:grid-cols-3 gap-4">
+                  {Object.entries(vehicleOptions).map(([key, { name, icon: Icon, baseFare }]) => (
+                    <FormItem key={key}>
+                      <RadioGroupItem value={key} id={key} className="peer sr-only" />
+                      <Label htmlFor={key} className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent/20 hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                        <Icon className="mb-3 h-8 w-8 text-primary" />
+                        {name}
+                        <span className="font-normal text-sm text-muted-foreground mt-1">From ${baseFare}</span>
+                      </Label>
+                    </FormItem>
+                  ))}
+                </RadioGroup></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
