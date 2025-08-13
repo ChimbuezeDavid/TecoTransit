@@ -1,7 +1,7 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import type { Booking } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +21,10 @@ function NairaIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-export default function ConfirmationPage() {
+export default function ConfirmationPage({ params }: { params: { id: string } }) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const { id } = useParams();
+  const { id } = params;
 
   useEffect(() => {
     if (id) {
