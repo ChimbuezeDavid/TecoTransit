@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,10 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Car, Bus, CheckCircle } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Car, Bus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-
 
 const luggageFee = 5;
 const baseFare = 50;
@@ -75,18 +73,15 @@ export default function BookingForm() {
   const { watch, getValues, setValue } = form;
   const intendedDate = watch('intendedDate');
   const selectedVehicleType = watch('vehicleType');
+  const luggageCount = watch('luggageCount');
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
        const { vehicleType, luggageCount } = values;
        
-       // Calculate fare
-       if (name === 'vehicleType' || name === 'luggageCount') {
-            const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
-            setTotalFare(newTotalFare);
-       }
+       const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
+       setTotalFare(newTotalFare);
        
-       // Reset alternative date if intended date changes
        if (name === 'intendedDate' && values.intendedDate) {
             const currentAlternative = getValues('alternativeDate');
             if (currentAlternative && currentAlternative <= values.intendedDate) {
@@ -94,10 +89,10 @@ export default function BookingForm() {
             }
        }
 
-       // Reset luggage if it exceeds max for the vehicle
        if (name === 'vehicleType' && vehicleType) {
             const maxLuggages = vehicleOptions[vehicleType].maxLuggages;
-            if (luggageCount && luggageCount > maxLuggages) {
+            const currentLuggages = getValues('luggageCount');
+            if (currentLuggages && currentLuggages > maxLuggages) {
                 setValue('luggageCount', maxLuggages);
             }
        }
@@ -107,13 +102,14 @@ export default function BookingForm() {
 
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
     const bookingId = uuidv4();
+    const finalFare = baseFare + (data.luggageCount || 0) * luggageFee;
     const newBooking: Booking = {
       ...data,
       id: bookingId,
       intendedDate: format(data.intendedDate, 'PPP'),
       alternativeDate: format(data.alternativeDate, 'PPP'),
       vehicleType: vehicleOptions[data.vehicleType].name as Booking['vehicleType'],
-      totalFare,
+      totalFare: finalFare,
       status: 'Pending',
       createdAt: Date.now(),
     };
@@ -142,7 +138,7 @@ export default function BookingForm() {
       });
     }
   }
-
+  
   const luggageOptions = selectedVehicleType ? 
     [...Array(vehicleOptions[selectedVehicleType].maxLuggages + 1).keys()] : 
     [0];
@@ -206,6 +202,26 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
+                <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Vehicle Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {Object.entries(vehicleOptions).map(([key, { name }]) => (
+                                <SelectItem key={key} value={key}>{name}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Intended Departure</FormLabel>
@@ -236,46 +252,15 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                
-                 <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
-                        <FormItem className="space-y-3 pt-4 md:col-span-2">
-                        <FormLabel>Select Vehicle Type</FormLabel>
-                        <FormControl>
-                            <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-1 md:grid-cols-3 gap-4"
-                            >
-                            {Object.entries(vehicleOptions).map(([key, { name, icon: Icon }]) => (
-                                <FormItem key={key} className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                    <RadioGroupItem value={key} className="sr-only" />
-                                </FormControl>
-                                <FormLabel className={cn("flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground w-full cursor-pointer relative", selectedVehicleType === key && "border-primary")}>
-                                    {selectedVehicleType === key && <CheckCircle className="h-5 w-5 text-primary absolute top-2 right-2" />}
-                                    <Icon className="mb-3 h-6 w-6" />
-                                    {name}
-                                </FormLabel>
-                                </FormItem>
-                            ))}
-                            </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                    <FormLabel>Number of Bags</FormLabel>
+                    <FormLabel>Number of Bags (Max {selectedVehicleType ? vehicleOptions[selectedVehicleType].maxLuggages : 'N/A'})</FormLabel>
                     <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value)} disabled={!selectedVehicleType}>
                         <FormControl>
                         <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : i}</SelectItem>)}
+                        {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
