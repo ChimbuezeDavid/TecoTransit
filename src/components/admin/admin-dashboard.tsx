@@ -339,10 +339,12 @@ export default function AdminDashboard() {
             <DialogContent className="max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                    <div className="flex items-center gap-2 pt-1">
-                        <strong>Status:</strong>
-                        <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
-                    </div>
+                    <DialogDescription className="pt-1">
+                        <div className="flex items-center gap-2">
+                            <strong>Status:</strong>
+                            <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
+                        </div>
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4 text-sm">
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
