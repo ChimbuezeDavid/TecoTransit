@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -142,7 +143,7 @@ export default function ConfirmationPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {booking.vehicleType}</span></div>
                 <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {booking.luggageCount}</span></div>
-                <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{booking.totalFare.toFixed(2)}</span></div>
+                <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{booking.totalFare.toLocaleString()}</span></div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-center p-6 bg-muted/30 rounded-b-lg">

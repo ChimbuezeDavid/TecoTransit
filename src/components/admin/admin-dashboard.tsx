@@ -363,7 +363,7 @@ export default function AdminDashboard() {
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
                         <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                        <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toFixed(2)}</span></div>
+                        <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
                     </div>
 
                     {selectedBooking.status === 'Pending' && (
