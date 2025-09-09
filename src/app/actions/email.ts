@@ -4,17 +4,18 @@
 import { Resend } from 'resend';
 import BookingStatusUpdateEmail from '@/components/emails/booking-status-update-email';
 import type { Booking } from '@/lib/types';
-import { format } from 'date-fns';
 
 export async function sendBookingStatusUpdateEmail(booking: Booking) {
-  if (!process.env.RESEND_API_KEY) {
-    console.error('Resend API key is not configured.');
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.error('Resend API key is not configured. Please set RESEND_API_KEY in your .env.local file.');
     // In a real app, you might throw an error or handle this more gracefully.
     // For now, we'll just log it to avoid crashing the booking update process.
     return;
   }
   
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(apiKey);
   const fromEmail = "tecotransit-nonreply@gmail.com";
 
   const subject = `Booking ${booking.status}: Your TecoTransit Trip (#${booking.id.substring(0, 8)})`;
@@ -29,7 +30,7 @@ export async function sendBookingStatusUpdateEmail(booking: Booking) {
 
     if (error) {
       console.error('Resend API Error:', error);
-      // Decide if you want to throw an error to the client
+      // In a real app, you might throw an error to the client
       // For now, we'll just log it.
       return;
     }
@@ -37,6 +38,6 @@ export async function sendBookingStatusUpdateEmail(booking: Booking) {
     console.log('Email sent successfully:', data);
   } catch (error) {
     console.error('Failed to send email:', error);
-    // Decide if you want to throw an error to the client
+    // In a real app, you might throw an error to the client
   }
 }

@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend('re_Cdi3K9H5_9r4EWyehA8xfkh6gKobSUZwL');
+const resend = new Resend('');
 
 resend.emails.send({
   from: 'onboarding@resend.dev',
