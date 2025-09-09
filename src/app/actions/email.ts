@@ -24,13 +24,12 @@ export async function sendBookingStatusUpdateEmail(booking: Booking, newStatus: 
     ? 'Your TecoTransit Booking is Confirmed!' 
     : 'Update on Your TecoTransit Booking';
   
-  // Format dates for display in the email
+  // Dates are already strings. Pass them directly to the email template.
   const formattedBooking = {
     ...booking,
-    intendedDate: format(parseISO(booking.intendedDate), 'PPP'),
-    alternativeDate: format(parseISO(booking.alternativeDate), 'PPP'),
-    confirmedDate: booking.confirmedDate ? format(parseISO(booking.confirmedDate), 'PPP') : undefined,
-  }
+    // No need for complex parsing, just ensure they are nicely formatted if needed.
+    // The component can handle displaying the string.
+  };
 
   try {
     const data = await resend.emails.send({

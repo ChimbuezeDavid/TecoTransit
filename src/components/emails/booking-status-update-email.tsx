@@ -81,6 +81,22 @@ const footer: React.CSSProperties = {
   color: '#64748b',
 };
 
+// Helper to format yyyy-MM-dd into a readable format.
+// This is safer than using parseISO which requires a full timestamp.
+const formatDateString = (dateString: string | undefined) => {
+  if (!dateString) return 'N/A';
+  try {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch (e) {
+    return dateString; // Fallback to original string
+  }
+};
+
 const BookingStatusUpdateEmail: React.FC<Readonly<EmailTemplateProps>> = ({ booking, status }) => {
   const statusStyles = status === 'Confirmed' ? confirmedBadge : cancelledBadge;
   
@@ -106,7 +122,7 @@ const BookingStatusUpdateEmail: React.FC<Readonly<EmailTemplateProps>> = ({ book
 
         {status === 'Confirmed' && booking.confirmedDate && (
           <p style={p}>
-            Your confirmed departure date is <strong>{booking.confirmedDate}</strong>.
+            Your confirmed departure date is <strong>{formatDateString(booking.confirmedDate)}</strong>.
           </p>
         )}
 
