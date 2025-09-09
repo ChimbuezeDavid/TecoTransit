@@ -4,7 +4,6 @@
 import { Resend } from 'resend';
 import BookingStatusUpdateEmail from '@/components/emails/booking-status-update-email';
 import type { Booking } from '@/lib/types';
-import { format, parseISO } from 'date-fns';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = 'tecotransit-nonreply@gmail.com';
@@ -17,26 +16,23 @@ export async function sendBookingStatusUpdateEmail(booking: Booking, newStatus: 
   
   if (!process.env.RESEND_API_KEY) {
      console.error("RESEND_API_KEY environment variable not set.");
-     throw new Error("Server is not configured to send emails.");
+     throw new Error("Server is not configured to send emails. Please set the RESEND_API_KEY environment variable.");
   }
 
   const subject = newStatus === 'Confirmed' 
     ? 'Your TecoTransit Booking is Confirmed!' 
     : 'Update on Your TecoTransit Booking';
   
-  // Dates are already strings. Pass them directly to the email template.
-  const formattedBooking = {
-    ...booking,
-    // No need for complex parsing, just ensure they are nicely formatted if needed.
-    // The component can handle displaying the string.
-  };
+  // The booking object contains date strings in the correct format ('yyyy-MM-dd').
+  // The email component is now responsible for displaying them as-is.
+  // No further formatting is needed here.
 
   try {
     const data = await resend.emails.send({
       from: `TecoTransit <${fromEmail}>`,
       to: [booking.email],
       subject: subject,
-      react: BookingStatusUpdateEmail({ booking: formattedBooking, status: newStatus }),
+      react: BookingStatusUpdateEmail({ booking, status: newStatus }),
       text: `Your booking status has been updated to: ${newStatus}.`
     });
 
