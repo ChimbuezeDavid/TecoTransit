@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,11 +56,9 @@ export default function BookingForm() {
   const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Confirmation Dialog State
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
-  // Calendar Popover State
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
 
@@ -75,59 +73,47 @@ export default function BookingForm() {
   });
 
   const { watch, getValues, setValue, trigger } = form;
-  const intendedDate = watch('intendedDate');
-  const selectedVehicleType = watch('vehicleType');
-  const luggageCount = watch('luggageCount');
-  const pickup = watch('pickup');
-  const destination = watch('destination');
+  const watchAllFields = watch();
 
-  // Filter available vehicles based on selected route
+  // Filter available vehicles and update fare
   useEffect(() => {
+    const { pickup, destination, vehicleType, luggageCount } = watchAllFields;
+
     if (pickup && destination && prices) {
       const vehiclesForRoute = prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
       setAvailableVehicles(vehiclesForRoute);
 
-      // Only reset if the new list doesn't contain the currently selected vehicle
-      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === getValues('vehicleType'));
+      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === vehicleType);
+
       if (!currentVehicleStillAvailable) {
         setValue('vehicleType', '');
+        setBaseFare(0);
+        setTotalFare(0);
+      } else {
+        const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
+        const newBaseFare = vehicleRule ? vehicleRule.price : 0;
+        setBaseFare(newBaseFare);
+        setTotalFare(newBaseFare + (luggageCount || 0) * 0);
       }
-
-      if (vehiclesForRoute.length === 0 && !pricesLoading) {
-        toast({
-          variant: 'destructive',
-          title: 'No Vehicles Available',
-          description:
-            'There are no vehicles scheduled for this route. Please select another.',
-        });
-      }
+      
     } else {
       setAvailableVehicles([]);
+      setBaseFare(0);
+      setTotalFare(0);
     }
-  }, [pickup, destination, prices, setValue, getValues, toast, pricesLoading]);
+  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, prices, setValue]);
 
-
-  // Update fares when selections change
-  useEffect(() => {
-    const updateFares = () => {
-        if (pickup && destination && selectedVehicleType) {
-            const vehicleRule = availableVehicles.find(v => v.vehicleType === selectedVehicleType);
-            const newBaseFare = vehicleRule ? vehicleRule.price : 0;
-            setBaseFare(newBaseFare);
-            setTotalFare(newBaseFare + (luggageCount || 0) * 0); // Luggage fee is 0
-        } else {
-          setBaseFare(0);
-          setTotalFare(0);
-        }
-    }
-    updateFares();
-  }, [pickup, destination, selectedVehicleType, luggageCount, availableVehicles]);
-
-  // Form value change subscriptions
+  // Handle dependent field resets and validation
   useEffect(() => {
     const subscription = watch((values, { name }) => {
+       if (name === 'pickup') {
+          setValue('destination', '');
+          setValue('vehicleType', '');
+          trigger('destination');
+          trigger('vehicleType');
+       }
        if (name === 'intendedDate' && values.intendedDate) {
             setValue('alternativeDate', undefined as any);
             trigger('alternativeDate');
@@ -145,6 +131,7 @@ export default function BookingForm() {
     return () => subscription.unsubscribe();
   }, [watch, getValues, setValue, trigger]);
 
+
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
     if (baseFare === 0) {
         toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
@@ -154,15 +141,20 @@ export default function BookingForm() {
     setIsSubmitting(true);
 
     try {
-      const newBooking = await createBooking({ ...data, totalFare });
+      const newBookingData = await createBooking({ ...data, totalFare });
       
+      const displayBooking = {
+          ...newBookingData,
+          intendedDate: format(data.intendedDate, 'PPP'),
+          alternativeDate: format(data.alternativeDate, 'PPP'),
+      }
+
       toast({
         title: "Booking Submitted!",
         description: "Your trip request has been received. We'll be in touch shortly.",
       });
 
-      // Show confirmation dialog
-      setConfirmedBooking(newBooking);
+      setConfirmedBooking(displayBooking);
       setIsConfirmationOpen(true);
       form.reset();
 
@@ -178,7 +170,7 @@ export default function BookingForm() {
     }
   }
   
-  const selectedVehicleDetails = selectedVehicleType ? Object.values(allVehicleOptions).find(v => v.name === selectedVehicleType) : null;
+  const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
@@ -218,7 +210,7 @@ export default function BookingForm() {
                 <FormField control={form.control} name="pickup" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={(value) => { field.onChange(value); setValue('destination', ''); }} value={field.value || ''}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
                         </FormControl>
@@ -232,12 +224,12 @@ export default function BookingForm() {
                 <FormField control={form.control} name="destination" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!pickup}>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAllFields.pickup}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!watchAllFields.pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {locations.filter(loc => loc !== pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        {locations.filter(loc => loc !== watchAllFields.pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -254,7 +246,7 @@ export default function BookingForm() {
                             <SelectTrigger>
                                 <SelectValue placeholder={
                                     pricesLoading ? 'Loading vehicles...' : 
-                                    !pickup || !destination ? 'Select route first' : 
+                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
                                     availableVehicles.length === 0 ? 'No vehicles for this route' :
                                     'Select a vehicle'
                                 } />
@@ -301,7 +293,7 @@ export default function BookingForm() {
                     <FormLabel>Alternative Departure</FormLabel>
                     <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
                         <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!intendedDate}>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                             </Button>
@@ -314,7 +306,7 @@ export default function BookingForm() {
                                     field.onChange(date);
                                     setIsAlternativeDatePopoverOpen(false);
                                 }}
-                                disabled={(date) => date <= (intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
+                                disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
                                 initialFocus 
                             />
                         </PopoverContent>
@@ -325,9 +317,9 @@ export default function BookingForm() {
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
                     <FormItem className="md:col-span-2">
                     <FormLabel>Number of Bags (Max {selectedVehicleDetails?.maxLuggages ?? 'N/A'})</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!selectedVehicleType}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!watchAllFields.vehicleType}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!watchAllFields.vehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                         {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}

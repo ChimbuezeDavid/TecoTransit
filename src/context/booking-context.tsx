@@ -40,6 +40,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   const fetchPrices = useCallback(async () => {
+    setLoading(true);
     try {
       const pricesCollection = collection(db, "prices");
       const pricesSnapshot = await getDocs(pricesCollection);
@@ -47,8 +48,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       setPrices(pricesData);
     } catch (err) {
       handleFirestoreError(err, 'fetching prices');
+    } finally {
+        setLoading(false);
     }
-  }, [toast]);
+  }, []);
   
   useEffect(() => {
     fetchPrices();
@@ -66,8 +69,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        // Defensive check for createdAt field to prevent crash on state re-render.
-        // The listener can sometimes re-process local data where createdAt is already a number.
         const createdAtMillis = data.createdAt instanceof Timestamp 
             ? data.createdAt.toMillis()
             : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
@@ -86,7 +87,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return () => unsubscribe();
-  }, [toast]);
+  }, []);
 
   const createBooking = useCallback(async (data: BookingFormData) => {
     const bookingId = uuidv4();
@@ -110,8 +111,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return {
       ...firestoreBooking,
       createdAt: firestoreBooking.createdAt.toMillis(),
-      intendedDate: format(data.intendedDate, 'PPP'),
-      alternativeDate: format(data.alternativeDate, 'PPP'),
     } as Booking;
     
   }, []);
@@ -125,13 +124,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       
       await updateDoc(bookingDocRef, updateData);
       
-      // Optionally trigger notifications here
-      const bookingDoc = await getDoc(bookingDocRef);
-      if (bookingDoc.exists()) {
-          const bookingData = bookingDoc.data() as Booking;
-          // Example: triggerBookingStatusUpdateEmail({ ...bookingData, ...updateData });
-      }
-
   }, []);
 
   const deleteBooking = useCallback(async (id: string) => {
