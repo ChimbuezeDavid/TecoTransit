@@ -64,11 +64,19 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
-      const bookingsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: (doc.data().createdAt as Timestamp).toMillis(),
-      } as Booking));
+      const bookingsData = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        // Defensive check for createdAt field
+        const createdAtMillis = data.createdAt instanceof Timestamp 
+            ? data.createdAt.toMillis()
+            : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
+
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: createdAtMillis,
+        } as Booking;
+      });
       setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
@@ -84,8 +92,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     const batch = writeBatch(db);
 
     const bookingDocRef = doc(db, 'bookings', bookingId);
-    const bookingSummaryDocRef = doc(db, 'booking_summaries', bookingId);
-
+   
     const firestoreBooking = {
       ...data,
       id: bookingId,
@@ -95,10 +102,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
-    const { name, email, phone, ...summaryData } = firestoreBooking;
-    
     batch.set(bookingDocRef, firestoreBooking);
-    batch.set(bookingSummaryDocRef, summaryData);
     
     await batch.commit();
 
@@ -112,19 +116,13 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (id: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
-      const batch = writeBatch(db);
       const bookingDocRef = doc(db, 'bookings', id);
-      const bookingSummaryDocRef = doc(db, 'booking_summaries', id);
-
       const updateData: any = { status };
       if (status === 'Confirmed' && confirmedDate) {
         updateData.confirmedDate = confirmedDate;
       }
       
-      batch.update(bookingDocRef, updateData);
-      batch.update(bookingSummaryDocRef, updateData);
-
-      await batch.commit();
+      await updateDoc(bookingDocRef, updateData);
       
       // Optionally trigger notifications here
       const bookingDoc = await getDoc(bookingDocRef);
@@ -136,14 +134,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const deleteBooking = useCallback(async (id: string) => {
-      const batch = writeBatch(db);
       const bookingDocRef = doc(db, 'bookings', id);
-      const bookingSummaryDocRef = doc(db, 'booking_summaries', id);
-
-      batch.delete(bookingDocRef);
-      batch.delete(bookingSummaryDocRef);
-      
-      await batch.commit();
+      await deleteDoc(bookingDocRef);
   }, []);
 
   const value = {
