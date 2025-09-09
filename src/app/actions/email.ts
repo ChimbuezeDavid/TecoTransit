@@ -7,12 +7,17 @@ import type { Booking } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.RESEND_FROM_EMAIL;
+const fromEmail = 'tecotransit-nonreply@gmail.com';
 
 export async function sendBookingStatusUpdateEmail(booking: Booking, newStatus: Booking['status']) {
   if (!fromEmail) {
-    console.error("RESEND_FROM_EMAIL environment variable not set.");
+    console.error("The from email address is not set.");
     throw new Error("Server is not configured to send emails.");
+  }
+  
+  if (!process.env.RESEND_API_KEY) {
+     console.error("RESEND_API_KEY environment variable not set.");
+     throw new Error("Server is not configured to send emails.");
   }
 
   const subject = newStatus === 'Confirmed' 
