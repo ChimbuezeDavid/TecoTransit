@@ -7,7 +7,8 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, T
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { sendBookingStatusUpdateEmail } from '@/app/actions/email';
 
 
 interface BookingContextType {
@@ -17,7 +18,7 @@ interface BookingContextType {
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => void;
   createBooking: (data: BookingFormData) => Promise<Booking>;
-  updateBookingStatus: (id: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
+  updateBookingStatus: (booking: Booking, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
 }
 
@@ -51,7 +52,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [toast]);
   
   useEffect(() => {
     fetchPrices();
@@ -87,12 +88,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const createBooking = useCallback(async (data: BookingFormData) => {
     const bookingId = uuidv4();
-    const batch = writeBatch(db);
-
     const bookingDocRef = doc(db, 'bookings', bookingId);
    
     const firestoreBooking = {
@@ -104,27 +103,32 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
-    batch.set(bookingDocRef, firestoreBooking);
-    
-    await batch.commit();
+    await setDoc(bookingDocRef, firestoreBooking);
 
     return {
       ...firestoreBooking,
       createdAt: firestoreBooking.createdAt.toMillis(),
     } as Booking;
     
-  }, []);
+  }, [toast]);
 
-  const updateBookingStatus = useCallback(async (id: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
-      const bookingDocRef = doc(db, 'bookings', id);
+  const updateBookingStatus = useCallback(async (booking: Booking, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
+      const bookingDocRef = doc(db, 'bookings', booking.id);
       const updateData: any = { status };
       if (status === 'Confirmed' && confirmedDate) {
         updateData.confirmedDate = confirmedDate;
       }
       
       await updateDoc(bookingDocRef, updateData);
+
+      try {
+        await sendBookingStatusUpdateEmail({ ...booking, ...updateData }, status);
+        toast({ title: 'Email Sent', description: `Customer has been notified of the ${status.toLowerCase()} booking.` });
+      } catch (emailError) {
+        toast({ variant: 'destructive', title: 'Email Failed', description: `The booking was updated, but the notification email failed to send. ${emailError instanceof Error ? emailError.message : ''}` });
+      }
       
-  }, []);
+  }, [toast]);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);

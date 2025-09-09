@@ -121,7 +121,7 @@ export default function AdminDashboard() {
     setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     
     try {
-        await updateBookingStatus(selectedBooking.id, status, status === 'Confirmed' ? confirmedDate : undefined);
+        await updateBookingStatus(selectedBooking, status, status === 'Confirmed' ? confirmedDate : undefined);
         toast({
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
