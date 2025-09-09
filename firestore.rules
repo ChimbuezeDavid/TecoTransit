@@ -2,32 +2,43 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
+    
+    // Admins can do anything
     function isAdmin() {
-      return request.auth.uid != null;
+      return request.auth != null;
     }
 
-    // Publicly readable collections
+    // Anyone can read prices and alerts
     match /prices/{priceId} {
       allow read: if true;
       allow write: if isAdmin();
     }
-
+    
     match /alerts/{alertId} {
       allow read: if true;
       allow write: if isAdmin();
     }
-    
-    // Restricted collections
+
+    // Bookings can be created by anyone, but only managed by admins.
+    // A 'create' request must include a `createdAt` timestamp to prevent spam.
     match /bookings/{bookingId} {
-      allow create: if true; // Anyone can create a booking
-      allow read, update, delete: if isAdmin(); // Only admins can manage bookings
+      allow read, update, delete: if isAdmin();
+      allow create: if request.resource.data.createdAt == request.time;
     }
 
-    // Default deny all other collections/documents
-    match /{document=**} {
-      allow read, write: if false;
+    // Booking summaries are managed entirely by the backend/admins.
+    match /booking_summaries/{bookingId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+    }
+    
+    // User and token data is admin-only.
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /fcmTokens/{token} {
+        allow read, write: if isAdmin();
     }
   }
 }

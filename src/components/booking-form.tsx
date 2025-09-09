@@ -2,17 +2,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { v4 as uuidv4 } from 'uuid';
-import type { Booking, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
+import { useBooking } from '@/context/booking-context';
+import type { Booking, PriceRule } from '@/lib/types';
+import BookingConfirmationDialog from './booking-confirmation-dialog';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,10 +19,9 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const luggageFee = 0; // No fee per luggage item
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -51,15 +48,21 @@ const bookingSchema = z.object({
 
 
 export default function BookingForm() {
-  const router = useRouter();
   const { toast } = useToast();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
+
   const [totalFare, setTotalFare] = useState(0);
   const [baseFare, setBaseFare] = useState(0);
-  const [availableVehicles, setAvailableVehicles] = useState<typeof allVehicleOptions>({});
-  const [isFetchingVehicles, setIsFetchingVehicles] = useState(false);
+  const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Confirmation Dialog State
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
+
+  // Calendar Popover State
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
-
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -78,87 +81,45 @@ export default function BookingForm() {
   const pickup = watch('pickup');
   const destination = watch('destination');
 
-  const fetchAvailableVehicles = useCallback(async (pickup: string, destination: string) => {
-    if (!pickup || !destination) return;
-    setIsFetchingVehicles(true);
-    setValue('vehicleType', ''); // Reset vehicle type
-
-    try {
-        const q = query(collection(db, "prices"), where("pickup", "==", pickup), where("destination", "==", destination));
-        const querySnapshot = await getDocs(q);
-        const pricesData: PriceRule[] = [];
-        querySnapshot.forEach((doc) => {
-            pricesData.push(doc.data() as PriceRule);
-        });
-
-        const vehicles: typeof allVehicleOptions = {};
-        pricesData.forEach(price => {
-          const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === price.vehicleType);
-          if (vehicleKey) {
-            vehicles[vehicleKey as keyof typeof allVehicleOptions] = allVehicleOptions[vehicleKey as keyof typeof allVehicleOptions];
-          }
-        });
-
-        if (Object.keys(vehicles).length === 0) {
-            toast({ variant: 'destructive', title: "No Vehicles Available", description: "There are no vehicles scheduled for this route. Please select another." });
-        }
-        
-        setAvailableVehicles(vehicles);
-    } catch (error) {
-        console.error("Error fetching available vehicles: ", error);
-        toast({ variant: 'destructive', title: "Error", description: "Could not fetch vehicle options." });
-    } finally {
-        setIsFetchingVehicles(false);
-    }
-  }, [setValue, toast]);
-
-
+  // Filter available vehicles based on selected route
   useEffect(() => {
     if (pickup && destination) {
-      fetchAvailableVehicles(pickup, destination);
+        const vehiclesForRoute = prices.filter(p => p.pickup === pickup && p.destination === destination);
+        setAvailableVehicles(vehiclesForRoute);
+        setValue('vehicleType', ''); // Reset vehicle selection
+        if (vehiclesForRoute.length === 0 && !pricesLoading) {
+             toast({ variant: 'destructive', title: "No Vehicles Available", description: "There are no vehicles scheduled for this route. Please select another." });
+        }
+    } else {
+        setAvailableVehicles([]);
     }
-  }, [pickup, destination, fetchAvailableVehicles]);
+  }, [pickup, destination, prices, setValue, toast, pricesLoading]);
 
-
+  // Update fares when selections change
   useEffect(() => {
-    const updateFares = async () => {
+    const updateFares = () => {
         if (pickup && destination && selectedVehicleType) {
-            const vehicleName = allVehicleOptions[selectedVehicleType as keyof typeof allVehicleOptions]?.name;
-            if (!vehicleName) {
-                setBaseFare(0);
-                return;
-            }
-            const q = query(collection(db, "prices"), where("pickup", "==", pickup), where("destination", "==", destination), where("vehicleType", "==", vehicleName));
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const priceDoc = querySnapshot.docs[0];
-                setBaseFare(priceDoc.data().price);
-            } else {
-                setBaseFare(0);
-            }
+            const vehicleRule = availableVehicles.find(v => v.vehicleType === selectedVehicleType);
+            const newBaseFare = vehicleRule ? vehicleRule.price : 0;
+            setBaseFare(newBaseFare);
+            setTotalFare(newBaseFare + (luggageCount || 0) * 0); // Luggage fee is 0
         } else {
           setBaseFare(0);
+          setTotalFare(0);
         }
     }
     updateFares();
-  }, [pickup, destination, selectedVehicleType]);
-  
+  }, [pickup, destination, selectedVehicleType, luggageCount, availableVehicles]);
 
-  useEffect(() => {
-    const newTotalFare = baseFare + (luggageCount || 0) * luggageFee;
-    setTotalFare(newTotalFare);
-  }, [baseFare, luggageCount]);
-
-  
+  // Form value change subscriptions
   useEffect(() => {
     const subscription = watch((values, { name }) => {
        if (name === 'intendedDate' && values.intendedDate) {
             setValue('alternativeDate', undefined as any);
             trigger('alternativeDate');
        }
-
        if (name === 'vehicleType' && values.vehicleType) {
-           const vehicleKey = values.vehicleType as keyof typeof allVehicleOptions;
+            const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === values.vehicleType) as keyof typeof allVehicleOptions;
             const maxLuggages = allVehicleOptions[vehicleKey]?.maxLuggages ?? 0;
             const currentLuggages = getValues('luggageCount');
             if (currentLuggages > maxLuggages) {
@@ -175,64 +136,41 @@ export default function BookingForm() {
         toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
         return;
     }
-
-    const bookingId = uuidv4();
-    const vehicleKey = data.vehicleType as keyof typeof allVehicleOptions;
     
-    const newBooking = {
-      ...data,
-      createdAt: Timestamp.now(),
-      status: 'Pending' as const,
-      totalFare,
-      vehicleType: allVehicleOptions[vehicleKey].name,
-    };
-    
-    const finalBooking: Booking = {
-        ...newBooking,
-        id: bookingId,
-        createdAt: newBooking.createdAt.toMillis(),
-        intendedDate: format(data.intendedDate, 'PPP'),
-        alternativeDate: format(data.alternativeDate, 'PPP'),
-    };
-    
-    // Data for firestore (uses ISO string for dates)
-    const firestoreBooking = {
-        ...newBooking,
-        intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
-        alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
-    };
-
+    setIsSubmitting(true);
 
     try {
-      // Store in Local Storage
-      const existingBookings = JSON.parse(localStorage.getItem('routewise-bookings') || '[]');
-      existingBookings.push(finalBooking);
-      localStorage.setItem('routewise-bookings', JSON.stringify(existingBookings));
-
-      // Store in Firebase
-      await addDoc(collection(db, 'bookings'), firestoreBooking);
+      const newBooking = await createBooking({ ...data, totalFare });
       
       toast({
         title: "Booking Submitted!",
         description: "Your trip request has been received. We'll be in touch shortly.",
       });
 
-      router.push(`/confirmation/${bookingId}`);
+      // Show confirmation dialog
+      setConfirmedBooking(newBooking);
+      setIsConfirmationOpen(true);
+      form.reset();
+
     } catch (error) {
       console.error("Booking submission error:", error);
       toast({
         variant: "destructive",
         title: "Oh no! Something went wrong.",
-        description: "There was a problem with your request. Please try again.",
+        description: `There was a problem with your request. ${error instanceof Error ? error.message : ''}`,
       });
+    } finally {
+        setIsSubmitting(false);
     }
   }
   
-  const luggageOptions = selectedVehicleType ? 
-    [...Array((allVehicleOptions[selectedVehicleType as keyof typeof allVehicleOptions]?.maxLuggages ?? 0) + 1).keys()] : 
+  const selectedVehicleDetails = selectedVehicleType ? Object.values(allVehicleOptions).find(v => v.name === selectedVehicleType) : null;
+  const luggageOptions = selectedVehicleDetails ? 
+    [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
 
   return (
+    <>
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
         <CardTitle className="font-headline text-3xl text-primary">Booking Details</CardTitle>
@@ -297,20 +235,20 @@ export default function BookingForm() {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Vehicle Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isFetchingVehicles || Object.keys(availableVehicles).length === 0}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder={
-                                    isFetchingVehicles ? 'Loading vehicles...' : 
+                                    pricesLoading ? 'Loading vehicles...' : 
                                     !pickup || !destination ? 'Select route first' : 
-                                    Object.keys(availableVehicles).length === 0 ? 'No vehicles for this route' :
+                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
                                     'Select a vehicle'
                                 } />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {Object.entries(availableVehicles).map(([key, { name }]) => (
-                                <SelectItem key={key} value={key}>{name}</SelectItem>
+                            {availableVehicles.map((v) => (
+                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
@@ -372,7 +310,7 @@ export default function BookingForm() {
                 )} />
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                    <FormLabel>Number of Bags (Max {selectedVehicleType ? allVehicleOptions[selectedVehicleType as keyof typeof allVehicleOptions]?.maxLuggages ?? 'N/A' : 'N/A'})</FormLabel>
+                    <FormLabel>Number of Bags (Max {selectedVehicleDetails?.maxLuggages ?? 'N/A'})</FormLabel>
                     <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!selectedVehicleType}>
                         <FormControl>
                         <SelectTrigger><SelectValue placeholder={!selectedVehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
@@ -391,13 +329,20 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={form.formState.isSubmitting || baseFare === 0}>
-              {form.formState.isSubmitting ? "Submitting..." : "Book My Trip"}
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting || baseFare === 0}>
+              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+              {isSubmitting ? "Submitting..." : "Book My Trip"}
+              {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
             </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
+    <BookingConfirmationDialog
+        booking={confirmedBooking}
+        isOpen={isConfirmationOpen}
+        onClose={() => setIsConfirmationOpen(false)}
+    />
+    </>
   );
 }
