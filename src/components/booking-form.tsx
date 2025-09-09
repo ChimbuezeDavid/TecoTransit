@@ -83,17 +83,31 @@ export default function BookingForm() {
 
   // Filter available vehicles based on selected route
   useEffect(() => {
-    if (pickup && destination) {
-        const vehiclesForRoute = prices.filter(p => p.pickup === pickup && p.destination === destination);
-        setAvailableVehicles(vehiclesForRoute);
-        setValue('vehicleType', ''); // Reset vehicle selection
-        if (vehiclesForRoute.length === 0 && !pricesLoading) {
-             toast({ variant: 'destructive', title: "No Vehicles Available", description: "There are no vehicles scheduled for this route. Please select another." });
-        }
+    if (pickup && destination && prices) {
+      const vehiclesForRoute = prices.filter(
+        (p) => p.pickup === pickup && p.destination === destination
+      );
+      setAvailableVehicles(vehiclesForRoute);
+
+      // Only reset if the new list doesn't contain the currently selected vehicle
+      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === getValues('vehicleType'));
+      if (!currentVehicleStillAvailable) {
+        setValue('vehicleType', '');
+      }
+
+      if (vehiclesForRoute.length === 0 && !pricesLoading) {
+        toast({
+          variant: 'destructive',
+          title: 'No Vehicles Available',
+          description:
+            'There are no vehicles scheduled for this route. Please select another.',
+        });
+      }
     } else {
-        setAvailableVehicles([]);
+      setAvailableVehicles([]);
     }
-  }, [pickup, destination, prices, setValue, toast, pricesLoading]);
+  }, [pickup, destination, prices, setValue, getValues, toast, pricesLoading]);
+
 
   // Update fares when selections change
   useEffect(() => {
