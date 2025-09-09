@@ -23,7 +23,6 @@ export default function Header() {
   const navLinks = [
     { href: "/", label: "Book a Trip" },
     { href: "/faqs", label: "FAQs" },
-    { href: "/contact", label: "Contact" },
   ];
 
   if (user) {

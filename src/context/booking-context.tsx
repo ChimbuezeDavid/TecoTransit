@@ -8,8 +8,6 @@ import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { sendBookingStatusUpdateEmail } from '@/app/actions/email';
-
 
 interface BookingContextType {
   bookings: Booking[];
@@ -110,7 +108,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       createdAt: firestoreBooking.createdAt.toMillis(),
     } as Booking;
     
-  }, [toast]);
+  }, []);
 
   const updateBookingStatus = useCallback(async (booking: Booking, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
       const bookingDocRef = doc(db, 'bookings', booking.id);
@@ -120,15 +118,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       }
       
       await updateDoc(bookingDocRef, updateData);
-
-      try {
-        await sendBookingStatusUpdateEmail({ ...booking, ...updateData }, status);
-        toast({ title: 'Email Sent', description: `Customer has been notified of the ${status.toLowerCase()} booking.` });
-      } catch (emailError) {
-        toast({ variant: 'destructive', title: 'Email Failed', description: `The booking was updated, but the notification email failed to send. ${emailError instanceof Error ? emailError.message : ''}` });
-      }
       
-  }, [toast]);
+  }, []);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
