@@ -66,7 +66,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(doc => {
         const data = doc.data();
-        // Defensive check for createdAt field
+        // Defensive check for createdAt field to prevent crash on state re-render.
+        // The listener can sometimes re-process local data where createdAt is already a number.
         const createdAtMillis = data.createdAt instanceof Timestamp 
             ? data.createdAt.toMillis()
             : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
