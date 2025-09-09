@@ -4,15 +4,13 @@
 import { Resend } from 'resend';
 import BookingStatusUpdateEmail from '@/components/emails/booking-status-update-email';
 import type { Booking } from '@/lib/types';
+import { format } from 'date-fns';
 
 export async function sendBookingStatusUpdateEmail(booking: Booking) {
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    console.error('Resend API key is not configured. Please set RESEND_API_KEY in your .env.local file.');
-    // In a real app, you might throw an error or handle this more gracefully.
-    // For now, we'll just log it to avoid crashing the booking update process.
-    return;
+    throw new Error('Resend API key is not configured. Please set RESEND_API_KEY in your .env.local file.');
   }
   
   const resend = new Resend(apiKey);
@@ -25,19 +23,29 @@ export async function sendBookingStatusUpdateEmail(booking: Booking) {
       from: `TecoTransit <${fromEmail}>`,
       to: [booking.email],
       subject: subject,
-      react: BookingStatusUpdateEmail({ booking: booking }),
+      react: BookingStatusUpdateEmail({ 
+          name: booking.name,
+          status: booking.status,
+          bookingId: booking.id,
+          route: `${booking.pickup} to ${booking.destination}`,
+          vehicle: booking.vehicleType,
+          intendedDate: booking.intendedDate, // Already a string
+          alternativeDate: booking.alternativeDate, // Already a string
+          confirmedDate: booking.confirmedDate, // Already a string or undefined
+          totalFare: booking.totalFare.toLocaleString()
+      }),
     });
 
     if (error) {
       console.error('Resend API Error:', error);
-      // In a real app, you might throw an error to the client
-      // For now, we'll just log it.
-      return;
+      // Re-throw to make it visible in the calling function
+      throw new Error(error.message);
     }
 
     console.log('Email sent successfully:', data);
   } catch (error) {
     console.error('Failed to send email:', error);
-    // In a real app, you might throw an error to the client
+    // Re-throw to ensure the calling context is aware of the failure.
+    throw error;
   }
 }

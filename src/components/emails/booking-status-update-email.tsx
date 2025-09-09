@@ -10,14 +10,31 @@ import {
   Section,
   Text,
 } from '@react-email/components';
-import type { Booking } from '@/lib/types';
 
 interface BookingStatusUpdateEmailProps {
-  booking: Booking;
+    name: string;
+    status: 'Pending' | 'Confirmed' | 'Cancelled';
+    bookingId: string;
+    route: string;
+    vehicle: string;
+    intendedDate: string;
+    alternativeDate: string;
+    confirmedDate?: string;
+    totalFare: string;
 }
 
-export default function BookingStatusUpdateEmail({ booking }: BookingStatusUpdateEmailProps) {
-  const previewText = `Your TecoTransit booking has been ${booking.status}.`;
+export default function BookingStatusUpdateEmail({ 
+    name,
+    status,
+    bookingId,
+    route,
+    vehicle,
+    intendedDate,
+    alternativeDate,
+    confirmedDate,
+    totalFare
+}: BookingStatusUpdateEmailProps) {
+  const previewText = `Your TecoTransit booking has been ${status}.`;
   
   return (
     <Html>
@@ -27,22 +44,22 @@ export default function BookingStatusUpdateEmail({ booking }: BookingStatusUpdat
         <Container style={container}>
           <Heading style={heading}>TecoTransit</Heading>
           <Section>
-            <Text style={paragraph}>Hello {booking.name},</Text>
+            <Text style={paragraph}>Hello {name},</Text>
             <Text style={paragraph}>
               This is an update regarding your booking request. Your booking status is now:{' '}
-              <strong style={booking.status === 'Confirmed' ? confirmedStatus : cancelledStatus}>
-                {booking.status}
+              <strong style={status === 'Confirmed' ? confirmedStatus : cancelledStatus}>
+                {status}
               </strong>
             </Text>
 
-            {booking.status === 'Confirmed' && booking.confirmedDate && (
+            {status === 'Confirmed' && confirmedDate && (
                 <Text style={paragraph}>
-                    Your departure has been confirmed for: <strong>{booking.confirmedDate}</strong>.
+                    Your departure has been confirmed for: <strong>{confirmedDate}</strong>.
                     Please be at the assembly point on or before 7:00am. Further details about your driver will be sent to a group chat the day before departure.
                 </Text>
             )}
 
-            {booking.status === 'Cancelled' && (
+            {status === 'Cancelled' && (
                 <Text style={paragraph}>
                     We are sorry, but we were unable to proceed with your booking at this time. If you believe this was in error or have any questions, please contact our support team.
                 </Text>
@@ -53,12 +70,12 @@ export default function BookingStatusUpdateEmail({ booking }: BookingStatusUpdat
             <Text style={summaryTitle}>Booking Summary</Text>
 
             <Section style={summarySection}>
-                <Text style={summaryText}><strong>Booking ID:</strong> #{booking.id.substring(0, 8)}</Text>
-                <Text style={summaryText}><strong>Route:</strong> {booking.pickup} to {booking.destination}</Text>
-                <Text style={summaryText}><strong>Vehicle:</strong> {booking.vehicleType}</Text>
-                <Text style={summaryText}><strong>Intended Date:</strong> {booking.intendedDate}</Text>
-                <Text style={summaryText}><strong>Alternative Date:</strong> {booking.alternativeDate}</Text>
-                <Text style={summaryText}><strong>Total Fare:</strong> ₦{booking.totalFare.toLocaleString()}</Text>
+                <Text style={summaryText}><strong>Booking ID:</strong> #{bookingId.substring(0, 8)}</Text>
+                <Text style={summaryText}><strong>Route:</strong> {route}</Text>
+                <Text style={summaryText}><strong>Vehicle:</strong> {vehicle}</Text>
+                <Text style={summaryText}><strong>Intended Date:</strong> {intendedDate}</Text>
+                <Text style={summaryText}><strong>Alternative Date:</strong> {alternativeDate}</Text>
+                <Text style={summaryText}><strong>Total Fare:</strong> ₦{totalFare}</Text>
             </Section>
             
             <Hr style={hr} />

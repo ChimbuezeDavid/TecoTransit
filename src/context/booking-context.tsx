@@ -123,9 +123,19 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
       // After successful DB update, send email
       const updatedBooking = { ...booking, ...updateData };
-      await sendBookingStatusUpdateEmail(updatedBooking);
+      try {
+        await sendBookingStatusUpdateEmail(updatedBooking);
+      } catch (emailError) {
+         console.error("Failed to send status update email:", emailError);
+         toast({
+            variant: "destructive",
+            title: "Email Failed to Send",
+            description: "The booking status was updated, but the notification email could not be sent. Please check the server logs.",
+            duration: 8000,
+        });
+      }
       
-  }, []);
+  }, [toast]);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
