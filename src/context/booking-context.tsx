@@ -8,6 +8,8 @@ import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { sendBookingStatusUpdateEmail } from '@/app/actions/email';
+
 
 interface BookingContextType {
   bookings: Booking[];
@@ -118,6 +120,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       }
       
       await updateDoc(bookingDocRef, updateData);
+
+      // After successful DB update, send email
+      const updatedBooking = { ...booking, ...updateData };
+      await sendBookingStatusUpdateEmail(updatedBooking);
       
   }, []);
 
