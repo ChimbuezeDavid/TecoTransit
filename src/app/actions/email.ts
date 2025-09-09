@@ -3,8 +3,6 @@
 
 import { Resend } from 'resend';
 import BookingStatusUpdateEmail from '@/components/emails/booking-status-update-email';
-import type { Booking } from '@/lib/types';
-import { format } from 'date-fns';
 
 interface SendEmailProps {
     name: string;
@@ -29,7 +27,9 @@ export async function sendBookingStatusUpdateEmail(props: SendEmailProps) {
   const resend = new Resend(apiKey);
   const fromEmail = "tecotransit-nonreply@gmail.com";
 
-  const subject = `Booking ${props.status}: Your TecoTransit Trip (#${props.bookingId.substring(0, 8)})`;
+  // Ensure bookingId is a string before using substring on it.
+  const shortBookingId = typeof props.bookingId === 'string' ? props.bookingId.substring(0, 8) : 'N/A';
+  const subject = `Booking ${props.status}: Your TecoTransit Trip (#${shortBookingId})`;
 
   try {
     const { data, error } = await resend.emails.send({

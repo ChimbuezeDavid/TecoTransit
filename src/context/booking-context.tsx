@@ -124,9 +124,17 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       // After successful DB update, send email
       try {
         await sendBookingStatusUpdateEmail({
-            ...booking,
-            status,
-            confirmedDate
+            name: booking.name,
+            email: booking.email,
+            status: status,
+            bookingId: booking.id,
+            pickup: booking.pickup,
+            destination: booking.destination,
+            vehicleType: booking.vehicleType,
+            intendedDate: booking.intendedDate,
+            alternativeDate: booking.alternativeDate,
+            totalFare: booking.totalFare,
+            confirmedDate: confirmedDate
         });
       } catch (emailError) {
          console.error("Failed to send status update email:", emailError);
