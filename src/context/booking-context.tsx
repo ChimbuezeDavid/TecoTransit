@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch, getDoc, setDoc } from 'firebase/firestore';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
