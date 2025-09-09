@@ -122,9 +122,12 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       await updateDoc(bookingDocRef, updateData);
 
       // After successful DB update, send email
-      const updatedBooking = { ...booking, ...updateData };
       try {
-        await sendBookingStatusUpdateEmail(updatedBooking);
+        await sendBookingStatusUpdateEmail({
+            ...booking,
+            status,
+            confirmedDate
+        });
       } catch (emailError) {
          console.error("Failed to send status update email:", emailError);
          toast({
