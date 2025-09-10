@@ -21,7 +21,7 @@ export const sendBookingStatusEmail = async (props: SendEmailProps) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: 'TecoTransit <noreply@tecotransit.com>',
+      from: 'TecoTransit <noreply@tecotransit.org>',
       to: [props.email],
       subject: `Your Booking is ${props.status}! (Ref: ${props.bookingId.substring(0,8)})`,
       react: BookingStatusEmail(props),
