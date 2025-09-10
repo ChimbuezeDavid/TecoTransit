@@ -18,7 +18,7 @@ interface BookingContextType {
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => void;
   createBooking: (data: BookingFormData) => Promise<Booking>;
-  updateBookingStatus: (booking: Booking, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
+  updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
 }
 
@@ -112,8 +112,13 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     
   }, []);
 
-  const updateBookingStatus = useCallback(async (booking: Booking, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
-      const bookingDocRef = doc(db, 'bookings', booking.id);
+  const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
+      const bookingDocRef = doc(db, 'bookings', bookingId);
+      const booking = bookings.find(b => b.id === bookingId);
+      if (!booking) {
+        throw new Error("Booking not found");
+      }
+      
       const updateData: any = { status };
       if (status === 'Confirmed' && confirmedDate) {
         updateData.confirmedDate = confirmedDate;
@@ -146,7 +151,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
         });
       }
       
-  }, [toast]);
+  }, [toast, bookings]);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
@@ -178,3 +183,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    
