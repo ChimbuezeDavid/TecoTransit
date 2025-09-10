@@ -8,8 +8,6 @@ import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { sendBookingStatusUpdateEmail } from '@/app/actions/email';
-
 
 interface BookingContextType {
   bookings: Booking[];
@@ -114,10 +112,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
       const bookingDocRef = doc(db, 'bookings', bookingId);
-      const booking = bookings.find(b => b.id === bookingId);
-      if (!booking) {
-        throw new Error("Booking not found");
-      }
       
       const updateData: any = { status };
       if (status === 'Confirmed' && confirmedDate) {
@@ -125,33 +119,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       }
       
       await updateDoc(bookingDocRef, updateData);
-
-      // After successful DB update, send email
-      try {
-        await sendBookingStatusUpdateEmail({
-            name: booking.name,
-            email: booking.email,
-            status: status,
-            bookingId: booking.id,
-            pickup: booking.pickup,
-            destination: booking.destination,
-            vehicleType: booking.vehicleType,
-            intendedDate: booking.intendedDate,
-            alternativeDate: booking.alternativeDate,
-            totalFare: booking.totalFare,
-            confirmedDate: confirmedDate
-        });
-      } catch (emailError) {
-         console.error("Failed to send status update email:", emailError);
-         toast({
-            variant: "destructive",
-            title: "Email Failed to Send",
-            description: "The booking status was updated, but the notification email could not be sent. Please check the server logs.",
-            duration: 8000,
-        });
-      }
       
-  }, [toast, bookings]);
+  }, []);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
