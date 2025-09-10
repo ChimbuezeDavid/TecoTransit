@@ -92,7 +92,8 @@ export default function BookingStatusEmail({
           </Text>
 
           <Text style={footer}>
-            TecoTransit, Your reliable travel partner.
+            TecoTransit, Your reliable travel partner. <br />
+            123 Transit Lane, Travel City, Nigeria
           </Text>
         </Container>
       </Body>
