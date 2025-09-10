@@ -10,6 +10,7 @@ import {
   Preview,
   Section,
   Text,
+  Link,
 } from '@react-email/components';
 import { format } from 'date-fns';
 
@@ -71,7 +72,7 @@ export default function BookingStatusEmail({
            {status === 'Cancelled' && (
              <Section style={highlightSection}>
                 <Text style={highlightText}>
-                    Unfortunately, we were unable to process your booking at this time. If you have any questions, please contact our support team.
+                    Unfortunately, we were unable to process your booking at this time. If you have any questions, please contact our support team at <Link href="mailto:tecotransit@gmail.com" style={link}>tecotransit@gmail.com</Link>.
                 </Text>
              </Section>
           )}
@@ -93,7 +94,8 @@ export default function BookingStatusEmail({
 
           <Text style={footer}>
             TecoTransit, Your reliable travel partner. <br />
-            KM. 8.5, Afe Babalola Way, Ado Ekiti
+            KM. 8.5, Afe Babalola Way, Ado Ekiti <br />
+            Contact us at <Link href="mailto:tecotransit@gmail.com" style={link}>tecotransit@gmail.com</Link>
           </Text>
         </Container>
       </Body>
@@ -150,6 +152,11 @@ const text = {
   lineHeight: '26px',
   padding: '0 30px',
 };
+
+const link = {
+  color: '#D4AF37',
+  textDecoration: 'underline',
+}
 
 const highlightSection = {
     backgroundColor: '#fffbe6',
