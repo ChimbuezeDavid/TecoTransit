@@ -1,3 +1,4 @@
+
 import { Route } from "lucide-react";
 import Link from "next/link";
 
@@ -10,9 +11,13 @@ export default function Footer() {
                         <Route className="h-6 w-6" />
                         <span className="font-headline">TecoTransit</span>
                     </Link>
-                    <p className="text-sm text-muted-foreground text-center sm:text-left">
-                        © {new Date().getFullYear()} TecoTransit. All rights reserved.
-                    </p>
+                     <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+                         <p className="text-center sm:text-left">
+                            © {new Date().getFullYear()} TecoTransit. All rights reserved.
+                        </p>
+                        <span className="hidden sm:inline">|</span>
+                        <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+                     </div>
                 </div>
             </div>
         </footer>

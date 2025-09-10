@@ -94,8 +94,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     const bookingId = uuidv4();
     const bookingDocRef = doc(db, 'bookings', bookingId);
    
+    const { privacyPolicy, ...restOfData } = data;
+
     const firestoreBooking = {
-      ...data,
+      ...restOfData,
       id: bookingId,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
@@ -186,5 +188,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    
