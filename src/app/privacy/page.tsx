@@ -12,35 +12,42 @@ export default function PrivacyPolicyPage() {
 
         <h2>1. WHAT INFORMATION DO WE COLLECT?</h2>
         <p>We collect personal information that you voluntarily provide to us when you make a booking on our website. The personal information we collect includes the following:</p>
-        <ul>
+        <ul className="list-disc pl-6 space-y-1">
             <li><strong>Personal Information:</strong> Name, email address, and phone number.</li>
             <li><strong>Booking Information:</strong> Pickup location, destination, intended and alternative departure dates, vehicle type, and luggage count.</li>
         </ul>
 
         <h2>2. HOW DO WE USE YOUR INFORMATION?</h2>
-        <p>We use the information we collect or receive:</p>
-        <ul>
+        <p>We use the information we collect or receive for the following purposes:</p>
+        <ul className="list-disc pl-6 space-y-1">
             <li><strong>To facilitate the booking process.</strong> We use your information to process your booking requests, manage your trip, and communicate with you about your booking status.</li>
-            <li><strong>To send administrative information to you.</strong> We may use your personal information to send you product, service, and new feature information and/or information about changes to our terms, conditions, and policies.</li>
+            <li><strong>To send administrative information to you.</strong> We may use your personal information to send you service and new feature information and/or information about changes to our terms, conditions, and policies.</li>
             <li><strong>To protect our Services.</strong> We may use your information as part of our efforts to keep our website safe and secure.</li>
         </ul>
 
         <h2>3. WILL YOUR INFORMATION BE SHARED WITH ANYONE?</h2>
-        <p>We only share information with your consent, to comply with laws, to provide you with services, to protect your rights, or to fulfill business obligations. Your information is shared with our administrative team to confirm and manage your booking.</p>
+        <p>We only share information with your consent, to comply with laws, to provide you with services, to protect your rights, or to fulfill business obligations. Your information is shared with our administrative team to confirm and manage your booking. We do not sell your personal information to third parties.</p>
 
         <h2>4. HOW LONG DO WE KEEP YOUR INFORMATION?</h2>
-        <p>We will only keep your personal information for as long as it is necessary for the purposes set out in this privacy policy, unless a longer retention period is required or permitted by law.</p>
+        <p>We will only keep your personal information for as long as it is necessary for the purposes set out in this privacy policy, unless a longer retention period is required or permitted by law (such as tax, accounting, or other legal requirements).</p>
 
         <h2>5. HOW DO WE KEEP YOUR INFORMATION SAFE?</h2>
         <p>We have implemented appropriate technical and organizational security measures designed to protect the security of any personal information we process. However, despite our safeguards and efforts to secure your information, no electronic transmission over the Internet or information storage technology can be guaranteed to be 100% secure.</p>
 
         <h2>6. WHAT ARE YOUR PRIVACY RIGHTS?</h2>
-        <p>You have certain rights under applicable data protection laws. These may include the right (i) to request access and obtain a copy of your personal information, (ii) to request rectification or erasure; and (iii) to restrict the processing of your personal information. To make such a request, please use the contact details provided below.</p>
+        <p>In accordance with the Nigeria Data Protection Act (NDPA), you have certain rights regarding your personal data. These may include the right to:</p>
+         <ul className="list-disc pl-6 space-y-1">
+            <li>Request access and obtain a copy of your personal information.</li>
+            <li>Request correction of any inaccurate or incomplete data.</li>
+            <li>Request erasure of your personal data.</li>
+            <li>Withdraw your consent at any time.</li>
+        </ul>
+        <p>To make such a request, please use the contact details provided below.</p>
 
         <h2>7. HOW CAN YOU CONTACT US ABOUT THIS POLICY?</h2>
         <p>If you have questions or comments about this policy, you may email us at tecotransit@gmail.com or by post to:</p>
-        <p>
-            TecoTransit<br />
+        <p className="not-prose">
+            <strong>TecoTransit</strong><br />
             KM. 8.5, Afe Babalola Way<br />
             Ado Ekiti, Nigeria
         </p>
