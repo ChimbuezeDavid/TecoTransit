@@ -20,14 +20,18 @@ export default function Header() {
     return null;
   }
 
-  const navLinks = [
-    { href: "/", label: "Book a Trip" },
-    { href: "/faqs", label: "FAQs" },
-  ];
-
-  if (user) {
-    navLinks.push({ href: "/admin", label: "Admin" });
-  }
+  const getNavLinks = () => {
+    const links = [
+      { href: "/", label: "Book a Trip" },
+      { href: "/faqs", label: "FAQs" },
+    ];
+    if (user) {
+      links.push({ href: "/admin", label: "Admin" });
+    }
+    return links;
+  };
+  
+  const navLinks = getNavLinks();
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
       <Link href={href} className={cn(
