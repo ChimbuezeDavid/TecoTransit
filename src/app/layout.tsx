@@ -5,6 +5,7 @@
 import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
+import { BookingProvider } from '@/context/booking-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
@@ -62,16 +63,18 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            {isAdminPage ? (
-              <>{children}</>
-            ) : (
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">{children}</main>
-                <Footer />
-              </div>
-            )}
-            <Toaster />
+            <BookingProvider>
+              {isAdminPage ? (
+                <>{children}</>
+              ) : (
+                <div className="flex flex-col min-h-screen">
+                  <Header />
+                  <main className="flex-grow">{children}</main>
+                  <Footer />
+                </div>
+              )}
+              <Toaster />
+            </BookingProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

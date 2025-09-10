@@ -1,0 +1,41 @@
+
+'use server';
+
+import { Resend } from 'resend';
+import BookingStatusEmail from '@/components/emails/booking-status-email';
+
+interface SendEmailProps {
+  name: string;
+  email: string;
+  status: 'Confirmed' | 'Cancelled';
+  bookingId: string;
+  pickup: string;
+  destination: string;
+  vehicleType: string;
+  totalFare: number;
+  confirmedDate?: string;
+}
+
+export const sendBookingStatusEmail = async (props: SendEmailProps) => {
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'TecoTransit <noreply@tecotransit.org>',
+      to: [props.email],
+      subject: `Your Booking is ${props.status}! (Ref: ${props.bookingId.substring(0,8)})`,
+      react: BookingStatusEmail(props),
+    });
+
+    if (error) {
+      // Re-throw the specific error from Resend
+      throw new Error(error.message);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    // Propagate the specific error message
+    throw new Error(error instanceof Error ? error.message : 'Failed to send email.');
+  }
+};

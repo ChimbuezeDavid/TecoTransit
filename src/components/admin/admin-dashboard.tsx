@@ -1,15 +1,16 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { collection, onSnapshot, doc, updateDoc, query, where, getDocs, deleteDoc, orderBy, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { format, parseISO } from "date-fns";
+import { useAuth } from "@/context/auth-context";
+import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,8 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+
+const ITEMS_PER_PAGE = 10;
 
 function DashboardSkeleton() {
     return (
@@ -75,77 +78,42 @@ function DashboardSkeleton() {
 
 
 export default function AdminDashboard() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking } = useBooking();
+  const { toast } = useToast();
+
+  const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [confirmedDate, setConfirmedDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
+  const [currentPage, setCurrentPage] = useState(1);
   
-  const { toast } = useToast();
-  
-  const bookingsQuery = useMemo(() => {
-    const baseQuery = collection(db, "bookings");
-    if (statusFilter === 'All') {
-        return query(baseQuery, orderBy("createdAt", "desc"));
-    } else {
-        return query(baseQuery, where("status", "==", statusFilter), orderBy("createdAt", "desc"));
-    }
-  }, [statusFilter]);
-
-  const fetchBookings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-        const querySnapshot = await getDocs(bookingsQuery);
-        const bookingsData: Booking[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            bookingsData.push({ 
-                ...data, 
-                id: doc.id,
-                createdAt: (data.createdAt as Timestamp).toMillis()
-            } as Booking);
-        });
-        setBookings(bookingsData);
-    } catch (err) {
-        console.error("Error fetching bookings: ", err);
-        const defaultError = "Could not fetch bookings. Please check your connection and Firestore security rules.";
-        setError(defaultError);
-        toast({ variant: "destructive", title: "Error", description: defaultError });
-    } finally {
-        setLoading(false);
-    }
-  }, [bookingsQuery, toast]);
-
-
+  // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    if (user) {
+      fetchBookings(statusFilter);
+    }
+  }, [user, statusFilter, fetchBookings]);
 
-    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
-      const bookingsData: Booking[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        bookingsData.push({ 
-            ...data, 
-            id: doc.id,
-            createdAt: (data.createdAt as Timestamp).toMillis()
-        } as Booking);
-      });
-      setBookings(bookingsData);
-      setLoading(false);
-    }, (err) => {
-        console.error("Error with snapshot listener: ", err);
-        const defaultError = "Could not fetch bookings. This might be due to a connection issue or missing Firestore security rules.";
-        setError(defaultError);
-        toast({ variant: "destructive", title: "Error Fetching Data", description: "Please check your connection and ensure Firestore rules are deployed. See helpme.txt for instructions.", duration: 10000 });
-        setLoading(false);
-    });
+  const filteredBookings = useMemo(() => {
+    if (statusFilter === 'All') {
+        return bookings;
+    }
+    return bookings.filter(b => b.status === statusFilter);
+  }, [bookings, statusFilter]);
 
-    return () => unsubscribe();
-  }, [bookingsQuery, toast]);
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+  
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredBookings.slice(startIndex, endIndex);
+  }, [filteredBookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -164,13 +132,11 @@ export default function AdminDashboard() {
         });
         return;
     }
+
+    setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     
-    const bookingRef = doc(db, "bookings", selectedBooking.id);
     try {
-        await updateDoc(bookingRef, { 
-            status,
-            ...(status === 'Confirmed' && { confirmedDate }),
-        });
+        await updateBookingStatus(selectedBooking.id, status, status === 'Confirmed' ? confirmedDate : undefined);
         toast({
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
@@ -180,15 +146,18 @@ export default function AdminDashboard() {
         toast({
             variant: "destructive",
             title: "Update Failed",
-            description: "Could not update the booking. Please try again.",
+            description: `Could not update the booking. Please try again. ${error instanceof Error ? error.message : ''}`,
         });
+    } finally {
+        setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
     }
   };
 
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
+    setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     try {
-      await deleteDoc(doc(db, "bookings", selectedBooking.id));
+      await deleteBooking(selectedBooking.id);
       toast({
         title: "Booking Deleted",
         description: `Booking has been permanently deleted.`,
@@ -200,18 +169,20 @@ export default function AdminDashboard() {
         title: "Delete Failed",
         description: "Could not delete the booking. Please try again.",
       });
+    } finally {
+        setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
     }
   };
 
   const downloadCSV = () => {
-    if (bookings.length === 0) {
+    if (filteredBookings.length === 0) {
         toast({ title: "No data to export" });
         return;
     }
     const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
-        ...bookings.map(b => [
+        ...filteredBookings.map(b => [
             b.id,
             `"${b.name.replace(/"/g, '""')}"`,
             b.email,
@@ -264,10 +235,10 @@ export default function AdminDashboard() {
         </TableRow>
       );
     }
-    if (bookings.length === 0) {
+    if (paginatedBookings.length === 0) {
       return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
     }
-    return bookings.map((booking) => (
+    return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
         <TableCell>
           <div className="font-medium">{booking.name}</div>
@@ -280,13 +251,15 @@ export default function AdminDashboard() {
         <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
         <TableCell className="text-right">
-          <Button variant="outline" size="sm" onClick={() => openDialog(booking)}>Manage</Button>
+          <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
+            {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Manage'}
+          </Button>
         </TableCell>
       </TableRow>
     ));
   };
   
-  if (loading) {
+  if (loading && bookings.length === 0) {
     return <DashboardSkeleton />;
   }
 
@@ -300,7 +273,9 @@ export default function AdminDashboard() {
             </div>
              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
-                <Button variant="outline" size="icon" onClick={fetchBookings}><RefreshCw className="h-4 w-4" /></Button>
+                <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
+                    {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                </Button>
             </div>
         </div>
         <div className="flex items-center gap-2 pt-4">
@@ -334,16 +309,39 @@ export default function AdminDashboard() {
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter className="flex items-center justify-between border-t pt-4">
+        <div className="text-sm text-muted-foreground">
+          Showing page {currentPage} of {totalPages}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </CardFooter>
       {selectedBooking && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
-                    <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                    <DialogDescription className="pt-1">
-                        <div className="flex items-center gap-2">
-                            <strong>Status:</strong>
-                            <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
-                        </div>
+                    <div className="flex justify-between items-start">
+                        <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
+                         <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1">{selectedBooking.status}</Badge>
+                    </div>
+                     <DialogDescription className="pt-1">
+                        Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4 text-sm">
@@ -356,8 +354,8 @@ export default function AdminDashboard() {
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
                         <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended Date:</strong> {selectedBooking.intendedDate}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {selectedBooking.alternativeDate}</span></div>
+                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
+                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
                     </div>
                     <Separator/>
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -372,25 +370,25 @@ export default function AdminDashboard() {
                              <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 space-y-2">
                                 <Label htmlFor="intended" className="flex items-center space-x-2 p-2 rounded-md hover:bg-background cursor-pointer">
                                     <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
-                                    <span>Intended: {selectedBooking.intendedDate}</span>
+                                    <span>Intended: {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
                                 </Label>
                                 <Label htmlFor="alternative" className="flex items-center space-x-2 p-2 rounded-md hover:bg-background cursor-pointer">
                                     <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
-                                    <span>Alternative: {selectedBooking.alternativeDate}</span>
+                                    <span>Alternative: {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
                                 </Label>
                             </RadioGroup>
                         </div>
                     )}
 
                     {selectedBooking.status === 'Confirmed' && (
-                        <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate}</span></div>
+                        <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
                     )}
                 </div>
                 <DialogFooter className="sm:justify-between">
                     <div>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                                <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -407,8 +405,14 @@ export default function AdminDashboard() {
                     <div className="flex gap-2">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')}>Cancel Booking</Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')}>Confirm Booking</Button>
+                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    Cancel Booking
+                                </Button>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    Confirm Booking
+                                </Button>
                             </>
                         ) : (
                             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
@@ -421,3 +425,7 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
+
+    

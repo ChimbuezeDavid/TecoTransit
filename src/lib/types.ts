@@ -1,4 +1,5 @@
 
+
 export type Booking = {
   id: string;
   name: string;
@@ -6,14 +7,19 @@ export type Booking = {
   phone: string;
   pickup: string;
   destination: string;
-  intendedDate: string;
-  alternativeDate: string;
+  intendedDate: string; // Stored as 'yyyy-MM-dd' in Firestore, but can be 'PPP' in UI
+  alternativeDate: string; // Stored as 'yyyy-MM-dd' in Firestore, but can be 'PPP' in UI
   vehicleType: string;
   luggageCount: number;
   totalFare: number;
   status: 'Pending' | 'Confirmed' | 'Cancelled';
-  createdAt: number;
-  confirmedDate?: string;
+  createdAt: number; // Stored as Firestore Timestamp, but millis in UI
+  confirmedDate?: string; // Stored as 'yyyy-MM-dd'
+};
+
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate'> & {
+    intendedDate: Date;
+    alternativeDate: Date;
 };
 
 export type PriceRule = {
