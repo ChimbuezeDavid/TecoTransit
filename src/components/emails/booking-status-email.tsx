@@ -93,7 +93,7 @@ export default function BookingStatusEmail({
 
           <Text style={footer}>
             TecoTransit, Your reliable travel partner. <br />
-            123 Transit Lane, Travel City, Nigeria
+            KM. 8.5, Afe Babalola Way, Ado Ekiti
           </Text>
         </Container>
       </Body>
