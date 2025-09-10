@@ -184,7 +184,7 @@ export default function BookingForm() {
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
-        <CardTitle className="font-headline text-3xl text-primary">Booking Details</CardTitle>
+        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
         <CardDescription>Fill out the form below to secure your seat.</CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -338,7 +338,7 @@ export default function BookingForm() {
               control={form.control}
               name="privacyPolicy"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl>
                     <Checkbox
                       checked={field.value}

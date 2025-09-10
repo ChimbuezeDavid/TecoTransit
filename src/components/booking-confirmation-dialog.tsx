@@ -23,12 +23,12 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader className="text-center items-center">
+        <DialogHeader className="text-center items-center p-6">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Request Received!</DialogTitle>
           <DialogDescription>Your request is now pending confirmation. We will contact you shortly with an update.</DialogDescription>
         </DialogHeader>
-        <div className="p-6 space-y-6">
+        <div className="px-6 space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-lg">Booking Summary</h3>
                 <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
@@ -57,8 +57,8 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
                 <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{booking.totalFare.toLocaleString()}</span></div>
             </div>
         </div>
-        <DialogFooter className="flex justify-center p-6 bg-muted/30 rounded-b-lg">
-             <Button asChild onClick={onClose}><Link href="/"><Home className="mr-2 h-4 w-4" />Go to Homepage</Link></Button>
+        <DialogFooter className="flex-col sm:flex-row justify-center p-6 mt-6 bg-muted/30 rounded-b-lg">
+             <Button asChild onClick={onClose} className="w-full sm:w-auto"><Link href="/"><Home className="mr-2 h-4 w-4" />Go to Homepage</Link></Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

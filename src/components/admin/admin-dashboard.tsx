@@ -27,7 +27,7 @@ function DashboardSkeleton() {
     return (
         <Card>
             <CardHeader>
-                <div className="flex flex-row items-start justify-between">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                     <div>
                         <Skeleton className="h-7 w-48" />
                         <Skeleton className="h-4 w-72 mt-2" />
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
       <TableRow key={booking.id}>
         <TableCell>
           <div className="font-medium">{booking.name}</div>
-          <div className="text-sm text-muted-foreground">{booking.email}</div>
+          <div className="text-sm text-muted-foreground hidden sm:block">{booking.email}</div>
         </TableCell>
         <TableCell className="hidden md:table-cell">
           <div className="font-medium">{booking.pickup}</div>
@@ -275,12 +275,12 @@ export default function AdminDashboard() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-row items-start justify-between">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
                 <CardTitle>Booking Requests</CardTitle>
                 <CardDescription>A list of all trip requests from customers.</CardDescription>
             </div>
-             <div className="flex items-center gap-2">
+             <div className="flex items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
                 <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
@@ -290,7 +290,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-2 pt-4">
             <Filter className="h-4 w-4 text-muted-foreground" />
              <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -318,7 +318,7 @@ export default function AdminDashboard() {
           </TableBody>
         </Table>
       </CardContent>
-      <CardFooter className="flex items-center justify-between border-t pt-4">
+      <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
         <div className="text-sm text-muted-foreground">
           Showing page {currentPage} of {totalPages}
         </div>
@@ -393,11 +393,11 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
                     )}
                 </div>
-                <DialogFooter className="sm:justify-between">
+                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
                     <div>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                                <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto"><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -411,7 +411,7 @@ export default function AdminDashboard() {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col-reverse sm:flex-row gap-2">
                         {selectedBooking.status === 'Pending' ? (
                             <>
                                 <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
@@ -434,5 +434,3 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
