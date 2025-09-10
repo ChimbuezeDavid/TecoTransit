@@ -28,12 +28,14 @@ export const sendBookingStatusEmail = async (props: SendEmailProps) => {
     });
 
     if (error) {
+      // Re-throw the specific error from Resend
       throw new Error(error.message);
     }
 
     return data;
   } catch (error) {
     console.error('Failed to send email:', error);
-    throw new Error('Failed to send email.');
+    // Propagate the specific error message
+    throw new Error(error instanceof Error ? error.message : 'Failed to send email.');
   }
 };
