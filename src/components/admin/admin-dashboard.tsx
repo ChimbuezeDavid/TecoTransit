@@ -79,7 +79,7 @@ function DashboardSkeleton() {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking } = useBooking();
+  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings } = useBooking();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
@@ -91,10 +91,19 @@ export default function AdminDashboard() {
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
     if (user) {
-      fetchBookings(statusFilter);
+      unsubscribe = fetchBookings(statusFilter);
+    } else {
+      clearBookings();
     }
-  }, [user, statusFilter, fetchBookings]);
+    // Cleanup the listener when the component unmounts or the user logs out
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user, statusFilter, fetchBookings, clearBookings]);
 
   const filteredBookings = useMemo(() => {
     if (statusFilter === 'All') {
@@ -425,7 +434,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
 
     

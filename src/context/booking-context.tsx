@@ -15,10 +15,11 @@ interface BookingContextType {
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
-  fetchBookings: (status: Booking['status'] | 'All') => void;
+  fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
   createBooking: (data: BookingFormData) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
+  clearBookings: () => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -86,7 +87,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, [toast]);
 
   const createBooking = useCallback(async (data: BookingFormData) => {
@@ -153,6 +154,11 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       const bookingDocRef = doc(db, 'bookings', id);
       await deleteDoc(bookingDocRef);
   }, []);
+  
+  const clearBookings = useCallback(() => {
+    setBookings([]);
+    setLoading(true);
+  }, []);
 
   const value = {
     bookings,
@@ -163,6 +169,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     createBooking,
     updateBookingStatus,
     deleteBooking,
+    clearBookings,
   };
 
   return (
@@ -179,3 +186,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    
