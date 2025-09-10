@@ -10,7 +10,7 @@ import type { Booking } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,6 +20,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+
+const ITEMS_PER_PAGE = 10;
 
 function DashboardSkeleton() {
     return (
@@ -85,6 +87,7 @@ export default function AdminDashboard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [confirmedDate, setConfirmedDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -99,6 +102,18 @@ export default function AdminDashboard() {
     }
     return bookings.filter(b => b.status === statusFilter);
   }, [bookings, statusFilter]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
+  
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const paginatedBookings = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredBookings.slice(startIndex, endIndex);
+  }, [filteredBookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -220,10 +235,10 @@ export default function AdminDashboard() {
         </TableRow>
       );
     }
-    if (filteredBookings.length === 0) {
+    if (paginatedBookings.length === 0) {
       return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
     }
-    return filteredBookings.map((booking) => (
+    return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
         <TableCell>
           <div className="font-medium">{booking.name}</div>
@@ -294,6 +309,29 @@ export default function AdminDashboard() {
           </TableBody>
         </Table>
       </CardContent>
+      <CardFooter className="flex items-center justify-between border-t pt-4">
+        <div className="text-sm text-muted-foreground">
+          Showing page {currentPage} of {totalPages}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => prev - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => prev + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </CardFooter>
       {selectedBooking && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-xl">
@@ -387,5 +425,7 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
