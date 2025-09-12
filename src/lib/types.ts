@@ -20,6 +20,7 @@ export type Booking = {
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate'> & {
     intendedDate: Date;
     alternativeDate: Date;
+    privacyPolicy: boolean;
 };
 
 export type PriceRule = {

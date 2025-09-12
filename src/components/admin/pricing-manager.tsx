@@ -33,8 +33,8 @@ const formSchema = z.object({
 
 function PricingManagerSkeleton() {
     return (
-        <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
+        <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-7 w-48" />
@@ -64,7 +64,7 @@ function PricingManagerSkeleton() {
                     </CardFooter>
                 </Card>
             </div>
-             <div className="md:col-span-2">
+             <div className="lg:col-span-2">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-7 w-40" />
@@ -257,8 +257,8 @@ export default function PricingManager() {
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-8">
-      <div className="md:col-span-1">
+    <div className="grid lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-1">
         <Card>
           <CardHeader>
             <CardTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</CardTitle>
@@ -325,59 +325,64 @@ export default function PricingManager() {
           </Form>
         </Card>
       </div>
-      <div className="md:col-span-2">
+      <div className="lg:col-span-2">
         <Card>
             <CardHeader>
                 <CardTitle>Current Price List</CardTitle>
                 <CardDescription>A list of all active pricing rules.</CardDescription>
             </CardHeader>
             <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Route</TableHead>
-                            <TableHead>Vehicle</TableHead>
-                            <TableHead>Price</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {priceList.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
-                        ) : (
-                            priceList.map((rule) => (
-                                <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
-                                    <TableCell>
-                                        <div className="font-medium">{rule.pickup}</div>
-                                        <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                                    </TableCell>
-                                    <TableCell>{rule.vehicleType}</TableCell>
-                                    <TableCell>₦{rule.price.toLocaleString()}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Route</TableHead>
+                                <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
+                                <TableHead className="hidden sm:table-cell">Price</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {priceList.length === 0 ? (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                            ) : (
+                                priceList.map((rule) => (
+                                    <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
+                                        <TableCell>
+                                            <div className="font-medium">{rule.pickup}</div>
+                                            <div className="text-sm text-muted-foreground">to {rule.destination}</div>
+                                            <div className="sm:hidden text-sm text-muted-foreground mt-1">{rule.vehicleType} - ₦{rule.price.toLocaleString()}</div>
+                                        </TableCell>
+                                        <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
+                                        <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end">
+                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
       </div>

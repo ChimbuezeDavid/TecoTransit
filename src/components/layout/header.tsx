@@ -36,7 +36,7 @@ export default function Header() {
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
       <Link href={href} className={cn(
           "font-medium transition-colors hover:text-primary",
-          pathname === href ? "text-primary" : "text-muted-foreground",
+          (pathname === href || (href === "/" && pathname.startsWith("/#"))) ? "text-primary" : "text-muted-foreground",
           className
        )}>
         {label}

@@ -11,6 +11,7 @@ import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants'
 import { useBooking } from '@/context/booking-context';
 import type { Booking, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Checkbox } from './ui/checkbox';
 
 
 const bookingSchema = z.object({
@@ -33,6 +35,9 @@ const bookingSchema = z.object({
   alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   luggageCount: z.coerce.number().min(0).max(10),
+  privacyPolicy: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the privacy policy to continue." }),
+  }),
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
@@ -179,7 +184,7 @@ export default function BookingForm() {
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
-        <CardTitle className="font-headline text-3xl text-primary">Booking Details</CardTitle>
+        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
         <CardDescription>Fill out the form below to secure your seat.</CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -329,6 +334,30 @@ export default function BookingForm() {
                     </FormItem>
                 )} />
             </div>
+            <FormField
+              control={form.control}
+              name="privacyPolicy"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      I agree to the{" "}
+                      <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+                        Privacy Policy
+                      </Link>
+                      {" "}and consent to my data being processed.
+                    </FormLabel>
+                    <FormMessage />
+                  </div>
+                </FormItem>
+              )}
+            />
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
