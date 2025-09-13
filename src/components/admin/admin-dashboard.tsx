@@ -113,24 +113,17 @@ export default function AdminDashboard() {
     };
   }, [user, statusFilter, fetchBookings, clearBookings]);
 
-  const filteredBookings = useMemo(() => {
-    if (statusFilter === 'All') {
-        return bookings;
-    }
-    return bookings.filter(b => b.status === statusFilter);
-  }, [bookings, statusFilter]);
-
   // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
   
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredBookings.slice(startIndex, endIndex);
-  }, [filteredBookings, currentPage]);
+    return bookings.slice(startIndex, endIndex);
+  }, [bookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -221,14 +214,14 @@ export default function AdminDashboard() {
   };
 
   const downloadCSV = () => {
-    if (filteredBookings.length === 0) {
+    if (bookings.length === 0) {
         toast({ title: "No data to export" });
         return;
     }
     const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
-        ...filteredBookings.map(b => [
+        ...bookings.map(b => [
             b.id,
             `"${b.name.replace(/"/g, '""')}"`,
             b.email,
@@ -566,7 +559,7 @@ export default function AdminDashboard() {
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selected.id]} className="w-full sm:w-auto">
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
@@ -582,11 +575,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-
-    
-
-    
 
     
