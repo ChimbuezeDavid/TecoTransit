@@ -3,7 +3,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +19,7 @@ interface BookingContextType {
   createBooking: (data: BookingFormData) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
+  deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
   clearBookings: () => void;
 }
 
@@ -62,14 +63,16 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     setLoading(true);
     setError(null);
     
-    let bookingsQuery;
     const bookingsCollection = collection(db, "bookings");
+    const queryConstraints = [];
 
     if (status !== 'All') {
-        bookingsQuery = query(bookingsCollection, where("status", "==", status), orderBy("createdAt", "desc"));
-    } else {
-        bookingsQuery = query(bookingsCollection, orderBy("createdAt", "desc"));
+        queryConstraints.push(where("status", "==", status));
     }
+    queryConstraints.push(orderBy("createdAt", "desc"));
+    
+    const bookingsQuery = query(bookingsCollection, ...queryConstraints);
+
 
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(doc => {
@@ -109,7 +112,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
-    await setDoc(bookingDocRef, firestoreBooking);
+    await addDoc(collection(db, 'bookings'), firestoreBooking);
 
     return {
       ...firestoreBooking,
@@ -160,6 +163,29 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       const bookingDocRef = doc(db, 'bookings', id);
       await deleteDoc(bookingDocRef);
   }, []);
+
+  const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
+    const startTimestamp = Timestamp.fromDate(startDate);
+    // Add 1 day to the end date to make the range inclusive
+    const endOfDay = new Date(endDate);
+    endOfDay.setHours(23, 59, 59, 999);
+    const endTimestamp = Timestamp.fromDate(endOfDay);
+    
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('createdAt', '>=', startTimestamp),
+      where('createdAt', '<=', endTimestamp)
+    );
+    
+    const snapshot = await getDocs(bookingsQuery);
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    return snapshot.size;
+  }, []);
   
   const clearBookings = useCallback(() => {
     setBookings([]);
@@ -175,6 +201,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     createBooking,
     updateBookingStatus,
     deleteBooking,
+    deleteBookingsInRange,
     clearBookings,
   };
 
@@ -192,3 +219,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    
