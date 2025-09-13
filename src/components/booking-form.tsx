@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import { Separator } from './ui/separator';
 
 
 const bookingSchema = z.object({
@@ -206,11 +207,28 @@ export default function BookingForm() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <Button asChild className="w-full" size="lg">
-                            <Link href={`https://wa.me/${customerService.phone}`} target="_blank">
+                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
                                 <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat on WhatsApp
+                                Chat with Tolu
                             </Link>
                         </Button>
+                         <Button asChild className="w-full" size="lg">
+                            <Link href="https://wa.me/message/OD5WZAO2CUCIF1" target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat with Esther
+                            </Link>
+                        </Button>
+                         <Button asChild className="w-full" size="lg">
+                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat with Abraham
+                            </Link>
+                        </Button>
+                        <div className="flex items-center gap-2">
+                           <Separator className="flex-1"/>
+                           <span className="text-xs text-muted-foreground">OR</span>
+                           <Separator className="flex-1"/>
+                        </div>
                          <Button asChild className="w-full" size="lg" variant="secondary">
                             <Link href={`mailto:${customerService.email}`}>
                                 <Mail className="mr-2 h-5 w-5" />
