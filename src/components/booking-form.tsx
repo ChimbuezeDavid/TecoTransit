@@ -224,17 +224,6 @@ export default function BookingForm() {
                                 Chat with Abraham
                             </Link>
                         </Button>
-                        <div className="flex items-center gap-2">
-                           <Separator className="flex-1"/>
-                           <span className="text-xs text-muted-foreground">OR</span>
-                           <Separator className="flex-1"/>
-                        </div>
-                         <Button asChild className="w-full" size="lg" variant="secondary">
-                            <Link href={`mailto:${customerService.email}`}>
-                                <Mail className="mr-2 h-5 w-5" />
-                                Send an Email
-                            </Link>
-                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -434,3 +423,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
