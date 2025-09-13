@@ -62,9 +62,13 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     setLoading(true);
     setError(null);
     
-    let bookingsQuery = query(collection(db, "bookings"), orderBy("createdAt", "desc"));
+    let bookingsQuery;
+    const bookingsCollection = collection(db, "bookings");
+
     if (status !== 'All') {
-        bookingsQuery = query(bookingsQuery, where("status", "==", status));
+        bookingsQuery = query(bookingsCollection, where("status", "==", status), orderBy("createdAt", "desc"));
+    } else {
+        bookingsQuery = query(bookingsCollection, orderBy("createdAt", "desc"));
     }
 
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
