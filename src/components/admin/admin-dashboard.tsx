@@ -399,7 +399,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
                     )}
                 </div>
-                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
                     <div>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -417,20 +417,20 @@ export default function AdminDashboard() {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                    <div className="flex flex-col-reverse sm:flex-row gap-2">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
                         )}
                     </div>
                 </DialogFooter>
