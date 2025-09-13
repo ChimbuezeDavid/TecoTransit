@@ -1,5 +1,7 @@
 
 
+import { DateRange } from "react-day-picker";
+
 export type Booking = {
   id: string;
   name: string;
@@ -40,3 +42,5 @@ export type PriceAlert = {
     italic: boolean;
     updatedAt: number;
 }
+
+    

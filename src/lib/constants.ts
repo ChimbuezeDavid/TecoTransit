@@ -16,3 +16,10 @@ export const vehicleOptions = {
     '5-seater': { name: '5-Seater Sienna', icon: Car, maxLuggages: 2 },
     '7-seater': { name: '7-Seater Bus', icon: Bus, maxLuggages: 2 },
 };
+
+export const customerService = {
+  phone: '2349032347965', // Your WhatsApp number with country code, no '+' or spaces
+  email: 'tecotransit@gmail.com',
+};
+
+    

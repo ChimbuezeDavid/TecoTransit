@@ -1,25 +1,30 @@
 
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { format, parseISO } from "date-fns";
+import { useState, useMemo, useEffect } from "react";
+import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
+import { DateRange } from "react-day-picker";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { ScrollArea } from "../ui/scroll-area";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -33,6 +38,7 @@ function DashboardSkeleton() {
                         <Skeleton className="h-4 w-72 mt-2" />
                     </div>
                     <div className="flex items-center gap-2">
+                        <Skeleton className="h-9 w-24" />
                         <Skeleton className="h-9 w-32" />
                         <Skeleton className="h-9 w-9" />
                     </div>
@@ -79,15 +85,17 @@ function DashboardSkeleton() {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings } = useBooking();
+  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings, deleteBookingsInRange } = useBooking();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   const [confirmedDate, setConfirmedDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -105,29 +113,22 @@ export default function AdminDashboard() {
     };
   }, [user, statusFilter, fetchBookings, clearBookings]);
 
-  const filteredBookings = useMemo(() => {
-    if (statusFilter === 'All') {
-        return bookings;
-    }
-    return bookings.filter(b => b.status === statusFilter);
-  }, [bookings, statusFilter]);
-
   // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
   
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredBookings.slice(startIndex, endIndex);
-  }, [filteredBookings, currentPage]);
+    return bookings.slice(startIndex, endIndex);
+  }, [bookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
     setConfirmedDate(booking.confirmedDate || '');
-    setIsDialogOpen(true);
+    setIsManageDialogOpen(true);
   }
 
   const handleUpdateBooking = async (status: 'Confirmed' | 'Cancelled') => {
@@ -150,7 +151,7 @@ export default function AdminDashboard() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        setIsDialogOpen(false);
+        setIsManageDialogOpen(false);
     } catch (error) {
         toast({
             variant: "destructive",
@@ -171,7 +172,7 @@ export default function AdminDashboard() {
         title: "Booking Deleted",
         description: `Booking has been permanently deleted.`,
       });
-      setIsDialogOpen(false);
+      setIsManageDialogOpen(false);
     } catch (error) {
        toast({
         variant: "destructive",
@@ -183,15 +184,44 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleBulkDelete = async (mode: 'all' | 'range') => {
+    setIsBulkDeleting(true);
+    try {
+      let count = 0;
+      if (mode === 'all') {
+        count = await deleteBookingsInRange(new Date(0), new Date());
+      } else if (dateRange?.from && dateRange?.to) {
+        count = await deleteBookingsInRange(dateRange.from, dateRange.to);
+      } else {
+        toast({ variant: "destructive", title: "Date Range Required", description: "Please select a valid date range to delete bookings." });
+        setIsBulkDeleting(false);
+        return;
+      }
+      toast({
+        title: "Bulk Delete Successful",
+        description: `${count} booking(s) have been permanently deleted.`,
+      });
+      setDateRange(undefined);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Bulk Delete Failed",
+        description: `Could not delete bookings. Please try again. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const downloadCSV = () => {
-    if (filteredBookings.length === 0) {
+    if (bookings.length === 0) {
         toast({ title: "No data to export" });
         return;
     }
     const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
-        ...filteredBookings.map(b => [
+        ...bookings.map(b => [
             b.id,
             `"${b.name.replace(/"/g, '""')}"`,
             b.email,
@@ -280,8 +310,111 @@ export default function AdminDashboard() {
                 <CardTitle>Booking Requests</CardTitle>
                 <CardDescription>A list of all trip requests from customers.</CardDescription>
             </div>
-             <div className="flex items-center gap-2 self-start sm:self-center">
+             <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
+                
+                <Dialog>
+                    <DialogTrigger asChild>
+                         <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Bulk Delete Bookings</DialogTitle>
+                            <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently delete all booking records. This is irreversible. Please confirm.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting}>
+                                            {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Yes, delete all
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <Separator />
+                            <div className="space-y-2">
+                                <Label>Delete by Date Range</Label>
+                                <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
+                                
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
+                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 29), to: new Date() })}>Last 30 Days</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
+                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) })}>Last Month</Button>
+                                </div>
+                                
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !dateRange && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {dateRange?.from ? (
+                                        dateRange.to ? (
+                                            <>
+                                            {format(dateRange.from, "LLL dd, y")} -{" "}
+                                            {format(dateRange.to, "LLL dd, y")}
+                                            </>
+                                        ) : (
+                                            format(dateRange.from, "LLL dd, y")
+                                        )
+                                        ) : (
+                                        <span>Pick a date range</span>
+                                        )}
+                                    </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            initialFocus
+                                            mode="range"
+                                            defaultMonth={dateRange?.from}
+                                            selected={dateRange}
+                                            onSelect={setDateRange}
+                                            numberOfMonths={2}
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will permanently delete all bookings from <strong className="text-foreground">{dateRange?.from && format(dateRange.from, 'PPP')}</strong> to <strong className="text-foreground">{dateRange?.to && format(dateRange.to, 'PPP')}</strong>. Are you sure?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting}>
+                                             {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                            Yes, delete range
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
@@ -342,7 +475,7 @@ export default function AdminDashboard() {
         </div>
       </CardFooter>
       {selectedBooking && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
@@ -353,54 +486,56 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-4 text-sm">
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
-                        <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
-                        <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
-                    </div>
-                    <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
-                        <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
-                    </div>
-                    <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
-                        <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                        <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
-                    </div>
-
-                    {selectedBooking.status === 'Pending' && (
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                             <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                    <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold">Intended</span>
-                                        <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                    </div>
-                                </Label>
-                                <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                    <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold">Alternative</span>
-                                        <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                    </div>
-                                </Label>
-                            </RadioGroup>
+                 <ScrollArea className="max-h-[60vh] sm:max-h-[65vh] md:max-h-full">
+                    <div className="space-y-6 py-4 pr-6 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
+                            <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
+                            <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
                         </div>
-                    )}
+                        <Separator/>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
+                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
+                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
+                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
+                        </div>
+                        <Separator/>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                            <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
+                            <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
+                            <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
+                        </div>
 
-                    {selectedBooking.status === 'Confirmed' && (
-                        <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
-                    )}
-                </div>
-                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between gap-2">
-                    <div>
+                        {selectedBooking.status === 'Pending' && (
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                                <Label className="font-semibold text-base">Confirm Departure Date</Label>
+                                <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                        <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Intended</span>
+                                            <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                        </div>
+                                    </Label>
+                                    <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                        <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Alternative</span>
+                                            <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                        </div>
+                                    </Label>
+                                </RadioGroup>
+                            </div>
+                        )}
+
+                        {selectedBooking.status === 'Confirmed' && (
+                            <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                        )}
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:items-center pt-4 border-t">
+                    <div className="flex justify-start">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto"><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
@@ -417,20 +552,20 @@ export default function AdminDashboard() {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                    <div className="flex flex-col-reverse sm:flex-row gap-2">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:w-auto w-full">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" onClick={() => setIsManageDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
                         )}
                     </div>
                 </DialogFooter>

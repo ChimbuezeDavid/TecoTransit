@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions, customerService } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
 import type { Booking, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -15,14 +15,16 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2 } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import { Separator } from './ui/separator';
 
 
 const bookingSchema = z.object({
@@ -183,9 +185,49 @@ export default function BookingForm() {
   return (
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
-       <CardHeader className="text-center">
-        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
-        <CardDescription>Fill out the form below to secure your seat.</CardDescription>
+       <CardHeader>
+        <div className="flex justify-between items-start">
+            <div className="text-center sm:text-left">
+                <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
+                <CardDescription className="mt-2">Fill out the form below to secure your seat.</CardDescription>
+            </div>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        Contact Us
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Contact Customer Service</DialogTitle>
+                        <DialogDescription>
+                            Have questions or need help with your booking? Reach out to us.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <Button asChild className="w-full" size="lg">
+                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat with Tolu
+                            </Link>
+                        </Button>
+                         <Button asChild className="w-full" size="lg">
+                            <Link href="https://wa.me/message/OD5WZAO2CUCIF1" target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat with Esther
+                            </Link>
+                        </Button>
+                         <Button asChild className="w-full" size="lg">
+                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat with Abraham
+                            </Link>
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </div>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -381,3 +423,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
