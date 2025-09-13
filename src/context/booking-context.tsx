@@ -99,8 +99,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const createBooking = useCallback(async (data: BookingFormData) => {
     const bookingId = uuidv4();
-    const bookingDocRef = doc(db, 'bookings', bookingId);
-   
     const { privacyPolicy, ...restOfData } = data;
 
     const firestoreBooking = {
@@ -112,6 +110,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
+    // We use addDoc here and let Firestore generate the ID inside the document.
     await addDoc(collection(db, 'bookings'), firestoreBooking);
 
     return {
@@ -122,6 +121,9 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
+      // This logic is tricky. Firestore queries are async. The 'bookings' state might not be up-to-date
+      // when this is called. We need to query for the specific document ID if we can't find it in state.
+      // A better approach might be to find the document in the 'bookings' state array.
       const bookingDocRef = doc(db, 'bookings', bookingId);
       const bookingToUpdate = bookings.find(b => b.id === bookingId);
 
@@ -219,5 +221,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    
