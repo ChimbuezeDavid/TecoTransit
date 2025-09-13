@@ -188,7 +188,7 @@ export default function BookingForm() {
         <div className="flex justify-between items-start">
             <div className="text-center sm:text-left">
                 <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
-                <CardDescription className="mt-2">Fill out the form below to secure your seat. <br /> Need help? Email us at <Link href={`mailto:${customerService.email}`} className="text-primary hover:underline">{customerService.email}</Link></CardDescription>
+                <CardDescription className="mt-2">Fill out the form below to secure your seat.</CardDescription>
             </div>
             <Dialog>
                 <DialogTrigger asChild>
