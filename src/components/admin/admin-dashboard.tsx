@@ -566,7 +566,7 @@ export default function AdminDashboard() {
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selected.id]} className="w-full sm:w-auto">
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
@@ -582,6 +582,8 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
 
