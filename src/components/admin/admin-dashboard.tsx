@@ -332,7 +332,7 @@ export default function AdminDashboard() {
                         <div className="space-y-4 py-4">
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full justify-start">Delete ALL Bookings</Button>
+                                    <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
@@ -582,6 +582,8 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
 
