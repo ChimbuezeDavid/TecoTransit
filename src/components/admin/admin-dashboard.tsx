@@ -345,29 +345,29 @@ export default function AdminDashboard() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                         <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1">{selectedBooking.status}</Badge>
+                         <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1 sm:mt-0 self-start">{selectedBooking.status}</Badge>
                     </div>
                      <DialogDescription className="pt-1">
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4 text-sm">
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                         <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
                         <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
                         <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
                     </div>
                     <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                         <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
                         <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
                         <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
                         <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
                     </div>
                     <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                         <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
                         <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
                         <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
@@ -376,14 +376,20 @@ export default function AdminDashboard() {
                     {selectedBooking.status === 'Pending' && (
                         <div className="p-4 bg-muted/50 rounded-lg">
                             <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                             <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 space-y-2">
-                                <Label htmlFor="intended" className="flex items-center space-x-2 p-2 rounded-md hover:bg-background cursor-pointer">
+                             <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
                                     <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
-                                    <span>Intended: {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold">Intended</span>
+                                        <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                    </div>
                                 </Label>
-                                <Label htmlFor="alternative" className="flex items-center space-x-2 p-2 rounded-md hover:bg-background cursor-pointer">
+                                <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
                                     <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
-                                    <span>Alternative: {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold">Alternative</span>
+                                        <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                    </div>
                                 </Label>
                             </RadioGroup>
                         </div>
@@ -434,3 +440,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
