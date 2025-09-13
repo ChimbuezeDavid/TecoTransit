@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { ScrollArea } from "../ui/scroll-area";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -353,54 +354,56 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-6 py-4 text-sm">
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
-                        <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
-                        <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
-                    </div>
-                    <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                        <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
-                        <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
-                        <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
-                    </div>
-                    <Separator/>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                        <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
-                        <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                        <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
-                    </div>
-
-                    {selectedBooking.status === 'Pending' && (
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                             <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                    <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold">Intended</span>
-                                        <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                    </div>
-                                </Label>
-                                <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                    <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
-                                    <div className="flex flex-col">
-                                        <span className="font-semibold">Alternative</span>
-                                        <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                    </div>
-                                </Label>
-                            </RadioGroup>
+                 <ScrollArea className="max-h-[60vh] sm:max-h-full">
+                    <div className="space-y-6 py-4 pr-6 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
+                            <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
+                            <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
                         </div>
-                    )}
+                        <Separator/>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
+                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
+                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
+                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
+                        </div>
+                        <Separator/>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                            <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
+                            <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
+                            <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
+                        </div>
 
-                    {selectedBooking.status === 'Confirmed' && (
-                        <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
-                    )}
-                </div>
-                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-                    <div>
+                        {selectedBooking.status === 'Pending' && (
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                                <Label className="font-semibold text-base">Confirm Departure Date</Label>
+                                <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                        <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Intended</span>
+                                            <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                        </div>
+                                    </Label>
+                                    <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                        <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold">Alternative</span>
+                                            <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                        </div>
+                                    </Label>
+                                </RadioGroup>
+                            </div>
+                        )}
+
+                        {selectedBooking.status === 'Confirmed' && (
+                            <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                        )}
+                    </div>
+                </ScrollArea>
+                <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:gap-0 pt-4 border-t">
+                    <div className="flex justify-start">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto"><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
@@ -417,7 +420,7 @@ export default function AdminDashboard() {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:w-auto w-full">
                         {selectedBooking.status === 'Pending' ? (
                             <>
                                 <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
