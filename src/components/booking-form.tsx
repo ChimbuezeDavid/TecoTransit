@@ -185,7 +185,7 @@ export default function BookingForm() {
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader className="text-center">
         <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
-        <CardDescription>Fill out the form below to secure your seat.</CardDescription>
+        <CardDescription>Fill out the form below to secure your seat. <br /> Need help? Email us at <Link href="mailto:tecotransit@gmail.com" className="text-primary hover:underline">tecotransit@gmail.com</Link></CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -381,3 +381,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
