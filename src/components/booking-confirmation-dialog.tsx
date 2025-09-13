@@ -34,15 +34,15 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
                 <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="flex items-start gap-3"><User className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Name:</strong> {booking.name}</span></div>
                 <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Email:</strong> {booking.email}</span></div>
-                <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {booking.phone}</span></div>
+                <div className="flex items-start gap-3 col-span-1 md:col-span-2"><Phone className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {booking.phone}</span></div>
             </div>
 
             <Separator/>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>From:</strong> {booking.pickup}</span></div>
                 <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>To:</strong> {booking.destination}</span></div>
                 <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Intended Date:</strong> {booking.intendedDate}</span></div>
@@ -51,10 +51,10 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
 
             <Separator/>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                 <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {booking.vehicleType}</span></div>
                 <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {booking.luggageCount}</span></div>
-                <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{booking.totalFare.toLocaleString()}</span></div>
+                <div className="flex items-center gap-3 md:col-span-2 font-semibold"><span className="font-bold text-primary text-base">₦</span><span className="text-lg">Total Fare: ₦{booking.totalFare.toLocaleString()}</span></div>
             </div>
         </div>
         <DialogFooter className="flex-col sm:flex-row justify-center p-6 mt-6 bg-muted/30 rounded-b-lg">

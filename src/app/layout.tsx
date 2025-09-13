@@ -52,7 +52,9 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head />
+      <head>
+          <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(52 100% 50%)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M12 17.5V12'></path><path d='M12 6.5V12'></path><path d='M17.5 12H12'></path><path d='M6.5 12H12'></path><path d='M15.5 15.5L12 12'></path><path d='M8.5 8.5L12 12'></path><path d='m15.5 8.5-3.5 3.5'></path><path d='m8.5 15.5 3.5-3.5'></path></svg>" />
+      </head>
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
       >
