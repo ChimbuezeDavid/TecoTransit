@@ -480,7 +480,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl p-0">
-                <DialogHeader className="p-6 pb-4">
+                <DialogHeader className="px-6 pt-8 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -722,5 +722,7 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
