@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -480,7 +480,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl p-0">
-                <DialogHeader className="p-6 pt-10 pb-4">
+                <DialogHeader className="p-6 pb-4 pt-10">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -559,17 +559,6 @@ export default function AdminDashboard() {
                         <div className="hidden md:grid lg:hidden grid-cols-2 gap-8">
                            <div className="space-y-6">
                                 <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5" /> Trip Details</h3>
-                                    <div className="space-y-2 pl-7">
-                                        <p><strong>From:</strong> {selectedBooking.pickup}</p>
-                                        <p><strong>To:</strong> {selectedBooking.destination}</p>
-                                        <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
-                                        <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
-                                    </div>
-                                </div>
-                           </div>
-                           <div className="space-y-6">
-                                <div className="space-y-4">
                                     <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer & Fare</h3>
                                      <div className="space-y-2 pl-7">
                                         <p><strong>Name:</strong> {selectedBooking.name}</p>
@@ -609,6 +598,17 @@ export default function AdminDashboard() {
                                  ) : (
                                      <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
                                  )}
+                           </div>
+                           <div className="space-y-6">
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5" /> Trip Details</h3>
+                                    <div className="space-y-2 pl-7">
+                                        <p><strong>From:</strong> {selectedBooking.pickup}</p>
+                                        <p><strong>To:</strong> {selectedBooking.destination}</p>
+                                        <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                        <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                    </div>
+                                </div>
                            </div>
                         </div>
 
