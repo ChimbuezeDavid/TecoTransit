@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from './ui/scroll-area';
 
 interface BookingConfirmationDialogProps {
   booking: Booking | null;
@@ -32,47 +33,49 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md p-0">
         <DialogHeader className="text-center items-center pt-6 px-6">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Request Received!</DialogTitle>
           <DialogDescription>Your request is now pending confirmation. We will contact you shortly with an update.</DialogDescription>
         </DialogHeader>
-        <div className="px-6 py-4 space-y-6">
-            <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-lg">Booking Summary</h3>
-                <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
-            </div>
-            
-            <div className="space-y-5">
-                <DetailItem icon={User} label="Name" value={booking.name} />
-                <DetailItem icon={Mail} label="Email" value={booking.email} />
-                <DetailItem icon={Phone} label="Phone" value={booking.phone} />
-            </div>
+        <ScrollArea className="max-h-[60vh] sm:max-h-none">
+            <div className="px-6 py-4 space-y-6">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-lg">Booking Summary</h3>
+                    <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
+                </div>
+                
+                <div className="space-y-5">
+                    <DetailItem icon={User} label="Name" value={booking.name} />
+                    <DetailItem icon={Mail} label="Email" value={booking.email} />
+                    <DetailItem icon={Phone} label="Phone" value={booking.phone} />
+                </div>
 
-            <Separator/>
+                <Separator/>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <DetailItem icon={MapPin} label="From" value={booking.pickup} />
-                <DetailItem icon={MapPin} label="To" value={booking.destination} />
-                <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
-                <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <DetailItem icon={MapPin} label="From" value={booking.pickup} />
+                    <DetailItem icon={MapPin} label="To" value={booking.destination} />
+                    <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
+                    <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                </div>
+
+                <Separator/>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
+                    <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
+                </div>
+
+                <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center mt-4">
+                    <span className="font-semibold text-lg">Total Fare</span>
+                    <span className="font-bold text-xl text-primary">₦{booking.totalFare.toLocaleString()}</span>
+                </div>
+
             </div>
-
-            <Separator/>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
-                <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
-            </div>
-
-            <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center mt-4">
-                <span className="font-semibold text-lg">Total Fare</span>
-                <span className="font-bold text-xl text-primary">₦{booking.totalFare.toLocaleString()}</span>
-            </div>
-
-        </div>
-        <DialogFooter className="flex-col sm:flex-row justify-center p-6 mt-2 bg-muted/30 rounded-b-lg">
+        </ScrollArea>
+        <DialogFooter className="flex-col sm:flex-row justify-center p-6 border-t bg-muted/30">
              <Button asChild onClick={onClose} className="w-full sm:w-auto"><Link href="/"><Home className="mr-2 h-4 w-4" />Go to Homepage</Link></Button>
         </DialogFooter>
       </DialogContent>
