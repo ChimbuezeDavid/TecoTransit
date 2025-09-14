@@ -489,8 +489,8 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[60vh]">
-                    <div className="space-y-6 py-4 pr-4 text-sm">
+                 <ScrollArea className="max-h-[60vh] sm:max-h-none">
+                    <div className="space-y-6 py-4 pr-2 sm:pr-4 text-sm">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                             <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
                             <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
