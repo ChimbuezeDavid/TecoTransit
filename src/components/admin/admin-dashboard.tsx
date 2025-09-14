@@ -480,8 +480,8 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl">
-                <DialogHeader className="mt-4">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                <DialogHeader>
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mt-4">
                         <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1 sm:mt-0 self-start">{selectedBooking.status}</Badge>
                     </div>
@@ -489,7 +489,7 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[60vh] sm:max-h-none">
+                 <ScrollArea className="max-h-[60vh] sm:max-h-[70vh]">
                     <div className="space-y-6 py-4 pr-2 sm:pr-4 text-sm">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                             <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
@@ -581,3 +581,4 @@ export default function AdminDashboard() {
     
 
     
+
