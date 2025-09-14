@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "../ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "../ui/sheet";
 import { ThemeToggle } from "../theme-toggle";
 
 export default function AdminHeader() {
@@ -71,6 +71,7 @@ export default function AdminHeader() {
               <SheetContent side="right" className="w-[240px]">
                  <div className="flex flex-col h-full">
                     <div className="flex-grow">
+                        <SheetTitle className="sr-only">Admin Menu</SheetTitle>
                         <SheetClose asChild>
                             <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                                 <Route className="h-6 w-6" />
