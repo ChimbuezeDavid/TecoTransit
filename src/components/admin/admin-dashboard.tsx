@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -481,7 +481,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-3xl p-0">
-                <DialogHeader className="p-6 pb-4 pt-10">
+                <DialogHeader className="p-6 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -718,6 +718,8 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
 
