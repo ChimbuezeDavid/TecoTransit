@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -12,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -479,7 +480,7 @@ export default function AdminDashboard() {
       </CardFooter>
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-xl p-0">
+            <DialogContent className="max-w-3xl p-0">
                 <DialogHeader className="p-6 pb-4 pt-10">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
@@ -578,7 +579,7 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                             {selectedBooking.status === 'Pending' ? (
-                                <div className="col-span-2 space-y-4">
+                                <div className="col-span-2 space-y-4 pt-4">
                                      <Separator/>
                                     <div className="p-4 bg-muted/50 rounded-lg">
                                         <Label className="font-semibold text-base">Confirm Departure Date</Label>
@@ -606,65 +607,74 @@ export default function AdminDashboard() {
                         </div>
 
 
-                        {/* Desktop Layout: 3 Columns */}
-                        <div className="hidden lg:grid grid-cols-3 gap-8">
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer Details</h3>
-                                <div className="space-y-2 pl-7">
-                                    <p><strong>Name:</strong> {selectedBooking.name}</p>
-                                    <p><strong>Email:</strong> {selectedBooking.email}</p>
-                                    <p><strong>Phone:</strong> {selectedBooking.phone}</p>
+                        {/* Desktop Layout */}
+                        <div className="hidden lg:block">
+                            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                                {/* Col 1: Customer & Trip */}
+                                <div className="col-span-2 space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" /> Customer Details</h3>
+                                        <div className="grid grid-cols-3 gap-x-4 gap-y-2 pl-7 text-sm">
+                                            <p><strong>Name:</strong> {selectedBooking.name}</p>
+                                            <p className="col-span-2"><strong>Email:</strong> {selectedBooking.email}</p>
+                                            <p><strong>Phone:</strong> {selectedBooking.phone}</p>
+                                        </div>
+                                    </div>
+                                    <Separator />
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-muted-foreground" /> Trip Details</h3>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pl-7 text-sm">
+                                            <p><strong>From:</strong> {selectedBooking.pickup}</p>
+                                            <p><strong>To:</strong> {selectedBooking.destination}</p>
+                                            <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                            <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 2: Vehicle & Fare */}
+                                <div className="col-span-1 space-y-4 rounded-lg bg-muted/30 p-4 border h-fit">
+                                    <h3 className="font-semibold text-lg flex items-center gap-2"><VehicleIcon className="h-5 w-5 text-muted-foreground" /> Vehicle & Fare</h3>
+                                    <div className="space-y-3 pl-7">
+                                        <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
+                                        <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Total Fare</p>
+                                            <p className="font-bold text-2xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                             <div className="space-y-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5" /> Trip Details</h3>
-                                <div className="space-y-2 pl-7">
-                                    <p><strong>From:</strong> {selectedBooking.pickup}</p>
-                                    <p><strong>To:</strong> {selectedBooking.destination}</p>
-                                    <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
-                                    <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                             {selectedBooking.status === 'Pending' && (
+                                <div className="pt-6">
+                                    <Separator/>
+                                    <div className="p-4 bg-muted/30 rounded-lg mt-6">
+                                        <Label className="font-semibold text-base">Confirm Departure Date</Label>
+                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
+                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Intended</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
+                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Alternative</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                        </RadioGroup>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-lg flex items-center gap-2"><VehicleIcon className="h-5 w-5" /> Vehicle & Fare</h3>
-                                <div className="space-y-2 pl-7">
-                                    <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
-                                    <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
-                                    <p><strong>Total Fare:</strong> <span className="font-bold text-lg text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
+                            )}
+                            {selectedBooking.status === 'Confirmed' && (
+                                <div className="pt-6">
+                                     <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N.A'}</span></div>
                                 </div>
-                            </div>
+                            )}
                         </div>
-
-                        {selectedBooking.status === 'Pending' && (
-                            <div className="hidden lg:block pt-6">
-                                <Separator/>
-                                <div className="p-4 bg-muted/50 rounded-lg mt-6">
-                                    <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                                    <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                            <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold">Intended</span>
-                                                <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                            </div>
-                                        </Label>
-                                        <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                            <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
-                                            <div className="flex flex-col">
-                                                <span className="font-semibold">Alternative</span>
-                                                <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                            </div>
-                                        </Label>
-                                    </RadioGroup>
-                                </div>
-                            </div>
-                        )}
-                         {selectedBooking.status === 'Confirmed' && (
-                            <div className="hidden lg:block pt-6">
-                                 <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N.A'}</span></div>
-                            </div>
-                        )}
-
                     </div>
                 </ScrollArea>
                 <DialogFooter className="flex-wrap items-center justify-between p-6 border-t bg-muted/30 gap-2">
@@ -708,5 +718,7 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
