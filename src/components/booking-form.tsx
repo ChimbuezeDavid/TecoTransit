@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, PriceRule } from '@/lib/types';
+import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import Link from 'next/link';
 
@@ -50,6 +51,12 @@ const bookingSchema = z.object({
     message: "Alternative date must be after the intended date.",
     path: ["alternativeDate"],
 });
+
+const contactOptions = [
+    { name: 'Tolu', link: 'https://wa.me/qr/VNXLPTJVCSHQF1' },
+    { name: 'Esther', link: 'https://wa.me/message/OD5WZAO2CUCIF1' },
+    { name: 'Abraham', link: 'https://wa.me/+2348104050628' },
+];
 
 
 export default function BookingForm() {
@@ -204,24 +211,14 @@ export default function BookingForm() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Tolu
-                            </Link>
-                        </Button>
-                         <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/message/OD5WZAO2CUCIF1" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Esther
-                            </Link>
-                        </Button>
-                         <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/+2348104050628" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Abraham
-                            </Link>
-                        </Button>
+                        {contactOptions.map(contact => (
+                            <Button asChild key={contact.name} className="w-full" size="lg">
+                                <Link href={contact.link} target="_blank">
+                                    <MessageCircle className="mr-2 h-5 w-5" />
+                                    Chat with {contact.name}
+                                </Link>
+                            </Button>
+                        ))}
                     </div>
                 </DialogContent>
             </Dialog>
