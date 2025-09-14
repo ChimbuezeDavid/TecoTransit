@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
             <DialogContent className="max-w-xl p-0">
                 <DialogHeader className="p-6 pt-10 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
-                        <DialogTitle className="text-xl">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
                     </div>
                      <DialogDescription>
@@ -559,15 +559,6 @@ export default function AdminDashboard() {
                         <div className="hidden md:grid lg:hidden grid-cols-2 gap-8">
                            <div className="space-y-6">
                                 <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer Details</h3>
-                                    <div className="space-y-2 pl-7">
-                                        <p><strong>Name:</strong> {selectedBooking.name}</p>
-                                        <p><strong>Email:</strong> {selectedBooking.email}</p>
-                                        <p><strong>Phone:</strong> {selectedBooking.phone}</p>
-                                    </div>
-                                </div>
-                                <Separator/>
-                                <div className="space-y-4">
                                     <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5" /> Trip Details</h3>
                                     <div className="space-y-2 pl-7">
                                         <p><strong>From:</strong> {selectedBooking.pickup}</p>
@@ -579,18 +570,21 @@ export default function AdminDashboard() {
                            </div>
                            <div className="space-y-6">
                                 <div className="space-y-4">
-                                     <h3 className="font-semibold text-lg flex items-center gap-2"><VehicleIcon className="h-5 w-5" /> Vehicle & Fare</h3>
+                                    <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer & Fare</h3>
                                      <div className="space-y-2 pl-7">
+                                        <p><strong>Name:</strong> {selectedBooking.name}</p>
+                                        <p><strong>Email:</strong> {selectedBooking.email}</p>
+                                        <p><strong>Phone:</strong> {selectedBooking.phone}</p>
                                         <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
                                         <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
                                         <p><strong>Total Fare:</strong> <span className="font-bold text-lg text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
                                      </div>
                                 </div>
                                 <Separator/>
-                                <div className="space-y-4">
-                                     <h3 className="font-semibold text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5" /> Actions</h3>
-                                     <div className="pl-7">
-                                        {selectedBooking.status === 'Pending' && (
+                                {selectedBooking.status === 'Pending' ? (
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5" /> Actions</h3>
+                                        <div className="pl-7">
                                             <div className="p-4 bg-muted/50 rounded-lg">
                                                 <Label className="font-semibold text-base">Confirm Departure Date</Label>
                                                 <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 gap-2">
@@ -610,12 +604,11 @@ export default function AdminDashboard() {
                                                     </Label>
                                                 </RadioGroup>
                                             </div>
-                                        )}
-                                        {selectedBooking.status === 'Confirmed' && (
-                                            <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
-                                        )}
-                                     </div>
-                                </div>
+                                        </div>
+                                    </div>
+                                 ) : (
+                                     <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                                 )}
                            </div>
                         </div>
 
