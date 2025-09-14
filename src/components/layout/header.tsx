@@ -25,9 +25,7 @@ export default function Header() {
       { href: "/", label: "Book a Trip" },
       { href: "/faqs", label: "FAQs" },
     ];
-    if (user) {
-      links.push({ href: "/admin", label: "Admin" });
-    }
+    // Admin link is removed for better security; access is manual via /admin
     return links;
   };
   
