@@ -219,7 +219,7 @@ export default function BookingForm() {
                             </Link>
                         </Button>
                          <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
+                            <Link href="https://wa.me/+2348104050628" target="_blank">
                                 <MessageCircle className="mr-2 h-5 w-5" />
                                 Chat with Abraham
                             </Link>
