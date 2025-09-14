@@ -683,7 +683,7 @@ export default function AdminDashboard() {
 
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-col-reverse gap-y-2 gap-x-4 sm:flex-row sm:justify-between p-6 border-t bg-muted/30">
+                <DialogFooter className="flex-col sm:flex-row sm:justify-between items-stretch sm:items-center p-6 border-t bg-muted/30 gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm" className="w-full sm:w-auto" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
@@ -699,20 +699,20 @@ export default function AdminDashboard() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:w-auto w-full">
+                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} className="w-full sm:w-auto" disabled={isProcessing[selectedBooking.id]}>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -726,5 +726,7 @@ export default function AdminDashboard() {
     
 
 
+
+    
 
     
