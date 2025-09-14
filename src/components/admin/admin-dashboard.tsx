@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -313,11 +313,11 @@ export default function AdminDashboard() {
              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
                 
-                <Dialog>
-                    <DialogTrigger asChild>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
                          <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
-                    </DialogTrigger>
-                    <DialogContent>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
                         <DialogHeader>
                             <DialogTitle>Bulk Delete Bookings</DialogTitle>
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
@@ -413,8 +413,8 @@ export default function AdminDashboard() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                    </AlertDialogContent>
+                </AlertDialog>
 
                 <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
@@ -480,7 +480,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl p-0">
-                <DialogHeader className="px-6 pt-8 pb-4">
+                <DialogHeader className="p-6 pt-10 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -675,7 +675,7 @@ export default function AdminDashboard() {
                         )}
                          {selectedBooking.status === 'Confirmed' && (
                             <div className="hidden lg:block pt-6">
-                                 <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                                 <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N.A'}</span></div>
                             </div>
                         )}
 
@@ -722,7 +722,3 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-
-    
