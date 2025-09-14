@@ -90,12 +90,12 @@ export default function AdminDashboard() {
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [selectedBooking, setSelectedBooking = useState<Booking | null>(null);
-  const [isManageDialogOpen, setIsManageDialogOpen = useState(false);
-  const [confirmedDate, setConfirmedDate = useState<string>('');
-  const [statusFilter, setStatusFilter = useState<Booking['status'] | 'All'>('All');
-  const [currentPage, setCurrentPage = useState(1);
-  const [dateRange, setDateRange = useState<DateRange | undefined>();
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
+  const [confirmedDate, setConfirmedDate] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -578,4 +578,5 @@ export default function AdminDashboard() {
   );
 }
 
+    
     
