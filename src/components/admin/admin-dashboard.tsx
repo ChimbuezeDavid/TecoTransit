@@ -482,7 +482,7 @@ export default function AdminDashboard() {
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-3xl p-0">
                 <DialogHeader className="p-6 pb-4">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2 mt-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
                     </div>
