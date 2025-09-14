@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -479,9 +479,9 @@ export default function AdminDashboard() {
       </CardFooter>
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-xl">
-                <DialogHeader>
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mt-4">
+            <DialogContent className="max-w-xl p-0">
+                <DialogHeader className="p-6 pb-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1 sm:mt-0 self-start">{selectedBooking.status}</Badge>
                     </div>
@@ -489,25 +489,64 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[60vh] sm:max-h-[70vh]">
-                    <div className="space-y-6 py-4 pr-2 sm:pr-4 text-sm">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
-                            <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
-                            <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
+                 <ScrollArea className="max-h-[70vh] sm:max-h-[60vh]">
+                    <div className="p-6 space-y-6 text-sm">
+                        
+                        {/* Mobile View: Stacked Cards */}
+                        <div className="space-y-4 md:hidden">
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base">Customer Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3 text-sm">
+                                    <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
+                                    <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
+                                    <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base">Trip Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3 text-sm">
+                                    <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
+                                    <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
+                                    <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
+                                    <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base">Vehicle & Fare</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3 text-sm">
+                                    <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
+                                    <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
+                                    <div className="flex items-center gap-3"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
+                                </CardContent>
+                            </Card>
                         </div>
-                        <Separator/>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
-                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
-                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
-                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
-                        </div>
-                        <Separator/>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
-                            <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                            <div className="flex items-center gap-3 col-span-full"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
+
+                        {/* Desktop View: Grid Layout */}
+                        <div className="hidden md:block space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
+                                <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
+                                <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
+                            </div>
+                            <Separator/>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
+                                <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
+                                <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
+                                <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
+                            </div>
+                            <Separator/>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
+                                <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
+                                <div className="flex items-center gap-3 col-span-full"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
+                            </div>
                         </div>
 
                         {selectedBooking.status === 'Pending' && (
@@ -537,10 +576,10 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-col-reverse gap-y-2 gap-x-4 sm:flex-row sm:justify-between pt-4 border-t">
+                <DialogFooter className="flex-col-reverse gap-y-2 gap-x-4 sm:flex-row sm:justify-between p-6 border-t bg-muted/30">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                            <Button variant="destructive" size="sm" className="w-full sm:w-auto" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -553,20 +592,20 @@ export default function AdminDashboard() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:w-auto w-full">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" className="w-full sm:w-auto" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button onClick={() => handleUpdateBooking('Confirmed')} className="w-full sm:w-auto" disabled={isProcessing[selectedBooking.id]}>
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -576,9 +615,3 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-    
-
-    
-
