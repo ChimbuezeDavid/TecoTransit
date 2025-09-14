@@ -191,13 +191,13 @@ export default function BookingForm() {
             </div>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" className="shrink-0 w-full sm:w-auto mt-4 sm:mt-0">
                         <HelpCircle className="mr-2 h-4 w-4" />
                         Contact Us
                     </Button>
                 </DialogTrigger>
-                 <DialogContent className="max-w-md">
-                    <DialogHeader>
+                 <DialogContent className="max-w-md p-6">
+                    <DialogHeader className="text-center">
                         <DialogTitle>Contact Customer Service</DialogTitle>
                         <DialogDescription>
                             Have questions or need help with your booking? Reach out to us.
@@ -423,5 +423,4 @@ export default function BookingForm() {
 }
 
     
-
     
