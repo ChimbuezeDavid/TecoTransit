@@ -12,14 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -479,7 +479,7 @@ export default function AdminDashboard() {
       </CardFooter>
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-4xl p-0">
+            <DialogContent className="max-w-xl p-0">
                 <DialogHeader className="p-6 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
@@ -489,7 +489,7 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[70vh]">
+                 <ScrollArea className="max-h-[60vh]">
                     <div className="px-6 pt-0 pb-6 text-sm">
                         
                         {/* Mobile Layout: Stacked Cards */}
@@ -722,3 +722,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
