@@ -677,16 +677,16 @@ export default function AdminDashboard() {
                         )}
                          {selectedBooking.status === 'Confirmed' && (
                             <div className="hidden lg:block pt-6">
-                                 <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                                 <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'NA'}</span></div>
                             </div>
                         )}
 
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-col sm:flex-row sm:justify-between items-stretch sm:items-center p-6 border-t bg-muted/30 gap-2">
+                <DialogFooter className="flex-wrap items-center justify-between p-6 border-t bg-muted/30 gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" className="w-full sm:w-auto" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                            <Button variant="destructive" size="sm" className="shrink-0" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -699,20 +699,20 @@ export default function AdminDashboard() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <div className="flex justify-end gap-2 flex-wrap">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button size="sm" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -722,11 +722,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-
-
-
-    
 
     
