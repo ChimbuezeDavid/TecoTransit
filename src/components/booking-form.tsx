@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions, customerService } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
 import type { Booking, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -24,8 +24,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
-import { Separator } from './ui/separator';
-
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -186,19 +184,19 @@ export default function BookingForm() {
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader>
-        <div className="flex justify-between items-start">
-            <div className="text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 text-center sm:text-left">
+            <div>
                 <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
                 <CardDescription className="mt-2">Fill out the form below to secure your seat.</CardDescription>
             </div>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0">
+                    <Button variant="outline" size="sm" className="shrink-0 w-full sm:w-auto">
                         <HelpCircle className="mr-2 h-4 w-4" />
                         Contact Us
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
+                 <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>Contact Customer Service</DialogTitle>
                         <DialogDescription>
