@@ -90,12 +90,12 @@ export default function AdminDashboard() {
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [confirmedDate, setConfirmedDate] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedBooking, setSelectedBooking = useState<Booking | null>(null);
+  const [isManageDialogOpen, setIsManageDialogOpen = useState(false);
+  const [confirmedDate, setConfirmedDate = useState<string>('');
+  const [statusFilter, setStatusFilter = useState<Booking['status'] | 'All'>('All');
+  const [currentPage, setCurrentPage = useState(1);
+  const [dateRange, setDateRange = useState<DateRange | undefined>();
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -436,20 +436,22 @@ export default function AdminDashboard() {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead className="hidden md:table-cell">Trip</TableHead>
-              <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {renderTableContent()}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead className="hidden md:table-cell">Trip</TableHead>
+                <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {renderTableContent()}
+            </TableBody>
+            </Table>
+        </div>
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
         <div className="text-sm text-muted-foreground">
@@ -477,7 +479,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-xl">
-                <DialogHeader>
+                <DialogHeader className="mt-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                         <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1 sm:mt-0 self-start">{selectedBooking.status}</Badge>
