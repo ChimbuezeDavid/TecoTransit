@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -82,8 +83,9 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
             : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
 
         return {
-          id: doc.id,
+          id: doc.id, // Use firestore doc id as primary id
           ...data,
+          firestoreDocId: doc.id,
           createdAt: createdAtMillis,
         } as Booking;
       });
@@ -98,35 +100,37 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, [toast]);
 
   const createBooking = useCallback(async (data: BookingFormData) => {
-    const bookingId = uuidv4();
     const { privacyPolicy, ...restOfData } = data;
+    const bookingUuid = uuidv4();
 
     const firestoreBooking = {
       ...restOfData,
-      id: bookingId,
+      id: bookingUuid,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
-    // We use addDoc here and let Firestore generate the ID inside the document.
-    await addDoc(collection(db, 'bookings'), firestoreBooking);
+    const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 
+    // Now include the firestore ID in the returned object
     return {
       ...firestoreBooking,
+      firestoreDocId: docRef.id,
       createdAt: firestoreBooking.createdAt.toMillis(),
     } as Booking;
     
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
-      const bookingDocRef = doc(db, 'bookings', bookingId);
       const bookingToUpdate = bookings.find(b => b.id === bookingId);
-
-      if (!bookingToUpdate) {
-        throw new Error("Booking not found");
+      
+      if (!bookingToUpdate || !bookingToUpdate.firestoreDocId) {
+        throw new Error("Booking not found or is missing Firestore document ID");
       }
+
+      const bookingDocRef = doc(db, 'bookings', bookingToUpdate.firestoreDocId);
       
       const updateData: any = { status };
       if (status === 'Confirmed' && confirmedDate) {
@@ -160,9 +164,13 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, [bookings, toast]);
 
   const deleteBooking = useCallback(async (id: string) => {
-      const bookingDocRef = doc(db, 'bookings', id);
+      const bookingToDelete = bookings.find(b => b.id === id);
+      if (!bookingToDelete || !bookingToDelete.firestoreDocId) {
+        throw new Error("Booking not found or is missing Firestore document ID");
+      }
+      const bookingDocRef = doc(db, 'bookings', bookingToDelete.firestoreDocId);
       await deleteDoc(bookingDocRef);
-  }, []);
+  }, [bookings]);
 
   const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
     const startTimestamp = Timestamp.fromDate(startDate);
