@@ -62,24 +62,22 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
                 </div>
                 
                 {/* Tablet and Desktop Layout */}
-                <div className="hidden md:grid md:grid-cols-2 md:gap-x-8">
-                     {/* Left Column */}
-                     <div className="space-y-5">
-                         <DetailItem icon={User} label="Name" value={booking.name} />
-                         <DetailItem icon={Mail} label="Email" value={booking.email} />
-                         <DetailItem icon={Phone} label="Phone" value={booking.phone} />
-                     </div>
-                      {/* Right Column */}
-                     <div className="space-y-5">
-                         <DetailItem icon={MapPin} label="From" value={booking.pickup} />
-                         <DetailItem icon={MapPin} label="To" value={booking.destination} />
-                         <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
-                         <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
-                         <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
-                         <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
-                     </div>
+                <div className="hidden md:block">
+                    <div className="grid md:grid-cols-2 md:gap-x-8 md:gap-y-4">
+                        <div className="space-y-5">
+                            <DetailItem icon={User} label="Name" value={booking.name} />
+                            <DetailItem icon={Mail} label="Email" value={booking.email} />
+                            <DetailItem icon={Phone} label="Phone" value={booking.phone} />
+                        </div>
+                        <div className="space-y-5">
+                            <DetailItem icon={MapPin} label="Route" value={`${booking.pickup} to ${booking.destination}`} />
+                            <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
+                            <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                            <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
+                            <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
+                        </div>
+                    </div>
                 </div>
-
 
                 <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center mt-4">
                     <span className="font-semibold text-lg">Total Fare</span>
