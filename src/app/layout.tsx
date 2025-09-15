@@ -57,7 +57,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
         <meta name="theme-color" content="#D4AF37" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png"></link>
+        <link rel="apple-touch-icon" href="/icon.svg"></link>
         <meta name="mobile-web-app-capable" content="yes"></meta>
         <meta name="apple-mobile-web-app-status-bar-style" content="default"></meta>
         <title>TecoTransit</title>
