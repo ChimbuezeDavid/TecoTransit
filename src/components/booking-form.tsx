@@ -69,7 +69,6 @@ export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
@@ -153,20 +152,13 @@ export default function BookingForm() {
     setIsSubmitting(true);
 
     try {
-      const newBookingData = await createBooking({ ...data, totalFare });
+      await createBooking({ ...data, totalFare });
       
-      const displayBooking = {
-          ...newBookingData,
-          intendedDate: format(data.intendedDate, 'PPP'),
-          alternativeDate: format(data.alternativeDate, 'PPP'),
-      }
-
       toast({
         title: "Booking Submitted!",
         description: "Your trip request has been received. We'll be in touch shortly.",
       });
 
-      setConfirmedBooking(displayBooking);
       setIsConfirmationOpen(true);
       form.reset();
 
@@ -411,13 +403,9 @@ export default function BookingForm() {
       </Form>
     </Card>
     <BookingConfirmationDialog
-        booking={confirmedBooking}
         isOpen={isConfirmationOpen}
         onClose={() => setIsConfirmationOpen(false)}
     />
     </>
   );
 }
-
-    
-    
