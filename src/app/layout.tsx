@@ -49,13 +49,35 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
+  
+  const manifest = {
+    name: "TecoTransit",
+    short_name: "TecoTransit",
+    description: "Book your trip with TecoTransit",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#D4AF37",
+    icons: [
+      {
+        src: "/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png"
+      },
+      {
+        src: "/icon-512x512.png",
+        sizes: "512x512",
+        type: "image/png"
+      }
+    ]
+  };
 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-          <link rel="manifest" href="/manifest.json" />
           <meta name="theme-color" content="#D4AF37" />
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
+          <link rel="manifest" href={`data:application/manifest+json;base64,${Buffer.from(JSON.stringify(manifest)).toString('base64')}`} />
           <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(52 100% 50%)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M12 17.5V12'></path><path d='M12 6.5V12'></path><path d='M17.5 12H12'></path><path d='M6.5 12H12'></path><path d='M15.5 15.5L12 12'></path><path d='M8.5 8.5L12 12'></path><path d='m15.5 8.5-3.5 3.5'></path><path d='m8.5 15.5 3.5-3.5'></path></svg>" />
       </head>
       <body
