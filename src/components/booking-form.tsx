@@ -67,6 +67,7 @@ export default function BookingForm() {
   const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
   const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
@@ -78,6 +79,7 @@ export default function BookingForm() {
       email: '',
       phone: '',
       luggageCount: 0,
+      privacyPolicy: false,
     },
   });
 
@@ -87,30 +89,30 @@ export default function BookingForm() {
   useEffect(() => {
     const { pickup, destination, vehicleType, luggageCount } = watchAllFields;
 
+    let newBaseFare = 0;
+
     if (pickup && destination && prices) {
       const vehiclesForRoute = prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
       setAvailableVehicles(vehiclesForRoute);
 
-      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === vehicleType);
-
-      if (!currentVehicleStillAvailable) {
-        setValue('vehicleType', '');
-        setBaseFare(0);
-        setTotalFare(0);
-      } else {
-        const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
-        const newBaseFare = vehicleRule ? vehicleRule.price : 0;
-        setBaseFare(newBaseFare);
-        setTotalFare(newBaseFare);
+      const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
+      if (vehicleRule) {
+        newBaseFare = vehicleRule.price;
       }
       
+      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === vehicleType);
+      if (!currentVehicleStillAvailable) {
+        setValue('vehicleType', '');
+      }
     } else {
       setAvailableVehicles([]);
-      setBaseFare(0);
-      setTotalFare(0);
     }
+
+    setBaseFare(newBaseFare);
+    setTotalFare(newBaseFare + (luggageCount * LUGGAGE_FARE));
+
   }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, prices, setValue]);
 
   useEffect(() => {
@@ -140,13 +142,19 @@ export default function BookingForm() {
 
 
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
+    setIsProcessing(true);
     if (baseFare === 0) {
         toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
+        setIsProcessing(false);
         return;
     }
     
+    // Simulate a brief delay to show loading state
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     setBookingData({ ...data, totalFare });
     setIsPaymentDialogOpen(true);
+    setIsProcessing(false);
   }
   
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
@@ -366,11 +374,20 @@ export default function BookingForm() {
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
-                <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={baseFare === 0}>
-              Proceed to Payment
-              <ArrowRight className="ml-2 h-5 w-5" />
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Proceed to Payment
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
             </Button>
           </CardFooter>
         </form>
@@ -390,3 +407,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
