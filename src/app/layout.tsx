@@ -1,4 +1,5 @@
 
+
 // THIS FILE IS MANAGED BY AN AI ASSISTANT. DO NOT EDIT DIRECTLY.
 
 'use client';
@@ -79,7 +80,7 @@ export default function RootLayout({
           <meta name="theme-color" content="#D4AF37" />
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
           <link rel="manifest" href={`data:application/manifest+json;base64,${Buffer.from(JSON.stringify(manifest)).toString('base64')}`} />
-          <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(52 100% 50%)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'></circle><path d='M12 17.5V12'></path><path d='M12 6.5V12'></path><path d='M17.5 12H12'></path><path d='M6.5 12H12'></path><path d='M15.5 15.5L12 12'></path><path d='M8.5 8.5L12 12'></path><path d='m15.5 8.5-3.5 3.5'></path><path d='m8.5 15.5 3.5-3.5'></path></svg>" />
+          <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='hsl(52 100% 50%)'>T</text></svg>" />
       </head>
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
