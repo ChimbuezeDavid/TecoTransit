@@ -99,8 +99,8 @@ export default function RootLayout({
   const manifestBase64 = Buffer.from(JSON.stringify(manifest)).toString('base64');
   const manifestDataUrl = `data:application/manifest+json;base64,${manifestBase64}`;
 
-  const userFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚌</text></svg>`;
-  const adminFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="75">TA</text></svg>`;
+  const userFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="hsl(var(--primary))" /><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="50" font-family="sans-serif" font-weight="bold" fill="hsl(var(--primary-foreground))">Teco</text></svg>`;
+  const adminFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="hsl(var(--background))" /><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="75" font-family="sans-serif" font-weight="bold" fill="hsl(var(--primary))">TA</text></svg>`;
   const faviconSvg = isAdminPage ? adminFaviconSvg : userFaviconSvg;
   const faviconDataUrl = `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`;
   
