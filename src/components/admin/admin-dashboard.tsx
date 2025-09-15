@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -20,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -90,6 +89,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
 
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
-    setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
+    setIsDeleting(true);
     try {
       await deleteBooking(selectedBooking.id);
       toast({
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
         description: "Could not delete the booking. Please try again.",
       });
     } finally {
-        setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
+        setIsDeleting(false);
     }
   };
 
@@ -324,8 +324,8 @@ export default function AdminDashboard() {
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
+                           <AlertDialog>
+                               <AlertDialogTrigger asChild>
                                     <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
@@ -342,6 +342,7 @@ export default function AdminDashboard() {
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
+
                             <Separator />
                             <div className="space-y-2">
                                 <Label>Delete by Date Range</Label>
@@ -479,68 +480,209 @@ export default function AdminDashboard() {
       </CardFooter>
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-xl">
-                <DialogHeader className="mt-4">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                        <DialogTitle>Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                         <Badge variant={getStatusVariant(selectedBooking.status)} className="mt-1 sm:mt-0 self-start">{selectedBooking.status}</Badge>
+            <DialogContent className="max-w-3xl p-0">
+                <DialogHeader className="p-6 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2 mt-4">
+                        <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
+                         <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
                     </div>
-                     <DialogDescription className="pt-1">
+                     <DialogDescription>
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[60vh] sm:max-h-none">
-                    <div className="space-y-6 py-4 pr-2 sm:pr-4 text-sm">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-start gap-3"><User className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Name:</strong> {selectedBooking.name}</span></div>
-                            <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Email:</strong> {selectedBooking.email}</span></div>
-                            <div className="flex items-start gap-3"><Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {selectedBooking.phone}</span></div>
+                 <ScrollArea className="max-h-[60vh]">
+                    <div className="px-6 pt-0 pb-6 text-sm">
+                        
+                        {/* Mobile Layout: Stacked Cards */}
+                        <div className="space-y-4 md:hidden">
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Customer Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3">
+                                    <p><strong>Name:</strong> {selectedBooking.name}</p>
+                                    <p><strong>Email:</strong> {selectedBooking.email}</p>
+                                    <p><strong>Phone:</strong> {selectedBooking.phone}</p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />Trip Details</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3">
+                                    <p><strong>From:</strong> {selectedBooking.pickup}</p>
+                                    <p><strong>To:</strong> {selectedBooking.destination}</p>
+                                    <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                    <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="p-4">
+                                    <CardTitle className="text-base flex items-center gap-2"><VehicleIcon className="h-4 w-4" />Vehicle & Fare</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0 space-y-3">
+                                    <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
+                                    <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
+                                    <p><strong>Total Fare:</strong> <span className="font-bold text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
+                                </CardContent>
+                            </Card>
+                             {selectedBooking.status === 'Pending' && (
+                                <Card>
+                                     <CardHeader className="p-4">
+                                        <CardTitle className="text-base">Confirm Departure Date</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 pt-0">
+                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
+                                            <Label htmlFor="intended-mobile" className="flex items-center space-x-3 p-3 rounded-md hover:bg-muted cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-mobile"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Intended</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="alternative-mobile" className="flex items-center space-x-3 p-3 rounded-md hover:bg-muted cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-mobile"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Alternative</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                        </RadioGroup>
+                                    </CardContent>
+                                </Card>
+                            )}
+                             {selectedBooking.status === 'Confirmed' && (
+                                <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                            )}
                         </div>
-                        <Separator/>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>From:</strong> {selectedBooking.pickup}</span></div>
-                            <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>To:</strong> {selectedBooking.destination}</span></div>
-                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</span></div>
-                            <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span></div>
-                        </div>
-                        <Separator/>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {selectedBooking.vehicleType}</span></div>
-                            <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {selectedBooking.luggageCount}</span></div>
-                            <div className="flex items-center gap-3 col-span-full"><span className="font-bold text-primary">₦</span><span><strong>Total Fare:</strong> ₦{selectedBooking.totalFare.toLocaleString()}</span></div>
-                        </div>
-
-                        {selectedBooking.status === 'Pending' && (
-                            <div className="p-4 bg-muted/50 rounded-lg">
-                                <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                                <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <Label htmlFor="intended" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                        <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold">Intended</span>
-                                            <span>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                        </div>
-                                    </Label>
-                                    <Label htmlFor="alternative" className="flex items-center space-x-2 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                        <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold">Alternative</span>
-                                            <span>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                        </div>
-                                    </Label>
-                                </RadioGroup>
+                        
+                        {/* Tablet Layout: Brick */}
+                        <div className="hidden md:grid lg:hidden md:grid-cols-2 gap-x-8 gap-y-6">
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer & Fare</h3>
+                                <div className="space-y-2 pl-7">
+                                    <p><strong>Name:</strong> {selectedBooking.name}</p>
+                                    <p><strong>Email:</strong> {selectedBooking.email}</p>
+                                    <p><strong>Phone:</strong> {selectedBooking.phone}</p>
+                                    <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
+                                    <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
+                                    <p><strong>Total Fare:</strong> <span className="font-bold text-lg text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
+                                </div>
                             </div>
-                        )}
+                            <div className="space-y-4">
+                                <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5" /> Trip Details</h3>
+                                <div className="space-y-2 pl-7">
+                                    <p><strong>From:</strong> {selectedBooking.pickup}</p>
+                                    <p><strong>To:</strong> {selectedBooking.destination}</p>
+                                    <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                    <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                </div>
+                            </div>
+                            {selectedBooking.status === 'Pending' ? (
+                                <div className="col-span-2 space-y-4 pt-4">
+                                     <Separator/>
+                                    <div className="p-4 bg-muted/50 rounded-lg">
+                                        <Label className="font-semibold text-base">Confirm Departure Date</Label>
+                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Label htmlFor="intended" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Intended</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="alternative" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Alternative</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                        </RadioGroup>
+                                    </div>
+                                </div>
+                                ) : (
+                                     <div className="col-span-2 flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
+                                )}
+                        </div>
 
-                        {selectedBooking.status === 'Confirmed' && (
-                            <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed Date: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span></div>
-                        )}
+
+                        {/* Desktop Layout */}
+                        <div className="hidden lg:block">
+                            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                                {/* Col 1: Customer & Trip */}
+                                <div className="col-span-2 space-y-6">
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" /> Customer Details</h3>
+                                        <div className="grid grid-cols-3 gap-x-4 gap-y-2 pl-7 text-sm">
+                                            <p><strong>Name:</strong> {selectedBooking.name}</p>
+                                            <p className="col-span-2"><strong>Email:</strong> {selectedBooking.email}</p>
+                                            <p><strong>Phone:</strong> {selectedBooking.phone}</p>
+                                        </div>
+                                    </div>
+                                    <Separator />
+                                    <div className="space-y-4">
+                                        <h3 className="font-semibold text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-muted-foreground" /> Trip Details</h3>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 pl-7 text-sm">
+                                            <p><strong>From:</strong> {selectedBooking.pickup}</p>
+                                            <p><strong>To:</strong> {selectedBooking.destination}</p>
+                                            <p><strong>Intended:</strong> {format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                            <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 2: Vehicle & Fare */}
+                                <div className="col-span-1 space-y-4 rounded-lg bg-muted/30 p-4 border h-fit">
+                                    <h3 className="font-semibold text-lg flex items-center gap-2"><VehicleIcon className="h-5 w-5 text-muted-foreground" /> Vehicle & Fare</h3>
+                                    <div className="space-y-3 pl-7">
+                                        <p><strong>Vehicle:</strong> {selectedBooking.vehicleType}</p>
+                                        <p><strong>Luggage:</strong> {selectedBooking.luggageCount} bag(s)</p>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Total Fare</p>
+                                            <p className="font-bold text-2xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                             {selectedBooking.status === 'Pending' && (
+                                <div className="pt-6">
+                                    <Separator/>
+                                    <div className="p-4 bg-muted/30 rounded-lg mt-6">
+                                        <Label className="font-semibold text-base">Confirm Departure Date</Label>
+                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
+                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Intended</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                            <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
+                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold">Alternative</span>
+                                                    <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                                </div>
+                                            </Label>
+                                        </RadioGroup>
+                                    </div>
+                                </div>
+                            )}
+                            {selectedBooking.status === 'Confirmed' && (
+                                <div className="pt-6">
+                                     <div className="flex items-center gap-3 text-primary font-bold p-3 bg-primary/10 rounded-lg"><CheckCircle className="h-5 w-5 flex-shrink-0" /><span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N.A'}</span></div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-col-reverse gap-y-2 gap-x-4 sm:flex-row sm:justify-between pt-4 border-t">
+                <DialogFooter className="flex-wrap items-center justify-between p-6 border-t bg-muted/30 gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm" disabled={isProcessing[selectedBooking.id]}><Trash2 className="mr-2 h-4 w-4"/>Delete</Button>
+                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0 px-2" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
@@ -549,24 +691,24 @@ export default function AdminDashboard() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteBooking}>Continue</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Continue</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <div className="flex justify-end gap-2 flex-wrap">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button size="sm" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>
                 </DialogFooter>
@@ -576,8 +718,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-    
 
     

@@ -15,6 +15,16 @@ interface BookingConfirmationDialogProps {
   onClose: () => void;
 }
 
+const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
+    <div className="flex items-start gap-3">
+        <Icon className="h-4 w-4 mt-1 text-primary flex-shrink-0" />
+        <div className="flex flex-col">
+            <span className="text-sm text-muted-foreground">{label}</span>
+            <span className="font-medium text-base">{value}</span>
+        </div>
+    </div>
+);
+
 export default function BookingConfirmationDialog({ booking, isOpen, onClose }: BookingConfirmationDialogProps) {
   if (!booking) return null;
 
@@ -22,42 +32,58 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader className="text-center items-center p-6">
+      <DialogContent className="max-w-md md:max-w-2xl p-0">
+        <DialogHeader className="text-center items-center pt-8 px-6 pb-4">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Request Received!</DialogTitle>
           <DialogDescription>Your request is now pending confirmation. We will contact you shortly with an update.</DialogDescription>
         </DialogHeader>
-        <div className="px-6 space-y-6">
+        <div className="px-6 py-4 space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="font-semibold text-lg">Booking Summary</h3>
                 <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div className="flex items-start gap-3"><User className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Name:</strong> {booking.name}</span></div>
-                <div className="flex items-start gap-3"><Mail className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Email:</strong> {booking.email}</span></div>
-                <div className="flex items-start gap-3 col-span-1 md:col-span-2"><Phone className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Phone:</strong> {booking.phone}</span></div>
+            {/* Mobile Layout */}
+            <div className="space-y-5 md:hidden">
+                <DetailItem icon={User} label="Name" value={booking.name} />
+                <DetailItem icon={Mail} label="Email" value={booking.email} />
+                <DetailItem icon={Phone} label="Phone" value={booking.phone} />
+                <Separator/>
+                <DetailItem icon={MapPin} label="From" value={booking.pickup} />
+                <DetailItem icon={MapPin} label="To" value={booking.destination} />
+                <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
+                <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                <Separator/>
+                <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
+                <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
+            </div>
+            
+            {/* Tablet and Desktop Layout */}
+            <div className="hidden md:block space-y-6">
+                <div className="grid md:grid-cols-2 md:gap-x-8 md:gap-y-4">
+                    <div className="space-y-5">
+                        <DetailItem icon={User} label="Name" value={booking.name} />
+                        <DetailItem icon={Mail} label="Email" value={booking.email} />
+                        <DetailItem icon={Phone} label="Phone" value={booking.phone} />
+                    </div>
+                    <div className="space-y-5">
+                        <DetailItem icon={MapPin} label="Route" value={`${booking.pickup} to ${booking.destination}`} />
+                        <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
+                        <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                        <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
+                        <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
+                    </div>
+                </div>
             </div>
 
-            <Separator/>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>From:</strong> {booking.pickup}</span></div>
-                <div className="flex items-start gap-3"><MapPin className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>To:</strong> {booking.destination}</span></div>
-                <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Intended Date:</strong> {booking.intendedDate}</span></div>
-                <div className="flex items-start gap-3"><CalendarIcon className="h-4 w-4 mt-1 text-primary flex-shrink-0" /><span><strong>Alternative:</strong> {booking.alternativeDate}</span></div>
+            <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center mt-4">
+                <span className="font-semibold text-lg">Total Fare</span>
+                <span className="font-bold text-xl text-primary">₦{booking.totalFare.toLocaleString()}</span>
             </div>
 
-            <Separator/>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div className="flex items-center gap-3"><VehicleIcon className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Vehicle:</strong> {booking.vehicleType}</span></div>
-                <div className="flex items-center gap-3"><Briefcase className="h-4 w-4 text-primary flex-shrink-0" /><span><strong>Luggage:</strong> {booking.luggageCount}</span></div>
-                <div className="flex items-center gap-3 md:col-span-2 font-semibold"><span className="font-bold text-primary text-base">₦</span><span className="text-lg">Total Fare: ₦{booking.totalFare.toLocaleString()}</span></div>
-            </div>
         </div>
-        <DialogFooter className="flex-col sm:flex-row justify-center p-6 mt-6 bg-muted/30 rounded-b-lg">
+        <DialogFooter className="flex-col sm:flex-row justify-center p-6 border-t bg-muted/30">
              <Button asChild onClick={onClose} className="w-full sm:w-auto"><Link href="/"><Home className="mr-2 h-4 w-4" />Go to Homepage</Link></Button>
         </DialogFooter>
       </DialogContent>

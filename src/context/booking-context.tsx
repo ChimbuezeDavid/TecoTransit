@@ -121,9 +121,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
-      // This logic is tricky. Firestore queries are async. The 'bookings' state might not be up-to-date
-      // when this is called. We need to query for the specific document ID if we can't find it in state.
-      // A better approach might be to find the document in the 'bookings' state array.
       const bookingDocRef = doc(db, 'bookings', bookingId);
       const bookingToUpdate = bookings.find(b => b.id === bookingId);
 
@@ -138,26 +135,27 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       
       await updateDoc(bookingDocRef, updateData);
 
-      try {
-        await sendBookingStatusEmail({
-            name: bookingToUpdate.name,
-            email: bookingToUpdate.email,
-            status: status,
-            bookingId: bookingToUpdate.id,
-            pickup: bookingToUpdate.pickup,
-            destination: bookingToUpdate.destination,
-            vehicleType: bookingToUpdate.vehicleType,
-            totalFare: bookingToUpdate.totalFare,
-            confirmedDate: confirmedDate,
-        });
-      } catch (emailError) {
+      // Send email in the background, don't await it here
+      sendBookingStatusEmail({
+          name: bookingToUpdate.name,
+          email: bookingToUpdate.email,
+          status: status,
+          bookingId: bookingToUpdate.id,
+          pickup: bookingToUpdate.pickup,
+          destination: bookingToUpdate.destination,
+          vehicleType: bookingToUpdate.vehicleType,
+          totalFare: bookingToUpdate.totalFare,
+          confirmedDate: confirmedDate,
+      }).catch(emailError => {
+        // If email fails, show a non-blocking toast
         console.error("Failed to send status update email:", emailError);
         toast({
           variant: "destructive",
-          title: "Email Failed",
-          description: "The booking status was updated, but the email notification could not be sent.",
+          title: "Email Failed to Send",
+          description: "The booking status was updated, but the email notification could not be sent. Please notify the customer manually.",
+          duration: 10000,
         });
-      }
+      });
       
   }, [bookings, toast]);
 

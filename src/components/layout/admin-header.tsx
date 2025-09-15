@@ -1,15 +1,16 @@
 
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Megaphone, Menu } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Megaphone, Menu, HandCoins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "../ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "../ui/sheet";
 import { ThemeToggle } from "../theme-toggle";
 
 export default function AdminHeader() {
@@ -24,7 +25,7 @@ export default function AdminHeader() {
 
   const navLinks = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
-    { href: "/admin/pricing", icon: () => <span className="font-bold text-base">₦</span>, label: "Pricing" },
+    { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
     { href: "/admin/price-alert", icon: Megaphone, label: "Site Alert" },
   ];
 
@@ -70,6 +71,7 @@ export default function AdminHeader() {
               <SheetContent side="right" className="w-[240px]">
                  <div className="flex flex-col h-full">
                     <div className="flex-grow">
+                        <SheetTitle className="sr-only">Admin Menu</SheetTitle>
                         <SheetClose asChild>
                             <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                                 <Route className="h-6 w-6" />

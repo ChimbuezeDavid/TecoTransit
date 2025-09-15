@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,9 +8,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions, customerService } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, PriceRule } from '@/lib/types';
+import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import Link from 'next/link';
 
@@ -24,8 +25,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
-import { Separator } from './ui/separator';
-
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -52,6 +51,12 @@ const bookingSchema = z.object({
     message: "Alternative date must be after the intended date.",
     path: ["alternativeDate"],
 });
+
+const contactOptions = [
+    { name: 'Tolu', link: 'https://wa.me/qr/VNXLPTJVCSHQF1' },
+    { name: 'Esther', link: 'https://wa.me/message/OD5WZAO2CUCIF1' },
+    { name: 'Abraham', link: 'https://wa.me/+2348104050628' },
+];
 
 
 export default function BookingForm() {
@@ -186,44 +191,34 @@ export default function BookingForm() {
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
        <CardHeader>
-        <div className="flex justify-between items-start">
-            <div className="text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 text-center sm:text-left">
+            <div>
                 <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
                 <CardDescription className="mt-2">Fill out the form below to secure your seat.</CardDescription>
             </div>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0">
+                    <Button variant="outline" size="sm" className="shrink-0 w-full sm:w-auto mt-4 sm:mt-0">
                         <HelpCircle className="mr-2 h-4 w-4" />
                         Contact Us
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
+                 <DialogContent className="max-w-md p-6">
+                    <DialogHeader className="text-center">
                         <DialogTitle>Contact Customer Service</DialogTitle>
                         <DialogDescription>
                             Have questions or need help with your booking? Reach out to us.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/qr/VNXLPTJVCSHQF1" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Tolu
-                            </Link>
-                        </Button>
-                         <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/message/OD5WZAO2CUCIF1" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Esther
-                            </Link>
-                        </Button>
-                         <Button asChild className="w-full" size="lg">
-                            <Link href="https://wa.me/+2348104050628" target="_blank">
-                                <MessageCircle className="mr-2 h-5 w-5" />
-                                Chat with Abraham
-                            </Link>
-                        </Button>
+                        {contactOptions.map(contact => (
+                            <Button asChild key={contact.name} className="w-full" size="lg">
+                                <Link href={contact.link} target="_blank">
+                                    <MessageCircle className="mr-2 h-5 w-5" />
+                                    Chat with {contact.name}
+                                </Link>
+                            </Button>
+                        ))}
                     </div>
                 </DialogContent>
             </Dialog>
@@ -424,4 +419,5 @@ export default function BookingForm() {
   );
 }
 
+    
     
