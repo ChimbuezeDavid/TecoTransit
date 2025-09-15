@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -25,6 +26,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "../ui/button";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -691,7 +693,7 @@ export default function AdminDashboard() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Continue</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -718,5 +720,7 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
