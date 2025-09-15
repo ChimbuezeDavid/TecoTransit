@@ -488,7 +488,7 @@ export default function AdminDashboard() {
       </CardFooter>
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-3xl p-0">
+            <DialogContent className="max-w-md md:max-w-3xl p-0">
                 <DialogHeader className="p-6 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2 mt-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
@@ -498,7 +498,7 @@ export default function AdminDashboard() {
                         Review customer details and manage the booking status.
                     </DialogDescription>
                 </DialogHeader>
-                 <ScrollArea className="max-h-[60vh]">
+                 <ScrollArea className="max-h-[70vh] md:max-h-[60vh]">
                     <div className="px-6 pt-0 pb-6 text-sm">
                         
                         {/* Mobile Layout: Stacked Cards */}
