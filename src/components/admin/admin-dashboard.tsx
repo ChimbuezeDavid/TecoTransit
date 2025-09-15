@@ -8,6 +8,7 @@ import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
 import { DateRange } from "react-day-picker";
+import Link from 'next/link';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -238,7 +239,8 @@ export default function AdminDashboard() {
             b.totalFare,
             b.status,
             b.confirmedDate || "",
-            new Date(b.createdAt).toISOString()
+            new Date(b.createdAt).toISOString(),
+            b.paymentReceiptUrl || ""
         ].join(','))
     ].join('\n');
 
@@ -256,7 +258,7 @@ export default function AdminDashboard() {
     switch (status) {
       case 'Confirmed': return 'default';
       case 'Cancelled': return 'destructive';
-      case 'Pending': return 'secondary';
+      case 'Payment Review': return 'secondary';
       default: return 'outline';
     }
   };
@@ -439,6 +441,7 @@ export default function AdminDashboard() {
                 <SelectContent>
                     <SelectItem value="All">All</SelectItem>
                     <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Payment Review">Payment Review</SelectItem>
                     <SelectItem value="Confirmed">Confirmed</SelectItem>
                     <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
@@ -503,6 +506,14 @@ export default function AdminDashboard() {
                         
                         {/* Mobile Layout: Stacked Cards */}
                         <div className="space-y-4 md:hidden">
+                             {selectedBooking.paymentReceiptUrl && (
+                                <Button asChild size="sm" className="w-full">
+                                    <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
+                                        <ExternalLink className="mr-2 h-4 w-4" />
+                                        View Payment Receipt
+                                    </Link>
+                                </Button>
+                            )}
                             <Card>
                                 <CardHeader className="p-4">
                                     <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Customer Details</CardTitle>
@@ -534,7 +545,7 @@ export default function AdminDashboard() {
                                     <p><strong>Total Fare:</strong> <span className="font-bold text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
                                 </CardContent>
                             </Card>
-                             {selectedBooking.status === 'Pending' && (
+                             { (selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') && (
                                 <Card>
                                      <CardHeader className="p-4">
                                         <CardTitle className="text-base">Confirm Departure Date</CardTitle>
@@ -566,6 +577,16 @@ export default function AdminDashboard() {
                         
                         {/* Tablet Layout: Brick */}
                         <div className="hidden md:grid lg:hidden md:grid-cols-2 gap-x-8 gap-y-6">
+                            {selectedBooking.paymentReceiptUrl && (
+                                <div className="col-span-2">
+                                    <Button asChild size="sm" className="w-full">
+                                        <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
+                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            View Payment Receipt
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer & Fare</h3>
                                 <div className="space-y-2 pl-7">
@@ -586,7 +607,7 @@ export default function AdminDashboard() {
                                     <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
                                 </div>
                             </div>
-                            {selectedBooking.status === 'Pending' ? (
+                            {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') ? (
                                 <div className="col-span-2 space-y-4 pt-4">
                                      <Separator/>
                                     <div className="p-4 bg-muted/50 rounded-lg">
@@ -617,6 +638,16 @@ export default function AdminDashboard() {
 
                         {/* Desktop Layout */}
                         <div className="hidden lg:block">
+                             {selectedBooking.paymentReceiptUrl && (
+                                <div className="mb-4">
+                                    <Button asChild size="sm" className="w-full">
+                                        <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
+                                            <ExternalLink className="mr-2 h-4 w-4" />
+                                            View Payment Receipt
+                                        </Link>
+                                    </Button>
+                                </div>
+                            )}
                             <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                                 {/* Col 1: Customer & Trip */}
                                 <div className="col-span-2 space-y-6">
@@ -653,7 +684,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-                             {selectedBooking.status === 'Pending' && (
+                             {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') && (
                                 <div className="pt-6">
                                     <Separator/>
                                     <div className="p-4 bg-muted/30 rounded-lg mt-6">
@@ -704,7 +735,7 @@ export default function AdminDashboard() {
                         </AlertDialogContent>
                     </AlertDialog>
                     <div className="flex justify-end gap-2 flex-wrap">
-                        {selectedBooking.status === 'Pending' ? (
+                        {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') ? (
                             <>
                                 <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
@@ -726,12 +757,3 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-
-    
-
-    
-
-
-    

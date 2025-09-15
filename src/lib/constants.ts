@@ -22,6 +22,11 @@ export const customerService = {
   email: 'tecotransit@gmail.com',
 };
 
-export const LUGGAGE_FARE = 0;
+// Replace with your actual account details
+export const bankAccountDetails = {
+    bankName: "WEMA BANK",
+    accountName: "TECOTRANSIT",
+    accountNumber: "8200686369",
+};
 
-    
+export const LUGGAGE_FARE = 0;

@@ -3,8 +3,9 @@
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,7 +18,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData) => Promise<Booking>;
+  createBooking: (data: BookingFormData, receiptFile: File) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -99,17 +100,23 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData) => {
+  const createBooking = useCallback(async (data: BookingFormData, receiptFile: File) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
+
+    // 1. Upload receipt to Firebase Storage
+    const receiptRef = ref(storage, `receipts/${bookingUuid}-${receiptFile.name}`);
+    const uploadResult = await uploadBytes(receiptRef, receiptFile);
+    const paymentReceiptUrl = await getDownloadURL(uploadResult.ref);
 
     const firestoreBooking = {
       ...restOfData,
       id: bookingUuid,
       createdAt: Timestamp.now(),
-      status: 'Pending' as const,
+      status: 'Payment Review' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
+      paymentReceiptUrl,
     };
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);

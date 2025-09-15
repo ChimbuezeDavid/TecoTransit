@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
-import BookingConfirmationDialog from './booking-confirmation-dialog';
+import PaymentDialog from './payment-dialog';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -60,15 +60,14 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { prices, loading: pricesLoading } = useBooking();
 
   const [totalFare, setTotalFare] = useState(0);
   const [baseFare, setBaseFare] = useState(0);
   const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
-  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
 
@@ -85,7 +84,6 @@ export default function BookingForm() {
   const { watch, getValues, setValue, trigger } = form;
   const watchAllFields = watch();
 
-  // Filter available vehicles and update fare
   useEffect(() => {
     const { pickup, destination, vehicleType, luggageCount } = watchAllFields;
 
@@ -115,7 +113,6 @@ export default function BookingForm() {
     }
   }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, prices, setValue]);
 
-  // Handle dependent field resets and validation
   useEffect(() => {
     const subscription = watch((values, { name }) => {
        if (name === 'pickup') {
@@ -148,29 +145,8 @@ export default function BookingForm() {
         return;
     }
     
-    setIsSubmitting(true);
-
-    try {
-      await createBooking({ ...data, totalFare });
-      
-      toast({
-        title: "Booking Submitted!",
-        description: "Your trip request has been received. We'll be in touch shortly.",
-      });
-
-      setIsConfirmationOpen(true);
-      form.reset();
-
-    } catch (error) {
-      console.error("Booking submission error:", error);
-      toast({
-        variant: "destructive",
-        title: "Oh no! Something went wrong.",
-        description: `There was a problem with your request. ${error instanceof Error ? error.message : ''}`,
-      });
-    } finally {
-        setIsSubmitting(false);
-    }
+    setBookingData({ ...data, totalFare });
+    setIsPaymentDialogOpen(true);
   }
   
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
@@ -392,21 +368,25 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isSubmitting || baseFare === 0}>
-              {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-              {isSubmitting ? "Submitting..." : "Book My Trip"}
-              {!isSubmitting && <ArrowRight className="ml-2 h-5 w-5" />}
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={baseFare === 0}>
+              Proceed to Payment
+              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
-    <BookingConfirmationDialog
-        isOpen={isConfirmationOpen}
-        onClose={() => setIsConfirmationOpen(false)}
-    />
+    {bookingData && (
+        <PaymentDialog
+            isOpen={isPaymentDialogOpen}
+            onClose={() => setIsPaymentDialogOpen(false)}
+            bookingData={bookingData}
+            onBookingComplete={() => {
+                form.reset();
+                setBookingData(null);
+            }}
+        />
+    )}
     </>
   );
 }
-
-    
