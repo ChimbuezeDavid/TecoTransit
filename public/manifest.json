@@ -4,12 +4,12 @@
   "description": "Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#D4AF37",
+  "background_color": "#ffffff",
   "theme_color": "#D4AF37",
   "icons": [
     {
       "src": "/icon.svg",
-      "sizes": "192x192",
+      "sizes": "any",
       "type": "image/svg+xml"
     }
   ]
