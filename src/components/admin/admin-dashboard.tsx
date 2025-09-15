@@ -320,13 +320,13 @@ export default function AdminDashboard() {
                     <DialogTrigger asChild>
                          <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
                     </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
+                    <DialogContent className="p-0">
+                        <DialogHeader className="p-6 pb-4">
                             <DialogTitle>Bulk Delete Bookings</DialogTitle>
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
                         </DialogHeader>
                         
-                        <div className="space-y-6 py-4">
+                        <div className="px-6 space-y-6">
                             <AlertDialog>
                                <AlertDialogTrigger asChild>
                                     <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
@@ -338,7 +338,7 @@ export default function AdminDashboard() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting}>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
                                             {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Yes, delete all
                                         </AlertDialogAction>
@@ -397,7 +397,7 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        <DialogFooter>
+                        <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
                              <DialogClose asChild>
                                 <Button variant="outline">Close</Button>
                              </DialogClose>
@@ -414,7 +414,7 @@ export default function AdminDashboard() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting}>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
                                              {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Yes, delete range
                                         </AlertDialogAction>
@@ -726,6 +726,8 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
 
     
 
