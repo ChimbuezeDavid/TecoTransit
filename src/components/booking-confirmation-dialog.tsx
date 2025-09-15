@@ -33,40 +33,53 @@ export default function BookingConfirmationDialog({ booking, isOpen, onClose }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0">
-        <DialogHeader className="text-center items-center pt-6 px-6">
+      <DialogContent className="max-w-md md:max-w-2xl p-0">
+        <DialogHeader className="text-center items-center pt-8 px-6 pb-4">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Request Received!</DialogTitle>
           <DialogDescription>Your request is now pending confirmation. We will contact you shortly with an update.</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[60vh] sm:max-h-none">
+        <ScrollArea className="max-h-[60vh]">
             <div className="px-6 py-4 space-y-6">
                 <div className="flex justify-between items-center">
                     <h3 className="font-semibold text-lg">Booking Summary</h3>
                     <Badge variant="secondary" className="text-sm">{booking.status}</Badge>
                 </div>
                 
-                <div className="space-y-5">
+                {/* Mobile Layout */}
+                <div className="space-y-5 md:hidden">
                     <DetailItem icon={User} label="Name" value={booking.name} />
                     <DetailItem icon={Mail} label="Email" value={booking.email} />
                     <DetailItem icon={Phone} label="Phone" value={booking.phone} />
-                </div>
-
-                <Separator/>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <Separator/>
                     <DetailItem icon={MapPin} label="From" value={booking.pickup} />
                     <DetailItem icon={MapPin} label="To" value={booking.destination} />
                     <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
                     <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
-                </div>
-
-                <Separator/>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <Separator/>
                     <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
                     <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
                 </div>
+                
+                {/* Tablet and Desktop Layout */}
+                <div className="hidden md:grid md:grid-cols-2 md:gap-x-8">
+                     {/* Left Column */}
+                     <div className="space-y-5">
+                         <DetailItem icon={User} label="Name" value={booking.name} />
+                         <DetailItem icon={Mail} label="Email" value={booking.email} />
+                         <DetailItem icon={Phone} label="Phone" value={booking.phone} />
+                     </div>
+                      {/* Right Column */}
+                     <div className="space-y-5">
+                         <DetailItem icon={MapPin} label="From" value={booking.pickup} />
+                         <DetailItem icon={MapPin} label="To" value={booking.destination} />
+                         <DetailItem icon={CalendarIcon} label="Intended Date" value={booking.intendedDate} />
+                         <DetailItem icon={CalendarIcon} label="Alternative Date" value={booking.alternativeDate} />
+                         <DetailItem icon={VehicleIcon} label="Vehicle" value={booking.vehicleType} />
+                         <DetailItem icon={Briefcase} label="Luggage" value={`${booking.luggageCount} bag(s)`} />
+                     </div>
+                </div>
+
 
                 <div className="rounded-lg bg-muted/50 p-4 flex justify-between items-center mt-4">
                     <span className="font-semibold text-lg">Total Fare</span>
