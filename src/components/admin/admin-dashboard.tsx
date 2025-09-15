@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -90,6 +89,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
 
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
-    setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
+    setIsDeleting(true);
     try {
       await deleteBooking(selectedBooking.id);
       toast({
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
         description: "Could not delete the booking. Please try again.",
       });
     } finally {
-        setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
+        setIsDeleting(false);
     }
   };
 
@@ -680,8 +680,8 @@ export default function AdminDashboard() {
                 <DialogFooter className="flex-wrap items-center justify-between p-6 border-t bg-muted/30 gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0 px-2" disabled={isProcessing[selectedBooking.id]}>
-                                <Trash2 className="h-4 w-4" />
+                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0 px-2" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -718,9 +718,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
-
-    
 
     
