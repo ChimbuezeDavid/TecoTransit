@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -106,7 +105,7 @@ export default function BookingForm() {
         const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
         const newBaseFare = vehicleRule ? vehicleRule.price : 0;
         setBaseFare(newBaseFare);
-        setTotalFare(newBaseFare + (luggageCount || 0) * 0);
+        setTotalFare(newBaseFare);
       }
       
     } else {
@@ -409,3 +408,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
