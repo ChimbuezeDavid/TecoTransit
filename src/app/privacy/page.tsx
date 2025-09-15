@@ -1,14 +1,23 @@
 
+"use client";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export default function PrivacyPolicyPage() {
+  const [lastUpdated, setLastUpdated] = useState('');
+
+  useEffect(() => {
+    setLastUpdated(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8 sm:py-12">
       <Card className="max-w-3xl mx-auto shadow-lg">
         <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold font-headline text-primary">Privacy Policy</CardTitle>
-            <p className="text-muted-foreground pt-2">Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-muted-foreground pt-2">Last updated: {lastUpdated}</p>
         </CardHeader>
         
         <CardContent className="space-y-8 text-base text-muted-foreground">
