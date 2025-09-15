@@ -51,40 +51,14 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
-  
-  const manifest = {
-    name: "TecoTransit",
-    short_name: "TecoTransit",
-    description: "Book your trip with TecoTransit",
-    start_url: "/",
-    display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#D4AF37",
-    icons: [
-      {
-        src: "/icon-192x192.png",
-        sizes: "192x192",
-        type: "image/png"
-      },
-      {
-        src: "/icon-512x512.png",
-        sizes: "512x512",
-        type: "image/png"
-      }
-    ]
-  };
-
-  const manifestAsBase64 = typeof window !== 'undefined'
-    ? window.btoa(JSON.stringify(manifest))
-    : Buffer.from(JSON.stringify(manifest)).toString('base64');
 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
           <meta name="theme-color" content="#D4AF37" />
-          <link rel="apple-touch-icon" href="/icon-192x192.png" />
-          <link rel="manifest" href={`data:application/manifest+json;base64,${manifestAsBase64}`} />
-          <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='hsl(52 100% 50%)'>Teco</text></svg>" />
+          <link rel="manifest" href="/manifest.json" />
+          <link rel="apple-touch-icon" href="/icon-192x192.svg" />
+          <link rel="icon" href="/icon-192x192.svg" type="image/svg+xml" />
       </head>
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}

@@ -1,21 +1,21 @@
 {
-  "name": "RouteWise",
-  "short_name": "RouteWise",
-  "description": "Book your trip with RouteWise",
+  "name": "TecoTransit",
+  "short_name": "TecoTransit",
+  "description": "Book your trip with TecoTransit",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F0F5FB",
-  "theme_color": "#FFDF00",
+  "background_color": "#ffffff",
+  "theme_color": "#D4AF37",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icon-192x192.svg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icon-512x512.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ]
 }
