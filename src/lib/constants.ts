@@ -8,8 +8,7 @@ export const locations = [
   "FESTAC Lagos",
   "Ibadan",
   "Iyana Paja Lagos",
-  "Ojota Lagos",
-  "Warri Delta state"
+  "Ojota Lagos"
 ];
 
 export const vehicleOptions = {
