@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -106,7 +105,7 @@ export default function BookingForm() {
         const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
         const newBaseFare = vehicleRule ? vehicleRule.price : 0;
         setBaseFare(newBaseFare);
-        setTotalFare(newBaseFare + (luggageCount || 0) * LUGGAGE_FARE);
+        setTotalFare(newBaseFare);
       }
       
     } else {
@@ -409,3 +408,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
