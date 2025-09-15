@@ -3,12 +3,12 @@ import { Car, Bus } from 'lucide-react';
 
 export const locations = [
   "ABUAD",
-  "Ojota Lagos",
-  "Iyana Paja Lagos",
+  "Abeokuta",
+  "Ajah Lagos",
   "FESTAC Lagos",
   "Ibadan",
-  "Ajah Lagos",
-  "Warri Delta state"
+  "Iyana Paja Lagos",
+  "Ojota Lagos"
 ];
 
 export const vehicleOptions = {

@@ -33,8 +33,8 @@ const formSchema = z.object({
 
 function PricingManagerSkeleton() {
     return (
-        <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
+        <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-1">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-7 w-48" />
@@ -64,7 +64,7 @@ function PricingManagerSkeleton() {
                     </CardFooter>
                 </Card>
             </div>
-             <div className="lg:col-span-2">
+             <div className="md:col-span-2">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-7 w-40" />
@@ -257,8 +257,8 @@ export default function PricingManager() {
   }
 
   return (
-    <div className="grid lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-1">
+    <div className="grid md:grid-cols-3 gap-8">
+      <div className="md:col-span-1">
         <Card>
           <CardHeader>
             <CardTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</CardTitle>
@@ -325,7 +325,7 @@ export default function PricingManager() {
           </Form>
         </Card>
       </div>
-      <div className="lg:col-span-2">
+      <div className="md:col-span-2">
         <Card>
             <CardHeader>
                 <CardTitle>Current Price List</CardTitle>

@@ -3,7 +3,8 @@
 import { DateRange } from "react-day-picker";
 
 export type Booking = {
-  id: string;
+  id: string; // UUID, used for client-side identification and referencing
+  firestoreDocId?: string; // Firestore's auto-generated document ID
   name: string;
   email: string;
   phone: string;
@@ -19,7 +20,7 @@ export type Booking = {
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId'> & {
     intendedDate: Date;
     alternativeDate: Date;
     privacyPolicy: boolean;

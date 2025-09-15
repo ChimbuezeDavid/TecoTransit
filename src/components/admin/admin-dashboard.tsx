@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -12,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "../ui/button";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -318,13 +320,14 @@ export default function AdminDashboard() {
                     <DialogTrigger asChild>
                          <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
                     </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
+                    <DialogContent className="p-0">
+                        <DialogHeader className="p-6 pb-4">
                             <DialogTitle>Bulk Delete Bookings</DialogTitle>
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
                         </DialogHeader>
-                        <div className="space-y-4 py-4">
-                           <AlertDialog>
+                        
+                        <div className="px-6 space-y-6">
+                            <AlertDialog>
                                <AlertDialogTrigger asChild>
                                     <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
                                 </AlertDialogTrigger>
@@ -335,7 +338,7 @@ export default function AdminDashboard() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting}>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
                                             {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Yes, delete all
                                         </AlertDialogAction>
@@ -344,8 +347,9 @@ export default function AdminDashboard() {
                             </AlertDialog>
 
                             <Separator />
-                            <div className="space-y-2">
-                                <Label>Delete by Date Range</Label>
+                            
+                            <div className="space-y-4">
+                                <h3 className="font-semibold">Delete by Date Range</h3>
                                 <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
                                 
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
@@ -392,7 +396,11 @@ export default function AdminDashboard() {
                                 </Popover>
                             </div>
                         </div>
-                        <DialogFooter>
+
+                        <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
+                             <DialogClose asChild>
+                                <Button variant="outline">Close</Button>
+                             </DialogClose>
                              <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
@@ -406,7 +414,7 @@ export default function AdminDashboard() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting}>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
                                              {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                             Yes, delete range
                                         </AlertDialogAction>
@@ -691,7 +699,7 @@ export default function AdminDashboard() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteBooking} className="bg-destructive hover:bg-destructive/90">Continue</AlertDialogAction>
+                                <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -718,5 +726,9 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
+
+    
 
     
