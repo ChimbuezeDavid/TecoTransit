@@ -52,22 +52,28 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
   
+  // Dynamically determine the base URL for absolute paths in the manifest.
+  const host =
+    typeof window !== 'undefined'
+      ? window.location.origin
+      : 'https://routewise-t6cdq.web.app'; // Fallback for server-side rendering
+
   const manifest = {
     name: "TecoTransit",
     short_name: "TecoTransit",
     description: "Book your trip with TecoTransit",
-    start_url: "/",
+    start_url: host,
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#D4AF37",
     icons: [
       {
-        src: "/icon-192x192.png",
+        src: `${host}/icon-192x192.png`,
         sizes: "192x192",
         type: "image/png"
       },
       {
-        src: "/icon-512x512.png",
+        src: `${host}/icon-512x512.png`,
         sizes: "512x512",
         type: "image/png"
       }
@@ -79,7 +85,7 @@ export default function RootLayout({
       <head>
           <meta name="theme-color" content="#D4AF37" />
           <link rel="apple-touch-icon" href="/icon-192x192.png" />
-          <link rel="manifest" href={`data:application/manifest+json;base64,${Buffer.from(JSON.stringify(manifest)).toString('base64')}`} />
+          <link rel="manifest" href={`data:application/manifest+json;base64,${typeof window !== 'undefined' ? window.btoa(JSON.stringify(manifest)) : ''}`} />
           <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90' font-weight='bold' fill='hsl(52 100% 50%)'>T</text></svg>" />
       </head>
       <body
