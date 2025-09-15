@@ -22,4 +22,4 @@ export const customerService = {
   email: 'tecotransit@gmail.com',
 };
 
-    
+export const LUGGAGE_FARE = 2000;
