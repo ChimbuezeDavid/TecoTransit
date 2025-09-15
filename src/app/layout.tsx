@@ -52,13 +52,69 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
 
+  // --- PWA Configuration ---
+  const userManifest = {
+    name: "TecoTransit",
+    short_name: "TecoTransit",
+    description: "Book your trip with TecoTransit",
+    start_url: "/",
+    display: "standalone",
+    background_color: "#F0F5FB",
+    theme_color: "#FFDF00",
+    icons: [
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+PGcgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iI0ZGRkYwMCIgZD0iTTAgMGgxOTJ2MTkySDB6Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjgwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9ImJvbGQiPlRjPC90ZXh0PjwvZz48L3N2Zz4=",
+        "sizes": "192x192",
+        "type": "image/svg+xml"
+      },
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGcgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iI0ZGRkYwMCIgZD0iTTAgMGg1MTJ2NTEySDB6Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjMDAwIiBmb250LXNpemU9IjIwMCIgZm9udC1fYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSJib2xkIj5UYzwvdGV4dD48L2c+PC9zdmc+",
+        "sizes": "512x512",
+        "type": "image/svg+xml"
+      }
+    ]
+  };
+
+  const adminManifest = {
+    name: "TecoTransit Admin",
+    short_name: "Teco Admin",
+    description: "Admin dashboard for TecoTransit",
+    start_url: "/admin",
+    display: "standalone",
+    background_color: "#111827",
+    theme_color: "#FFDF00",
+    icons: [
+       {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIiB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiI+PGcgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iIzExMTgyNyIgZD0iTTAgMGgxOTJ2MTkySDB6Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRjAwIiBmb250LXNpemU9IjYwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9ImJvbGQiPlRjQTwvdGV4dD48L2c+PC9zdmc+",
+        "sizes": "192x192",
+        "type": "image/svg+xml"
+      },
+      {
+        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGcgZmlsbD0ibm9uZSI+PHBhdGggZmlsbD0iIzExMTgyNyIgZD0iTTAgMGg1MTJ2NTEySDB6Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJjZW50cmFsIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjRkZGRjAwIiBmb250LXNpemU9IjE1MCIgZm9udC1fYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSJib2xkIj5UY0E8L3RleHQ+PC9nPgjwvdGV4dD48L2c+PC9zdmc+",
+        "sizes": "512x512",
+        "type": "image/svg+xml"
+      }
+    ]
+  };
+  
+  const manifest = isAdminPage ? adminManifest : userManifest;
+  const manifestBase64 = Buffer.from(JSON.stringify(manifest)).toString('base64');
+  const manifestDataUrl = `data:application/manifest+json;base64,${manifestBase64}`;
+
+  const userFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🚌</text></svg>`;
+  const adminFaviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="75">TA</text></svg>`;
+  const faviconSvg = isAdminPage ? adminFaviconSvg : userFaviconSvg;
+  const faviconDataUrl = `data:image/svg+xml,${encodeURIComponent(faviconSvg)}`;
+  
+  // --- End PWA Configuration ---
+
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-          <meta name="theme-color" content="#D4AF37" />
-          <link rel="manifest" href="/manifest.json" />
-          <link rel="apple-touch-icon" href="/icon-192x192.svg" />
-          <link rel="icon" href="/icon-192x192.svg" type="image/svg+xml" />
+          <meta name="theme-color" content={manifest.theme_color} />
+          <link rel="manifest" href={manifestDataUrl} />
+          <link rel="apple-touch-icon" href={faviconDataUrl} />
+          <link rel="icon" href={faviconDataUrl} type="image/svg+xml" />
       </head>
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
