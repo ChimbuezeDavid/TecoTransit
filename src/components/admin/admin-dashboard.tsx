@@ -592,15 +592,15 @@ export default function AdminDashboard() {
                                     <div className="p-4 bg-muted/50 rounded-lg">
                                         <Label className="font-semibold text-base">Confirm Departure Date</Label>
                                         <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            <Label htmlFor="intended" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended"/>
+                                            <Label htmlFor="intended-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-tablet"/>
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold">Intended</span>
                                                     <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
                                                 </div>
                                             </Label>
-                                            <Label htmlFor="alternative" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
-                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative"/>
+                                            <Label htmlFor="alternative-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-tablet"/>
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold">Alternative</span>
                                                     <span className="text-muted-foreground">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
@@ -730,5 +730,8 @@ export default function AdminDashboard() {
     
 
     
+
+    
+
 
     
