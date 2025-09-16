@@ -21,7 +21,7 @@ The technologies for TecoTransit were chosen to build a performant, scalable, an
 ### **Backend & Infrastructure**
 
 *   **Firebase (Backend as a Service)**
-    *   **Firebase Authentication**: Chosen for its robust, secure, and easy-to-implement authentication system. It handles the complexities of user sign-in, session management, and password security for the admin portal, saving significant development time while providing enterprise-grade security.
+    *   **Firebase Authentication**: Chosen for its robust, secure, and easy-to-implement authentication system. It handles the complexities of admin sign-in, session management, and password security for the admin portal, saving significant development time while providing enterprise-grade security.
     *   **Firebase Firestore**: A NoSQL, real-time database that serves as the application's primary data store. Its real-time capabilities are crucial for the admin dashboard, where new bookings appear instantly without needing a page refresh. Its scalable nature means it can handle growth without infrastructure overhead.
 
 *   **Vercel (Hosting & Serverless Functions)**
