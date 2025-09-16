@@ -513,7 +513,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="p-0 max-w-4xl max-h-[90vh] sm:max-h-[80vh] flex flex-col">
-                <DialogHeader className="p-6 pr-12 pb-4 border-b">
+                <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -588,7 +588,7 @@ export default function AdminDashboard() {
                                  {/* Confirmation Section */}
                                 {selectedBooking.status === 'Pending' && (
                                     <div className="space-y-3">
-                                        <Label className="font-semibold text-base text-foreground">Confirm Departure Date</Label>
+                                        <h3 className="font-semibold text-lg">Confirm Departure</h3>
                                         <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
                                             <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
                                                 <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
@@ -614,45 +614,45 @@ export default function AdminDashboard() {
                                         <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
                                     </div>
                                 )}
+
+                                <Separator />
+                                
+                                <div className="space-y-2">
+                                    {selectedBooking.status === 'Pending' ? (
+                                        <>
+                                            <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
+                                                {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                Confirm Booking
+                                            </Button>
+                                            <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                                {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                Cancel Booking
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                                    )}
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="link" size="sm" className="text-destructive hover:text-destructive h-auto w-full" disabled={isDeleting}>
+                                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                <span>Delete Booking</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
                              </div>
                         </ScrollArea>
-                        
-                        <div className="p-6 border-t bg-muted/50">
-                            <div className="flex flex-col gap-2">
-                                {selectedBooking.status === 'Pending' ? (
-                                    <>
-                                        <Button size="lg" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
-                                            {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            Confirm Booking
-                                        </Button>
-                                        <Button variant="secondary" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
-                                            {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            Cancel Booking
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button variant="outline" size="lg" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
-                                )}
-                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="link" size="sm" className="text-destructive hover:text-destructive h-auto" disabled={isDeleting}>
-                                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                            <span>Delete Booking</span>
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </DialogContent>
@@ -660,7 +660,7 @@ export default function AdminDashboard() {
       )}
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-md p-0 sm:max-h-full max-h-[65vh]">
+        <DialogContent className="max-w-md p-0 max-h-[65vh] sm:max-h-full">
            <DialogHeader className="p-6 pb-4">
             <DialogTitle>Payment Receipt</DialogTitle>
             <DialogDescription>
