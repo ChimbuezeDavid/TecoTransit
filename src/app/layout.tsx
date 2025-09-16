@@ -60,6 +60,22 @@ export default function RootLayout({
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('Service Worker unregistered successfully.');
+                  }
+                }).catch(function(err) {
+                  console.log('Service Worker unregistration failed: ', err);
+                });
+              }
+            `,
+          }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -81,20 +97,6 @@ export default function RootLayout({
             </BookingProvider>
           </AuthProvider>
         </ThemeProvider>
-         <Script id="service-worker-unregister" strategy="afterInteractive">
-          {`
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                  registration.unregister()
-                  console.log('Service Worker unregistered successfully.');
-                }
-              }).catch(function(err) {
-                console.log('Service Worker unregistration failed: ', err);
-              });
-            }
-          `}
-        </Script>
       </body>
     </html>
   );
