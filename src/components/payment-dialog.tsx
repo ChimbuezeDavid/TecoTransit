@@ -101,7 +101,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
   const canSubmit = receiptFile !== null && hasPaid;
 
   return (
-    <>
+    <div>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md p-0">
           <DialogHeader className="p-6 pb-4">
@@ -182,6 +182,6 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
         isOpen={isConfirmationOpen}
         onClose={() => setIsConfirmationOpen(false)}
       />
-    </>
+    </div>
   );
 }
