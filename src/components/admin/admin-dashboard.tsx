@@ -8,6 +8,8 @@ import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 import Link from 'next/link';
+import Image from 'next/image';
+
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -101,6 +103,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -297,8 +301,11 @@ export default function AdminDashboard() {
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
         <TableCell>
             {booking.paymentReceiptUrl ? (
-                <Button asChild variant="link" size="sm" className="p-0 h-auto">
-                    <Link href={booking.paymentReceiptUrl} target="_blank">View</Link>
+                <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => {
+                  setReceiptImageUrl(booking.paymentReceiptUrl!);
+                  setIsReceiptDialogOpen(true);
+                }}>
+                    View
                 </Button>
             ) : (
                 <span className="text-xs text-muted-foreground">N/A</span>
@@ -318,6 +325,7 @@ export default function AdminDashboard() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
@@ -500,6 +508,8 @@ export default function AdminDashboard() {
           </Button>
         </div>
       </CardFooter>
+      </Card>
+      
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-md md:max-w-3xl p-0">
@@ -737,6 +747,32 @@ export default function AdminDashboard() {
             </DialogContent>
         </Dialog>
       )}
-    </Card>
+
+      <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Payment Receipt</DialogTitle>
+            <DialogDescription>
+              This is the payment receipt uploaded by the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 relative aspect-video">
+            {receiptImageUrl ? (
+                <Image 
+                    src={receiptImageUrl} 
+                    alt="Payment Receipt" 
+                    fill
+                    className="object-contain"
+                />
+            ) : (
+                <p>No receipt image to display.</p>
+            )}
+          </div>
+           <DialogFooter>
+                <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
