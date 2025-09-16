@@ -4,7 +4,8 @@
 import { put } from '@vercel/blob';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function uploadReceipt(file: File) {
+export async function uploadReceipt(formData: FormData) {
+  const file = formData.get('file') as File;
   if (!file) {
     throw new Error('No file provided');
   }

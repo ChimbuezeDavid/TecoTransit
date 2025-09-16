@@ -69,7 +69,9 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
     setIsSubmitting(true);
     try {
       // 1. Upload the receipt file using the server action
-      const blob = await uploadReceipt(receiptFile);
+      const formData = new FormData();
+      formData.append('file', receiptFile);
+      const blob = await uploadReceipt(formData);
       const receiptUrl = blob.url;
 
       // 2. Call createBooking with the booking data and the returned URL
