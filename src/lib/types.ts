@@ -15,7 +15,7 @@ export type Booking = {
   vehicleType: string;
   luggageCount: number;
   totalFare: number;
-  status: 'Pending' | 'Payment Review' | 'Confirmed' | 'Cancelled';
+  status: 'Pending' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   paymentReceiptUrl?: string; // URL to the uploaded payment receipt

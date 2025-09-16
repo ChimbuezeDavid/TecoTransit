@@ -263,7 +263,7 @@ export default function AdminDashboard() {
     switch (status) {
       case 'Confirmed': return 'default';
       case 'Cancelled': return 'destructive';
-      case 'Payment Review': return 'secondary';
+      case 'Pending': return 'secondary';
       default: return 'outline';
     }
   };
@@ -459,7 +459,6 @@ export default function AdminDashboard() {
                 <SelectContent>
                     <SelectItem value="All">All</SelectItem>
                     <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Payment Review">Payment Review</SelectItem>
                     <SelectItem value="Confirmed">Confirmed</SelectItem>
                     <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
@@ -558,7 +557,7 @@ export default function AdminDashboard() {
                                     <p><strong>Total Fare:</strong> <span className="font-bold text-primary">₦{selectedBooking.totalFare.toLocaleString()}</span></p>
                                 </CardContent>
                             </Card>
-                             { (selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') && (
+                             { selectedBooking.status === 'Pending' && (
                                 <Card>
                                      <CardHeader className="p-4">
                                         <CardTitle className="text-base">Confirm Departure Date</CardTitle>
@@ -610,7 +609,7 @@ export default function AdminDashboard() {
                                     <p><strong>Alternative:</strong> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
                                 </div>
                             </div>
-                            {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') ? (
+                            {selectedBooking.status === 'Pending' ? (
                                 <div className="col-span-2 space-y-4 pt-4">
                                      <Separator/>
                                     <div className="p-4 bg-muted/50 rounded-lg">
@@ -677,7 +676,7 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             </div>
-                             {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') && (
+                             {selectedBooking.status === 'Pending' && (
                                 <div className="pt-6">
                                     <Separator/>
                                     <div className="p-4 bg-muted/30 rounded-lg mt-6">
@@ -728,7 +727,7 @@ export default function AdminDashboard() {
                         </AlertDialogContent>
                     </AlertDialog>
                     <div className="flex justify-end gap-2 flex-wrap">
-                        {(selectedBooking.status === 'Pending' || selectedBooking.status === 'Payment Review') ? (
+                        {selectedBooking.status === 'Pending' ? (
                             <>
                                 <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}

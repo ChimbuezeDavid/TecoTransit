@@ -106,7 +106,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       ...restOfData,
       id: bookingUuid,
       createdAt: Timestamp.now(),
-      status: 'Payment Review' as const,
+      status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
       paymentReceiptUrl,
