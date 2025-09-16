@@ -109,7 +109,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
           <div className="px-6 space-y-4">
             <Alert>
               <AlertTitle className="font-bold">Bank Transfer Details</AlertTitle>
-              <AlertDescription asChild>
+              <AlertDescription>
                 <div className="space-y-2 pt-2">
                   <p><strong>Bank:</strong> {accountDetails.bankName}</p>
                   <p><strong>Account Name:</strong> {accountDetails.accountName}</p>
