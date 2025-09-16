@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -160,7 +161,6 @@ export default function AdminDashboard() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        setIsManageDialogOpen(false);
     } catch (error) {
         toast({
             variant: "destructive",
@@ -169,6 +169,7 @@ export default function AdminDashboard() {
         });
     } finally {
         setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
+        setIsManageDialogOpen(false);
     }
   };
 
@@ -181,7 +182,6 @@ export default function AdminDashboard() {
         title: "Booking Deleted",
         description: `Booking has been permanently deleted.`,
       });
-      setIsManageDialogOpen(false);
     } catch (error) {
        toast({
         variant: "destructive",
@@ -190,6 +190,7 @@ export default function AdminDashboard() {
       });
     } finally {
         setIsDeleting(false);
+        setIsManageDialogOpen(false);
     }
   };
 
@@ -755,17 +756,19 @@ export default function AdminDashboard() {
               This is the payment receipt uploaded by the customer.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 relative aspect-video p-4 bg-muted/50 rounded-md">
-            {receiptImageUrl ? (
-                <Image 
-                    src={receiptImageUrl} 
-                    alt="Payment Receipt" 
-                    fill
-                    className="object-contain"
-                />
-            ) : (
-                <p>No receipt image to display.</p>
-            )}
+          <div className="mt-4 bg-muted/50 rounded-md p-4">
+            <div className="relative aspect-video">
+                {receiptImageUrl ? (
+                    <Image 
+                        src={receiptImageUrl} 
+                        alt="Payment Receipt" 
+                        fill
+                        className="object-contain"
+                    />
+                ) : (
+                    <p>No receipt image to display.</p>
+                )}
+            </div>
           </div>
            <DialogFooter>
                 <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
@@ -775,7 +778,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
-
-    
