@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
-import { uploadReceipt } from '@/app/actions/upload-receipt';
 
 interface BookingContextType {
   bookings: Booking[];
@@ -17,7 +16,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData, receiptFile: File) => Promise<Booking>;
+  createBooking: (data: BookingFormData, receiptUrl: string) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -99,13 +98,9 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData, receiptFile: File) => {
+  const createBooking = useCallback(async (data: BookingFormData, paymentReceiptUrl: string) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
-
-    // 1. Upload receipt using server action
-    const blob = await uploadReceipt(receiptFile);
-    const paymentReceiptUrl = blob.url;
 
     const firestoreBooking = {
       ...restOfData,

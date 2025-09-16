@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { BookingFormData } from '@/lib/types';
 import { useBooking } from '@/context/booking-context';
 import { useToast } from '@/hooks/use-toast';
+import { uploadReceipt } from '@/app/actions/upload-receipt';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -67,7 +68,12 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
 
     setIsSubmitting(true);
     try {
-      await createBooking(bookingData, receiptFile);
+      // 1. Upload the receipt file using the server action
+      const blob = await uploadReceipt(receiptFile);
+      const receiptUrl = blob.url;
+
+      // 2. Call createBooking with the booking data and the returned URL
+      await createBooking(bookingData, receiptUrl);
       
       toast({
         title: "Booking Submitted for Review!",
@@ -107,16 +113,16 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
           </DialogHeader>
 
           <div className="px-6 space-y-4">
-            <Alert>
-              <AlertTitle className="font-bold">Bank Transfer Details</AlertTitle>
-              <AlertDescription>
-                <div className="space-y-2 pt-2">
-                  <p><strong>Bank:</strong> {accountDetails.bankName}</p>
-                  <p><strong>Account Name:</strong> {accountDetails.accountName}</p>
-                  <p><strong>Account Number:</strong> {accountDetails.accountNumber}</p>
-                   <p className="pt-2"><strong>Amount:</strong> <span className="font-bold text-primary text-lg">₦{bookingData.totalFare.toLocaleString()}</span></p>
-                </div>
-              </AlertDescription>
+             <Alert>
+                <AlertTitle className="font-bold">Bank Transfer Details</AlertTitle>
+                <AlertDescription>
+                    <div className="space-y-2 pt-2">
+                        <p><strong>Bank:</strong> {accountDetails.bankName}</p>
+                        <p><strong>Account Name:</strong> {accountDetails.accountName}</p>
+                        <p><strong>Account Number:</strong> {accountDetails.accountNumber}</p>
+                        <p className="pt-2"><strong>Amount:</strong> <span className="font-bold text-primary text-lg">₦{bookingData.totalFare.toLocaleString()}</span></p>
+                    </div>
+                </AlertDescription>
             </Alert>
             
             <Separator />
