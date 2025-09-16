@@ -749,7 +749,8 @@ export default function AdminDashboard() {
       )}
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-xl p-6">
+        <DialogContent className="max-w-xl">
+          <div className="p-6">
             <DialogHeader>
                 <DialogTitle>Payment Receipt</DialogTitle>
                 <DialogDescription>
@@ -770,9 +771,10 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </div>
-            <DialogFooter className="mt-6">
+            <div className="mt-6 flex justify-end">
                 <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
-            </DialogFooter>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
