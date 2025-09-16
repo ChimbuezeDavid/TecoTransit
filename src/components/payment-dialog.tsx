@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Upload, Banknote } from 'lucide-react';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { Card, CardContent } from './ui/card';
+import { ScrollArea } from './ui/scroll-area';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -103,7 +104,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
   return (
     <div>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0">
+        <DialogContent className="max-w-md p-0 flex flex-col h-full max-h-[90vh]">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle className="text-2xl font-headline flex items-center gap-2">
               <Banknote className="h-6 w-6 text-primary" />
@@ -114,56 +115,58 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-6 space-y-6">
-             {/* Step 1: Make Payment */}
-             <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">1</div>
-                    <h3 className="text-lg font-semibold">Make Payment</h3>
-                </div>
-                <Card>
-                    <CardContent className="p-4 space-y-3">
-                         <p className="text-sm text-center">Transfer the total fare to the account below.</p>
-                         <div className="text-center bg-muted/50 p-4 rounded-lg">
-                            <p className="text-sm text-muted-foreground">Total Amount</p>
-                            <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare.toLocaleString()}</p>
-                         </div>
-                         <div className="text-sm space-y-2 pt-2">
-                            <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{accountDetails.bankName}</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{accountDetails.accountName}</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">Account Number:</span> <span className="font-medium">{accountDetails.accountNumber}</span></div>
-                         </div>
-                    </CardContent>
-                </Card>
-             </div>
+          <ScrollArea className="flex-grow">
+            <div className="px-6 space-y-6">
+              {/* Step 1: Make Payment */}
+              <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">1</div>
+                      <h3 className="text-lg font-semibold">Make Payment</h3>
+                  </div>
+                  <Card>
+                      <CardContent className="p-4 space-y-3">
+                           <p className="text-sm text-center">Transfer the total fare to the account below.</p>
+                           <div className="text-center bg-muted/50 p-4 rounded-lg">
+                              <p className="text-sm text-muted-foreground">Total Amount</p>
+                              <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare.toLocaleString()}</p>
+                           </div>
+                           <div className="text-sm space-y-2 pt-2">
+                              <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{accountDetails.bankName}</span></div>
+                              <div className="flex justify-between"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{accountDetails.accountName}</span></div>
+                              <div className="flex justify-between"><span className="text-muted-foreground">Account Number:</span> <span className="font-medium">{accountDetails.accountNumber}</span></div>
+                           </div>
+                      </CardContent>
+                  </Card>
+              </div>
 
-            <Separator />
-            
-             {/* Step 2: Upload & Confirm */}
-            <div className="space-y-4">
-               <div className="flex items-center gap-3">
-                    <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">2</div>
-                    <h3 className="text-lg font-semibold">Upload & Confirm</h3>
-                </div>
-               <div className="grid w-full max-w-sm items-center gap-1.5">
-                    <Label htmlFor="receipt">Upload Payment Receipt</Label>
-                    <div className="flex items-center gap-2">
-                        <Input id="receipt" type="file" accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} />
-                        <Upload className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    {receiptFile && <p className="text-xs text-muted-foreground pt-1">File selected: {receiptFile.name}</p>}
-               </div>
+              <Separator />
+              
+              {/* Step 2: Upload & Confirm */}
+              <div className="space-y-4">
+                 <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">2</div>
+                      <h3 className="text-lg font-semibold">Upload & Confirm</h3>
+                  </div>
+                 <div className="grid w-full max-w-sm items-center gap-1.5">
+                      <Label htmlFor="receipt">Upload Payment Receipt</Label>
+                      <div className="flex items-center gap-2">
+                          <Input id="receipt" type="file" accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} />
+                          <Upload className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      {receiptFile && <p className="text-xs text-muted-foreground pt-1">File selected: {receiptFile.name}</p>}
+                 </div>
 
-                <div className="flex items-center space-x-2 pt-2">
-                    <Checkbox id="hasPaid" checked={hasPaid} onCheckedChange={(checked) => setHasPaid(checked as boolean)} />
-                    <Label htmlFor="hasPaid" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        I confirm I have transferred the correct amount.
-                    </Label>
-                </div>
+                  <div className="flex items-center space-x-2 pt-2">
+                      <Checkbox id="hasPaid" checked={hasPaid} onCheckedChange={(checked) => setHasPaid(checked as boolean)} />
+                      <Label htmlFor="hasPaid" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                          I confirm I have transferred the correct amount.
+                      </Label>
+                  </div>
+              </div>
             </div>
-          </div>
+          </ScrollArea>
           
-          <DialogFooter className="p-6 bg-muted/50 mt-6">
+          <DialogFooter className="p-6 bg-muted/50 mt-auto border-t">
             <Button
               type="button"
               className="w-full"
