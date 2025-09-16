@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -750,31 +749,36 @@ export default function AdminDashboard() {
       )}
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl p-0">
           <div className="p-6">
             <DialogHeader>
-                <DialogTitle>Payment Receipt</DialogTitle>
-                <DialogDescription>
+              <DialogTitle>Payment Receipt</DialogTitle>
+              <DialogDescription>
                 This is the payment receipt uploaded by the customer.
-                </DialogDescription>
+              </DialogDescription>
             </DialogHeader>
             <div className="mt-4">
-                <div className="relative aspect-video">
-                    {receiptImageUrl ? (
-                        <Image 
-                            src={receiptImageUrl} 
-                            alt="Payment Receipt" 
-                            fill
-                            sizes="(max-width: 768px) 100vw, 576px"
-                            className="object-contain rounded-md"
-                        />
-                    ) : (
-                        <p>No receipt image to display.</p>
-                    )}
-                </div>
+              <div className="relative aspect-video">
+                {receiptImageUrl ? (
+                  <Image
+                    src={receiptImageUrl}
+                    alt="Payment Receipt"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 576px"
+                    className="object-contain rounded-md"
+                  />
+                ) : (
+                  <p>No receipt image to display.</p>
+                )}
+              </div>
             </div>
             <div className="mt-6 flex justify-end">
-                <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsReceiptDialogOpen(false)}
+              >
+                Close
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -782,7 +786,5 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
 
     
