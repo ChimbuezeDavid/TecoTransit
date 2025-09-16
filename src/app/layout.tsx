@@ -11,6 +11,7 @@ import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico } from 'next/font/google';
+import Script from 'next/script';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -80,6 +81,20 @@ export default function RootLayout({
             </BookingProvider>
           </AuthProvider>
         </ThemeProvider>
+         <Script id="service-worker-unregister" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                  registration.unregister()
+                  console.log('Service Worker unregistered successfully.');
+                }
+              }).catch(function(err) {
+                console.log('Service Worker unregistration failed: ', err);
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
