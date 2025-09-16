@@ -708,39 +708,41 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-wrap items-center justify-between flex-col-reverse sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2">
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive w-full sm:w-auto justify-start" disabled={isDeleting}>
-                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                                <span>Delete Booking</span>
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                    <div className="flex flex-col sm:flex-row sm:justify-end gap-2 w-full">
+                <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center p-6 border-t bg-muted/30 gap-2">
+                    <div className="w-full sm:w-auto">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive w-full justify-center sm:w-auto sm:justify-start" disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                    <span>Delete Booking</span>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         {selectedBooking.status === 'Pending' ? (
                             <>
                                 <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
-                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Cancel Booking
                                 </Button>
                                 <Button size="sm" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
+                            <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
                         )}
                     </div>
                 </DialogFooter>
