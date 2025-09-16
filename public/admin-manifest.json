@@ -1,0 +1,32 @@
+{
+    "theme_color": "#1f2937",
+    "background_color": "#111827",
+    "display": "standalone",
+    "scope": "/admin/",
+    "start_url": "/admin",
+    "name": "TecoTransit Admin",
+    "short_name": "Teco Admin",
+    "description": "Admin dashboard for managing TecoTransit bookings and operations.",
+    "icons": [
+        {
+            "src": "/admin-icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/admin-icon-256x256.png",
+            "sizes": "256x256",
+            "type": "image/png"
+        },
+        {
+            "src": "/admin-icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "/admin-icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
