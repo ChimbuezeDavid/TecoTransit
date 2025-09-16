@@ -517,14 +517,6 @@ export default function AdminDashboard() {
                         
                         {/* Mobile Layout: Stacked Cards */}
                         <div className="space-y-4 md:hidden">
-                             {selectedBooking.paymentReceiptUrl && (
-                                <Button asChild size="sm" className="w-full">
-                                    <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
-                                        <ExternalLink className="mr-2 h-4 w-4" />
-                                        View Payment Receipt
-                                    </Link>
-                                </Button>
-                            )}
                             <Card>
                                 <CardHeader className="p-4">
                                     <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" />Customer Details</CardTitle>
@@ -588,16 +580,6 @@ export default function AdminDashboard() {
                         
                         {/* Tablet Layout: Brick */}
                         <div className="hidden md:grid lg:hidden md:grid-cols-2 gap-x-8 gap-y-6">
-                            {selectedBooking.paymentReceiptUrl && (
-                                <div className="col-span-2">
-                                    <Button asChild size="sm" className="w-full">
-                                        <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
-                                            <ExternalLink className="mr-2 h-4 w-4" />
-                                            View Payment Receipt
-                                        </Link>
-                                    </Button>
-                                </div>
-                            )}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2"><User className="h-5 w-5" /> Customer & Fare</h3>
                                 <div className="space-y-2 pl-7">
@@ -649,16 +631,6 @@ export default function AdminDashboard() {
 
                         {/* Desktop Layout */}
                         <div className="hidden lg:block">
-                             {selectedBooking.paymentReceiptUrl && (
-                                <div className="mb-4">
-                                    <Button asChild size="sm" className="w-full">
-                                        <Link href={selectedBooking.paymentReceiptUrl} target="_blank">
-                                            <ExternalLink className="mr-2 h-4 w-4" />
-                                            View Payment Receipt
-                                        </Link>
-                                    </Button>
-                                </div>
-                            )}
                             <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                                 {/* Col 1: Customer & Trip */}
                                 <div className="col-span-2 space-y-6">
@@ -768,5 +740,3 @@ export default function AdminDashboard() {
     </Card>
   );
 }
-
-    
