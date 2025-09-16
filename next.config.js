@@ -1,3 +1,4 @@
+
 /** @type {import('next').NextConfig} */
 
 const pwa = require('@ducanh2912/next-pwa');
