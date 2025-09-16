@@ -12,10 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Upload, Banknote } from 'lucide-react';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
+import { Card, CardContent } from './ui/card';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -103,33 +103,48 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0 sm:max-h-full max-h-[65vh]">
+        <DialogContent className="max-w-md p-0 max-h-[65vh] sm:max-h-full">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle className="text-2xl font-headline flex items-center gap-2">
               <Banknote className="h-6 w-6 text-primary" />
               Complete Your Booking
             </DialogTitle>
             <DialogDescription>
-              Transfer the total fare to the account below and upload your receipt to finalize your booking.
+              Follow the steps below to finalize your booking request.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-6 space-y-4">
-             <Alert>
-                <AlertTitle className="font-bold">Bank Transfer Details</AlertTitle>
-                <AlertDescription>
-                    <div className="space-y-2 pt-2">
-                        <p><strong>Bank:</strong> {accountDetails.bankName}</p>
-                        <p><strong>Account Name:</strong> {accountDetails.accountName}</p>
-                        <p><strong>Account Number:</strong> {accountDetails.accountNumber}</p>
-                        <p className="pt-2"><strong>Amount:</strong> <span className="font-bold text-primary text-lg">₦{bookingData.totalFare.toLocaleString()}</span></p>
-                    </div>
-                </AlertDescription>
-            </Alert>
-            
+          <div className="px-6 space-y-6">
+             {/* Step 1: Make Payment */}
+             <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">1</div>
+                    <h3 className="text-lg font-semibold">Make Payment</h3>
+                </div>
+                <Card>
+                    <CardContent className="p-4 space-y-3">
+                         <p className="text-sm text-center">Transfer the total fare to the account below.</p>
+                         <div className="text-center bg-muted/50 p-4 rounded-lg">
+                            <p className="text-sm text-muted-foreground">Total Amount</p>
+                            <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare.toLocaleString()}</p>
+                         </div>
+                         <div className="text-sm space-y-2 pt-2">
+                            <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{accountDetails.bankName}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{accountDetails.accountName}</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">Account Number:</span> <span className="font-medium">{accountDetails.accountNumber}</span></div>
+                         </div>
+                    </CardContent>
+                </Card>
+             </div>
+
             <Separator />
             
+             {/* Step 2: Upload & Confirm */}
             <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 bg-primary text-primary-foreground h-8 w-8 rounded-full flex items-center justify-center font-bold">2</div>
+                    <h3 className="text-lg font-semibold">Upload & Confirm</h3>
+                </div>
                <div className="grid w-full max-w-sm items-center gap-1.5">
                     <Label htmlFor="receipt">Upload Payment Receipt</Label>
                     <div className="flex items-center gap-2">
@@ -142,7 +157,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
                 <div className="flex items-center space-x-2 pt-2">
                     <Checkbox id="hasPaid" checked={hasPaid} onCheckedChange={(checked) => setHasPaid(checked as boolean)} />
                     <Label htmlFor="hasPaid" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        I have made the payment to the account above.
+                        I confirm I have transferred the correct amount.
                     </Label>
                 </div>
             </div>
