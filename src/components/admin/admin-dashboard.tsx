@@ -341,7 +341,7 @@ export default function AdminDashboard() {
                     <DialogTrigger asChild>
                          <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
                     </DialogTrigger>
-                    <DialogContent className="p-0">
+                    <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
                         <DialogHeader className="p-6 pb-4">
                             <DialogTitle>Bulk Delete Bookings</DialogTitle>
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
@@ -524,7 +524,7 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 <div className="grid md:grid-cols-3 flex-1 overflow-hidden">
                     <ScrollArea className="md:col-span-2 md:border-r">
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 grid sm:grid-cols-2 gap-x-8 gap-y-6">
                             {/* Customer Details */}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Customer</h3>
@@ -534,8 +534,6 @@ export default function AdminDashboard() {
                                     <li className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.phone}</span></li>
                                 </ul>
                             </div>
-
-                            <Separator />
 
                             {/* Trip Details */}
                             <div className="space-y-4">
@@ -547,25 +545,25 @@ export default function AdminDashboard() {
                                 </ul>
                             </div>
                             
-                            <Separator />
-                            
                             {/* Departure Dates */}
-                            <div className="space-y-4">
+                            <div className="space-y-4 sm:col-span-2">
                                 <h3 className="font-semibold text-lg">Departure Dates</h3>
-                                <ul className="space-y-3 text-sm">
-                                    <li className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="flex items-start gap-3">
+                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <span className="font-medium text-foreground">Intended:</span> {format(parseISO(selectedBooking.intendedDate), 'PPP')}
+                                            <span className="font-medium text-foreground">Intended:</span>
+                                            <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
                                         </div>
-                                    </li>
-                                     <li className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                    </div>
+                                     <div className="flex items-start gap-3">
+                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <span className="font-medium text-foreground">Alternative:</span> {format(parseISO(selectedBooking.alternativeDate), 'PPP')}
+                                            <span className="font-medium text-foreground">Alternative:</span>
+                                            <p>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
                                         </div>
-                                    </li>
-                                </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </ScrollArea>
@@ -635,7 +633,7 @@ export default function AdminDashboard() {
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="link" size="sm" className="text-destructive hover:text-destructive h-auto w-full" disabled={isDeleting}>
-                                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4"/>}
                                                 <span>Delete Booking</span>
                                             </Button>
                                         </AlertDialogTrigger>
@@ -694,3 +692,5 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+    
