@@ -4,14 +4,10 @@
   "description": "Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination.",
   "icons": [
     {
-      "src": "/icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
