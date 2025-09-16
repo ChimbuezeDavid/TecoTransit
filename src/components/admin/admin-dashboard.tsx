@@ -611,19 +611,19 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                             {selectedBooking.status === 'Pending' ? (
-                                <div className="col-span-2 space-y-4 pt-4">
-                                     <Separator/>
-                                    <div className="p-4 bg-muted/50 rounded-lg">
+                                <div className="col-span-2 pt-6">
+                                    <Separator/>
+                                    <div className="p-4 bg-muted/50 rounded-lg mt-6">
                                         <Label className="font-semibold text-base">Confirm Departure Date</Label>
-                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            <Label htmlFor="intended-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <Label htmlFor="intended-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
                                                 <RadioGroupItem value={selectedBooking.intendedDate} id="intended-tablet"/>
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold">Intended</span>
                                                     <span className="text-muted-foreground">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
                                                 </div>
                                             </Label>
-                                            <Label htmlFor="alternative-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border">
+                                            <Label htmlFor="alternative-tablet" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background">
                                                 <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-tablet"/>
                                                 <div className="flex flex-col">
                                                     <span className="font-semibold">Alternative</span>
@@ -709,7 +709,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="p-6 border-t bg-muted/30 flex-col sm:flex-row sm:justify-between items-center gap-2">
+                <DialogFooter className="flex-wrap items-center justify-between flex-col-reverse sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2">
                     <div className="w-full sm:w-auto">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -753,37 +753,35 @@ export default function AdminDashboard() {
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
         <DialogContent className="max-w-xl p-0">
-          <div className="p-6">
-            <DialogHeader>
-              <DialogTitle>Payment Receipt</DialogTitle>
-              <DialogDescription>
-                This is the payment receipt uploaded by the customer.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              <div className="relative aspect-video">
-                {receiptImageUrl ? (
-                  <Image
-                    src={receiptImageUrl}
-                    alt="Payment Receipt"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 576px"
-                    className="object-contain rounded-md"
-                  />
-                ) : (
-                  <p>No receipt image to display.</p>
-                )}
-              </div>
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Payment Receipt</DialogTitle>
+            <DialogDescription>
+              This is the payment receipt uploaded by the customer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            <div className="relative aspect-video">
+              {receiptImageUrl ? (
+                <Image
+                  src={receiptImageUrl}
+                  alt="Payment Receipt"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 576px"
+                  className="object-contain rounded-md"
+                />
+              ) : (
+                <p>No receipt image to display.</p>
+              )}
             </div>
+            <DialogFooter className="mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setIsReceiptDialogOpen(false)}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter className="p-6 pt-0">
-            <Button
-              variant="outline"
-              onClick={() => setIsReceiptDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -792,3 +790,6 @@ export default function AdminDashboard() {
 
     
 
+
+
+    
