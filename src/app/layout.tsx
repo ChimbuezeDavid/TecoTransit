@@ -11,7 +11,6 @@ import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico } from 'next/font/google';
-import Script from 'next/script';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -56,26 +55,13 @@ export default function RootLayout({
       <head>
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta name="theme-color" content="#D4AF37" />
       </head>
       <body
         className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                  for(let registration of registrations) {
-                    registration.unregister();
-                    console.log('Service Worker unregistered successfully.');
-                  }
-                }).catch(function(err) {
-                  console.log('Service Worker unregistration failed: ', err);
-                });
-              }
-            `,
-          }}
-        />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
