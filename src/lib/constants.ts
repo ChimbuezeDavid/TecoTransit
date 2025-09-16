@@ -24,9 +24,9 @@ export const customerService = {
 
 // Replace with your actual account details
 export const bankAccountDetails = {
-    bankName: "WEMA BANK",
-    accountName: "TECOTRANSIT",
-    accountNumber: "8200686369",
+    bankName: "Opay",
+    accountName: "Chimbueze David Okoroji",
+    accountNumber: "9029858977",
 };
 
 export const LUGGAGE_FARE = 0;

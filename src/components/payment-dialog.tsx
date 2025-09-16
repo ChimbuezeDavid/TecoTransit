@@ -17,6 +17,7 @@ import { Loader2, Upload, Banknote } from 'lucide-react';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { Card, CardContent } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
+import { bankAccountDetails } from '@/lib/constants';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -24,13 +25,6 @@ interface PaymentDialogProps {
   bookingData: BookingFormData;
   onBookingComplete: () => void;
 }
-
-// TODO: Replace with your actual account details
-const accountDetails = {
-    bankName: "WEMA BANK",
-    accountName: "TECOTRANSIT",
-    accountNumber: "8200686369",
-};
 
 export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingComplete }: PaymentDialogProps) {
   const { toast } = useToast();
@@ -131,9 +125,9 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
                               <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare.toLocaleString()}</p>
                            </div>
                            <div className="text-sm space-y-2 pt-2">
-                              <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{accountDetails.bankName}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{accountDetails.accountName}</span></div>
-                              <div className="flex justify-between"><span className="text-muted-foreground">Account Number:</span> <span className="font-medium">{accountDetails.accountNumber}</span></div>
+                              <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{bankAccountDetails.bankName}</span></div>
+                              <div className="flex justify-between"><span className="text-muted-foreground">Account Name:</span> <span className="font-medium">{bankAccountDetails.accountName}</span></div>
+                              <div className="flex justify-between"><span className="text-muted-foreground">Account Number:</span> <span className="font-medium">{bankAccountDetails.accountNumber}</span></div>
                            </div>
                       </CardContent>
                   </Card>
