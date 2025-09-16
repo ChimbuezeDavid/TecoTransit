@@ -50,7 +50,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-            
+            <Route className="h-6 w-6" />
             <span className="font-headline">TecoTransit</span>
           </Link>
           
@@ -72,7 +72,7 @@ export default function Header() {
               </SheetTrigger>
               <SheetContent side="left" className="w-[240px]">
                 <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
-                    
+                    <Route className="h-6 w-6" />
                     <span className="font-headline">TecoTransit</span>
                 </Link>
                 <nav className="flex flex-col gap-6">
