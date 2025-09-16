@@ -56,7 +56,6 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
-        <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='0' y='75' font-size='100' font-weight='bold' fill='yellow' font-family='sans-serif'%3ETe%3C/text%3E%3C/svg%3E" type="image/svg+xml" />
         <meta name="theme-color" content="#D4AF37" />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
