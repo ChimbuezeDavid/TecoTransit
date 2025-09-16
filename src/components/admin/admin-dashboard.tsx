@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -512,7 +513,7 @@ export default function AdminDashboard() {
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-md md:max-w-3xl p-0 sm:max-h-full max-h-[65vh]">
-                <DialogHeader className="p-6 pb-4">
+                <DialogHeader className="p-6 pr-12 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
@@ -708,11 +709,11 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-col sm:flex-row sm:justify-between items-center p-6 border-t bg-muted/30 gap-2">
+                <DialogFooter className="p-6 border-t bg-muted/30 flex-col sm:flex-row sm:justify-between items-center gap-2">
                     <div className="w-full sm:w-auto">
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive w-full justify-center sm:w-auto sm:justify-start" disabled={isDeleting}>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive w-full justify-center sm:justify-start" disabled={isDeleting}>
                                     {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                                     <span>Delete Booking</span>
                                 </Button>
@@ -774,15 +775,15 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
-            <div className="mt-6 flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsReceiptDialogOpen(false)}
-              >
-                Close
-              </Button>
-            </div>
           </div>
+          <DialogFooter className="p-6 pt-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsReceiptDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
@@ -790,3 +791,4 @@ export default function AdminDashboard() {
 }
 
     
+
