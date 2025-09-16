@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -59,6 +58,7 @@ function DashboardSkeleton() {
                             <TableHead className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -75,6 +75,7 @@ function DashboardSkeleton() {
                                 </TableCell>
                                 <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
                                 <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                             </TableRow>
                         ))}
@@ -269,7 +270,7 @@ export default function AdminDashboard() {
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={5} className="text-center py-10 text-destructive">
+          <TableCell colSpan={6} className="text-center py-10 text-destructive">
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
@@ -280,7 +281,7 @@ export default function AdminDashboard() {
       );
     }
     if (paginatedBookings.length === 0) {
-      return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
+      return <TableRow><TableCell colSpan={6} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
@@ -294,6 +295,15 @@ export default function AdminDashboard() {
         </TableCell>
         <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
+        <TableCell>
+            {booking.paymentReceiptUrl ? (
+                <Button asChild variant="link" size="sm" className="p-0 h-auto">
+                    <Link href={booking.paymentReceiptUrl} target="_blank">View</Link>
+                </Button>
+            ) : (
+                <span className="text-xs text-muted-foreground">N/A</span>
+            )}
+        </TableCell>
         <TableCell className="text-right">
           <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
             {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Manage'}
@@ -457,6 +467,7 @@ export default function AdminDashboard() {
                 <TableHead className="hidden md:table-cell">Trip</TableHead>
                 <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Receipt</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -757,3 +768,5 @@ export default function AdminDashboard() {
     </Card>
   );
 }
+
+    
