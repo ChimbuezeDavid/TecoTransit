@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -161,6 +160,7 @@ export default function AdminDashboard() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
+        setIsManageDialogOpen(false);
     } catch (error) {
         toast({
             variant: "destructive",
@@ -169,7 +169,6 @@ export default function AdminDashboard() {
         });
     } finally {
         setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
-        setIsManageDialogOpen(false);
     }
   };
 
@@ -182,6 +181,7 @@ export default function AdminDashboard() {
         title: "Booking Deleted",
         description: `Booking has been permanently deleted.`,
       });
+      setIsManageDialogOpen(false);
     } catch (error) {
        toast({
         variant: "destructive",
@@ -190,7 +190,6 @@ export default function AdminDashboard() {
       });
     } finally {
         setIsDeleting(false);
-        setIsManageDialogOpen(false);
     }
   };
 
@@ -514,7 +513,7 @@ export default function AdminDashboard() {
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
             <DialogContent className="max-w-md md:max-w-3xl p-0">
                 <DialogHeader className="p-6 pb-4">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2 mt-4">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
                     </div>
@@ -709,11 +708,12 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 </ScrollArea>
-                <DialogFooter className="flex-wrap items-center justify-between p-6 border-t bg-muted/30 gap-2">
+                <DialogFooter className="flex-wrap items-center justify-between flex-col-reverse sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0 px-2" disabled={isDeleting}>
-                                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive w-full sm:w-auto justify-start" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                <span>Delete Booking</span>
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -727,20 +727,20 @@ export default function AdminDashboard() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <div className="flex justify-end gap-2 flex-wrap">
+                    <div className="flex flex-col sm:flex-row sm:justify-end gap-2 w-full">
                         {selectedBooking.status === 'Pending' ? (
                             <>
-                                <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button variant="secondary" size="sm" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                      {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button size="sm" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]}>
+                                <Button size="sm" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id]} className="w-full sm:w-auto">
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                                     Confirm Booking
                                 </Button>
                             </>
                         ) : (
-                             <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                             <Button variant="outline" size="sm" onClick={() => setIsManageDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
                         )}
                     </div>
                 </DialogFooter>
