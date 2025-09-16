@@ -49,13 +49,14 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAdminPage = pathname.startsWith('/admin');
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
-        <link rel="manifest" href="/manifest.json" />
+        {isProduction && <link rel="manifest" href="/manifest.json" />}
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <meta name="theme-color" content="#D4AF37" />
       </head>
