@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -764,6 +765,7 @@ export default function AdminDashboard() {
                             src={receiptImageUrl} 
                             alt="Payment Receipt" 
                             fill
+                            sizes="(max-width: 768px) 100vw, 576px"
                             className="object-contain rounded-md"
                         />
                     ) : (
@@ -780,5 +782,7 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+    
 
     
