@@ -512,7 +512,7 @@ export default function AdminDashboard() {
       
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="p-0 max-w-4xl max-h-[90vh] sm:max-h-[80vh] flex flex-col">
+            <DialogContent className="p-0 max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
@@ -522,9 +522,9 @@ export default function AdminDashboard() {
                         Created on {format(selectedBooking.createdAt, 'PPP p')}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-3 flex-1 overflow-hidden">
-                    <ScrollArea className="md:col-span-2 md:border-r">
-                        <div className="p-6 grid sm:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="grid md:grid-cols-3 flex-1 overflow-y-auto">
+                     <div className="md:col-span-2 p-6">
+                        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
                             {/* Customer Details */}
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Customer</h3>
@@ -566,24 +566,22 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
                         </div>
-                    </ScrollArea>
+                    </div>
                     
                     {/* Right Panel */}
                     <div className="md:col-span-1 bg-muted/30 flex flex-col">
-                        <ScrollArea className="flex-1">
-                             <div className="p-6 space-y-6">
-                                {/* Fare Details */}
-                                <div className="space-y-3">
-                                    <h3 className="font-semibold text-lg">Fare</h3>
-                                     <div>
-                                        <p className="text-xs text-muted-foreground">Total Paid</p>
-                                        <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
-                                    </div>
+                        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                            {/* Fare Details */}
+                            <div className="space-y-3">
+                                <h3 className="font-semibold text-lg">Fare</h3>
+                                    <div>
+                                    <p className="text-xs text-muted-foreground">Total Paid</p>
+                                    <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
                                 </div>
-                                
-                                <Separator/>
+                            </div>
+                            
+                            <Separator/>
 
-                                 {/* Confirmation Section */}
                                 {selectedBooking.status === 'Pending' && (
                                     <div className="space-y-3">
                                         <h3 className="font-semibold text-lg">Confirm Departure</h3>
@@ -606,53 +604,53 @@ export default function AdminDashboard() {
                                     </div>
                                 )}
 
-                                {selectedBooking.status === 'Confirmed' && (
-                                    <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
-                                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
-                                        <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
-                                    </div>
-                                )}
-
-                                <Separator />
-                                
-                                <div className="space-y-2">
-                                    {selectedBooking.status === 'Pending' ? (
-                                        <>
-                                            <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
-                                                {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                                Confirm Booking
-                                            </Button>
-                                            <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
-                                                {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                                Cancel Booking
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
-                                    )}
-                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="link" size="sm" className="text-destructive hover:text-destructive h-auto w-full" disabled={isDeleting}>
-                                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4"/>}
-                                                <span>Delete Booking</span>
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
+                            {selectedBooking.status === 'Confirmed' && (
+                                <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                                    <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
                                 </div>
-                             </div>
-                        </ScrollArea>
+                            )}
+                        </div>
                     </div>
                 </div>
+                 <DialogFooter className="flex-wrap items-center justify-between sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2">
+                    <div>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="link" size="sm" className="text-destructive hover:text-destructive h-auto p-0" disabled={isDeleting}>
+                                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4"/>}
+                                    <span>Delete Booking</span>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete this booking record from our servers.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleDeleteBooking} className={cn(buttonVariants({ variant: "destructive" }))}>Continue</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
+                        {selectedBooking.status === 'Pending' ? (
+                            <>
+                                <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Cancel Booking
+                                </Button>
+                                <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Confirm Booking
+                                </Button>
+                            </>
+                        ) : (
+                            <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
+                        )}
+                    </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
       )}
@@ -692,5 +690,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
