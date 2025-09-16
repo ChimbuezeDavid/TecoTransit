@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route, Menu } from "lucide-react";
+import { Route, Menu, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
@@ -22,10 +22,14 @@ export default function Header() {
 
   const getNavLinks = () => {
     const links = [
-      { href: "/", label: "Book a Trip" },
-      { href: "/faqs", label: "FAQs" },
+      { href: "/", label: "Book a Trip", icon: Route },
+      { href: "/faqs", label: "FAQs", icon: Menu },
     ];
-    // Admin link is removed for better security; access is manual via /admin
+
+    if (user) {
+      links.push({ href: "/admin", label: "Admin", icon: Shield });
+    }
+    
     return links;
   };
   
@@ -74,7 +78,13 @@ export default function Header() {
                 <nav className="flex flex-col gap-6">
                     {navLinks.map(link => (
                         <SheetClose asChild key={link.href}>
-                             <NavLink {...link} className="text-lg"/>
+                             <Link href={link.href} className={cn(
+                                "flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary",
+                                pathname === link.href ? "text-primary" : "text-muted-foreground",
+                             )}>
+                                <link.icon className="h-5 w-5" />
+                                <span>{link.label}</span>
+                            </Link>
                         </SheetClose>
                     ))}
                 </nav>
