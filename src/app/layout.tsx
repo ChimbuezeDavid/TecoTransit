@@ -55,10 +55,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3e%3ctext x='50' y='50' text-anchor='middle' dominant-baseline='middle' font-size='55' font-weight='bold' fill='yellow'%3eTeco%3c/text%3e%3c/svg%3e" />
-        
-        <meta name="theme-color" content="#D4AF37" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png"></link>
+        <meta name="theme-color" content="#fff" />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
         <meta name="mobile-web-app-capable" content="yes"></meta>
