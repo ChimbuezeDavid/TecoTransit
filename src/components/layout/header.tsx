@@ -21,9 +21,9 @@ export default function Header() {
   }
 
   const getNavLinks = () => {
-    const links = [
-      { href: "/", label: "Book a Trip", icon: Route },
-      { href: "/faqs", label: "FAQs", icon: Menu },
+    const links: { href: string; label: string; icon?: React.ElementType }[] = [
+      { href: "/", label: "Book a Trip" },
+      { href: "/faqs", label: "FAQs" },
     ];
 
     if (user) {
@@ -56,7 +56,7 @@ export default function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
-             {navLinks.map(link => <NavLink key={link.href} {...link}/>)}
+             {navLinks.map(link => <NavLink key={link.href} href={link.href} label={link.label}/>)}
              <ThemeToggle />
           </nav>
 
@@ -76,17 +76,20 @@ export default function Header() {
                     <span className="font-headline">TecoTransit</span>
                 </Link>
                 <nav className="flex flex-col gap-6">
-                    {navLinks.map(link => (
-                        <SheetClose asChild key={link.href}>
-                             <Link href={link.href} className={cn(
-                                "flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary",
-                                pathname === link.href ? "text-primary" : "text-muted-foreground",
-                             )}>
-                                <link.icon className="h-5 w-5" />
-                                <span>{link.label}</span>
-                            </Link>
-                        </SheetClose>
-                    ))}
+                    {navLinks.map(link => {
+                        const Icon = link.icon;
+                        return (
+                             <SheetClose asChild key={link.href}>
+                                 <Link href={link.href} className={cn(
+                                    "flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary",
+                                    pathname === link.href ? "text-primary" : "text-muted-foreground",
+                                 )}>
+                                    {Icon && <Icon className="h-5 w-5" />}
+                                    <span>{link.label}</span>
+                                </Link>
+                            </SheetClose>
+                        );
+                    })}
                 </nav>
               </SheetContent>
             </Sheet>

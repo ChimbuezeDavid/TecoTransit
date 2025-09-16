@@ -1,21 +1,16 @@
 {
+  "name": "TecoTransit",
   "short_name": "TecoTransit",
-  "name": "TecoTransit Booking",
   "description": "Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination.",
-  "icons": [
-    {
-      "src": "/icon-192x192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/icon-512x512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
   "start_url": "/",
   "display": "standalone",
+  "background_color": "#ffffff",
   "theme_color": "#D4AF37",
-  "background_color": "#ffffff"
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
 }
