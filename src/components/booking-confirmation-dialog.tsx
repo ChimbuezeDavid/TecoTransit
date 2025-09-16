@@ -15,7 +15,7 @@ export default function BookingConfirmationDialog({ isOpen, onClose }: BookingCo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md p-0">
+      <DialogContent className="max-w-md p-0 sm:max-h-full max-h-[65vh]">
         <DialogHeader className="text-center items-center pt-8 px-6 pb-6">
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Submitted!</DialogTitle>

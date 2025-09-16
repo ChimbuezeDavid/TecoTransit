@@ -512,7 +512,7 @@ export default function AdminDashboard() {
       
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="max-w-md md:max-w-3xl p-0">
+            <DialogContent className="max-w-md md:max-w-3xl p-0 sm:max-h-full max-h-[65vh]">
                 <DialogHeader className="p-6 pb-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-y-2">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>

@@ -178,7 +178,7 @@ export default function BookingForm() {
                         Contact Us
                     </Button>
                 </DialogTrigger>
-                 <DialogContent className="max-w-md p-6">
+                 <DialogContent className="max-w-md p-6 sm:max-h-full max-h-[65vh]">
                     <DialogHeader className="text-center">
                         <DialogTitle>Contact Customer Service</DialogTitle>
                         <DialogDescription>
