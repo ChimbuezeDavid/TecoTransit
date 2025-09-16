@@ -1,16 +1,15 @@
 
-
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
+import { uploadReceipt } from '@/app/actions/upload-receipt';
 
 interface BookingContextType {
   bookings: Booking[];
@@ -104,10 +103,9 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
 
-    // 1. Upload receipt to Firebase Storage
-    const receiptRef = ref(storage, `receipts/${bookingUuid}-${receiptFile.name}`);
-    const uploadResult = await uploadBytes(receiptRef, receiptFile);
-    const paymentReceiptUrl = await getDownloadURL(uploadResult.ref);
+    // 1. Upload receipt using server action
+    const blob = await uploadReceipt(receiptFile);
+    const paymentReceiptUrl = blob.url;
 
     const firestoreBooking = {
       ...restOfData,
