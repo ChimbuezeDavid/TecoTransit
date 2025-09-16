@@ -749,28 +749,28 @@ export default function AdminDashboard() {
       )}
 
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Payment Receipt</DialogTitle>
-            <DialogDescription>
-              This is the payment receipt uploaded by the customer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 bg-muted/50 rounded-md p-4">
-            <div className="relative aspect-video">
-                {receiptImageUrl ? (
-                    <Image 
-                        src={receiptImageUrl} 
-                        alt="Payment Receipt" 
-                        fill
-                        className="object-contain"
-                    />
-                ) : (
-                    <p>No receipt image to display.</p>
-                )}
+        <DialogContent className="max-w-xl p-6">
+            <DialogHeader>
+                <DialogTitle>Payment Receipt</DialogTitle>
+                <DialogDescription>
+                This is the payment receipt uploaded by the customer.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+                <div className="relative aspect-video">
+                    {receiptImageUrl ? (
+                        <Image 
+                            src={receiptImageUrl} 
+                            alt="Payment Receipt" 
+                            fill
+                            className="object-contain rounded-md"
+                        />
+                    ) : (
+                        <p>No receipt image to display.</p>
+                    )}
+                </div>
             </div>
-          </div>
-           <DialogFooter>
+            <DialogFooter className="mt-6">
                 <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>Close</Button>
             </DialogFooter>
         </DialogContent>
