@@ -103,7 +103,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0 max-h-[65vh] sm:max-h-full">
+        <DialogContent className="max-w-md p-0">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle className="text-2xl font-headline flex items-center gap-2">
               <Banknote className="h-6 w-6 text-primary" />
