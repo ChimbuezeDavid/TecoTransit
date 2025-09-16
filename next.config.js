@@ -1,4 +1,12 @@
 /** @type {import('next').NextConfig} */
+
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+});
+
 const nextConfig = {
   /* config options here */
   typescript: {
@@ -21,8 +29,16 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: "https",
+        hostname: "*.vercel-storage.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };
 
-module.exports = nextConfig;
+const isProduction = process.env.NODE_ENV === 'production';
+
+module.exports = isProduction ? withPWA(nextConfig) : nextConfig;

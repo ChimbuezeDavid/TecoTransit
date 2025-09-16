@@ -302,6 +302,7 @@ export default function PricingManager() {
                         <FormLabel>Price (NGN)</FormLabel>
                         <FormControl>
                             <Input 
+                                id="price"
                                 type="text"
                                 inputMode="decimal" 
                                 placeholder="50,000"
@@ -389,3 +390,5 @@ export default function PricingManager() {
     </div>
   );
 }
+
+    

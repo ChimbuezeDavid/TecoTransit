@@ -22,6 +22,11 @@ export const customerService = {
   email: 'tecotransit@gmail.com',
 };
 
-export const LUGGAGE_FARE = 0;
+// Replace with your actual account details
+export const bankAccountDetails = {
+    bankName: "Opay",
+    accountName: "Chimbueze David Okoroji",
+    accountNumber: "9029858977",
+};
 
-    
+export const LUGGAGE_FARE = 0;
