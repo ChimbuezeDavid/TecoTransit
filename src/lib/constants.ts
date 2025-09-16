@@ -18,15 +18,15 @@ export const vehicleOptions = {
 };
 
 export const customerService = {
-  phone: '2349032347965', // Your WhatsApp number with country code, no '+' or spaces
+  phone: '2348104050628', // Your WhatsApp number with country code, no '+' or spaces
   email: 'tecotransit@gmail.com',
 };
 
 // Replace with your actual account details
 export const bankAccountDetails = {
-    bankName: "Opay",
-    accountName: "Chimbueze David Okoroji",
-    accountNumber: "9029858977",
+    bankName: "Fidelity Bank",
+    accountName: "Ogundipe Toluwalase Cherish",
+    accountNumber: "6173080473",
 };
 
 export const LUGGAGE_FARE = 0;
