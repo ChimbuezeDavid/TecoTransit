@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route, Menu, Shield } from "lucide-react";
+import { Route, Menu, Shield, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
@@ -20,20 +20,11 @@ export default function Header() {
     return null;
   }
 
-  const getNavLinks = () => {
-    const links: { href: string; label: string; icon?: React.ElementType }[] = [
+  const navLinks: { href: string; label: string; icon?: React.ElementType }[] = [
       { href: "/", label: "Book a Trip" },
       { href: "/faqs", label: "FAQs" },
-    ];
-
-    if (user) {
-      links.push({ href: "/admin", label: "Admin", icon: Shield });
-    }
-    
-    return links;
-  };
-  
-  const navLinks = getNavLinks();
+      { href: "/contact", label: "Help Center", icon: HelpCircle },
+  ];
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
       <Link href={href} className={cn(
@@ -57,6 +48,12 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
              {navLinks.map(link => <NavLink key={link.href} href={link.href} label={link.label}/>)}
+             {user && (
+                <Link href="/admin" className="flex items-center gap-2 text-sm font-medium transition-colors text-muted-foreground hover:text-primary">
+                    <Shield className="h-4 w-4" />
+                    Admin
+                </Link>
+             )}
              <ThemeToggle />
           </nav>
 
@@ -90,6 +87,17 @@ export default function Header() {
                             </SheetClose>
                         );
                     })}
+                     {user && (
+                        <SheetClose asChild>
+                            <Link href="/admin" className={cn(
+                                "flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary",
+                                pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
+                            )}>
+                                <Shield className="h-5 w-5" />
+                                <span>Admin</span>
+                            </Link>
+                        </SheetClose>
+                    )}
                 </nav>
               </SheetContent>
             </Sheet>
