@@ -1,6 +1,8 @@
 
 import BookingForm from '@/components/booking-form';
 import CustomerPriceAlert from '@/components/customer-price-alert';
+import GroupBookingForm from '@/components/group-booking-form';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Home() {
   return (
@@ -15,7 +17,18 @@ export default function Home() {
       </div>
       <div className="max-w-3xl mx-auto">
         <CustomerPriceAlert />
-        <BookingForm />
+        <Tabs defaultValue="individual" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="individual">Individual Booking</TabsTrigger>
+            <TabsTrigger value="group">Group Booking</TabsTrigger>
+          </TabsList>
+          <TabsContent value="individual">
+            <BookingForm />
+          </TabsContent>
+          <TabsContent value="group">
+            <GroupBookingForm />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

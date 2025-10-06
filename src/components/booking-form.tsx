@@ -164,11 +164,11 @@ export default function BookingForm() {
 
   return (
     <>
-    <Card className="w-full shadow-2xl shadow-primary/10">
+    <Card className="w-full shadow-2xl shadow-primary/10 border-t-0 rounded-t-none">
        <CardHeader>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 text-center sm:text-left">
             <div>
-                <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Booking Details</CardTitle>
+                <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Individual Booking Details</CardTitle>
                 <CardDescription className="mt-2">Fill out the form below to secure your seat.</CardDescription>
             </div>
             <Dialog>
