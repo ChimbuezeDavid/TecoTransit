@@ -25,7 +25,7 @@ export const customerService = {
 // Replace with your actual account details
 export const bankAccountDetails = {
     bankName: "Fidelity Bank",
-    accountName: "Ogundipe Toluwalase Cherish",
+    accountName: "Ogundipe Toluwalase Cherish",
     accountNumber: "6173080473",
 };
 
