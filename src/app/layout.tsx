@@ -53,6 +53,24 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                  if (registrations.length > 0) {
+                    console.log('Found active service workers. Unregistering...');
+                    for (let registration of registrations) {
+                      registration.unregister();
+                    }
+                    console.log('All service workers unregistered. Reloading page...');
+                    window.location.reload();
+                  }
+                });
+              }
+            `,
+          }}
+        />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
         <meta name="theme-color" content="#D4AF37" />
