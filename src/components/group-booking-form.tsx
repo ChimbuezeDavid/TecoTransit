@@ -38,7 +38,9 @@ const groupBookingSchema = z.object({
   intendedDate: z.date({ required_error: 'A departure date is required.' }),
   alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
-  passengers: z.array(passengerSchema),
+  passengers: z.array(passengerSchema)
+    .min(2, { message: 'Group bookings require at least two passengers.' })
+    .max(7, { message: 'You have exceeded the maximum number of passengers for any vehicle.'}), // Fallback, will be refined dynamically
   privacyPolicy: z.literal(true, {
     errorMap: () => ({ message: "You must accept the privacy policy to continue." }),
   }),
@@ -47,13 +49,10 @@ const groupBookingSchema = z.object({
   path: ["destination"],
 }).refine((data) => {
     const selectedVehicle = Object.values(allVehicleOptions).find(v => v.name === data.vehicleType);
-    if (!selectedVehicle) return true; // Let other validation handle this
+    if (!selectedVehicle) return true;
     return data.passengers.length <= selectedVehicle.capacity;
 }, {
     message: "You have exceeded the maximum number of passengers for this vehicle.",
-    path: ["passengers"],
-}).refine((data) => data.passengers.length >= 2, {
-    message: "Group bookings require at least two passengers.",
     path: ["passengers"],
 });
 
@@ -90,13 +89,14 @@ export default function GroupBookingForm() {
   
   const availableVehicles = prices.filter(p => p.pickup === pickup && p.destination === destination);
   const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
-  const totalFare = (vehicleRule?.price ?? 0) * (passengers?.length || 0);
 
   const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
+
+  const totalFare = (vehicleRule?.price ?? 0) * (passengers?.length || 0);
 
   useEffect(() => {
     if (pickup) {
@@ -193,7 +193,7 @@ export default function GroupBookingForm() {
                     </div>
                 </div>
                 
-                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                 <div className="grid grid-cols-1 gap-x-8 gap-y-6">
                     <FormField control={form.control} name="vehicleType" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Vehicle Type</FormLabel>
@@ -217,53 +217,53 @@ export default function GroupBookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
-                    <div className="flex items-end">
-                      <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers} className="w-full sm:w-auto">
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
-                      </Button>
-                    </div>
                 </div>
 
                 {fields.length > 0 && (
                     <div className="space-y-4">
                         {fields.map((field, index) => (
-                            <div key={field.id} className="border bg-muted/20 rounded-lg">
-                                <div className="flex-row items-center justify-between p-4 flex">
-                                    <p className="font-semibold">Passenger {index + 1}</p>
+                            <div key={field.id} className="border bg-muted/20 rounded-lg p-4">
+                                <div className="flex-row items-center justify-between flex mb-4">
+                                    <p className="font-semibold text-foreground">Passenger {index + 1}</p>
                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                         <span className="sr-only">Remove passenger</span>
                                     </Button>
                                 </div>
-                                <div className="p-4 pt-0">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                        <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
-                                            <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                         <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Number of Bags</FormLabel>
-                                                <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select bags" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )} />
-                                        <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
-                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                        <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
-                                            <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
-                                        )} />
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                    <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
+                                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
+                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
+                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Number of Bags</FormLabel>
+                                            <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select bags" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
+
+                <div className="pt-2">
+                    <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers} className="w-full sm:w-auto">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
+                    </Button>
+                </div>
+
                  {errors.passengers && typeof errors.passengers.message === 'string' && (
                     <p className="text-sm font-medium text-destructive">{errors.passengers.message}</p>
                 )}
@@ -317,3 +317,4 @@ export default function GroupBookingForm() {
     </>
   );
 }
+
