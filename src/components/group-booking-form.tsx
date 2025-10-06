@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -33,9 +34,6 @@ const passengerSchema = z.object({
 });
 
 const groupBookingSchema = z.object({
-  organizerName: z.string().min(2, { message: "Organizer's name is required." }),
-  organizerEmail: z.string().email({ message: 'A valid contact email is required.' }),
-  organizerPhone: z.string().min(10, { message: 'A valid contact phone is required.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
   intendedDate: z.date({ required_error: 'A departure date is required.' }),
@@ -66,9 +64,6 @@ export default function GroupBookingForm() {
   const form = useForm<z.infer<typeof groupBookingSchema>>({
     resolver: zodResolver(groupBookingSchema),
     defaultValues: {
-      organizerName: '',
-      organizerEmail: '',
-      organizerPhone: '',
       passengers: [],
       privacyPolicy: false,
     },
@@ -137,16 +132,22 @@ export default function GroupBookingForm() {
         setIsProcessing(false);
         return;
     }
+    if (data.passengers.length === 0) {
+        toast({ variant: 'destructive', title: "No Passengers", description: "Please add at least one passenger to the booking." });
+        setIsProcessing(false);
+        return;
+    }
 
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const { privacyPolicy, organizerName, organizerEmail, organizerPhone, ...restOfData } = data;
+    const { privacyPolicy, ...restOfData } = data;
+    const firstPassenger = data.passengers[0];
     
     setBookingData({
         ...restOfData,
-        name: organizerName, // Use organizer name as the main contact name
-        email: organizerEmail,
-        phone: organizerPhone,
+        name: firstPassenger.name,
+        email: firstPassenger.email,
+        phone: firstPassenger.phone,
         totalFare,
         bookingType: 'group',
         numberOfPassengers: data.passengers.length,
@@ -166,24 +167,6 @@ export default function GroupBookingForm() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8 pt-6">
-            
-            {/* Organizer Details */}
-            <div className="space-y-6">
-                <h3 className="text-lg font-semibold text-foreground">Organizer's Contact Information</h3>
-                <div className="grid md:grid-cols-3 gap-x-8 gap-y-6">
-                    <FormField control={form.control} name="organizerName" render={({ field }) => (
-                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Jane Smith" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="organizerEmail" render={({ field }) => (
-                        <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="organizer@example.com" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="organizerPhone" render={({ field }) => (
-                        <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="(123) 456-7890" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
-            </div>
-
-            <Separator />
 
             {/* Trip Details */}
             <div className="space-y-6">
@@ -211,7 +194,7 @@ export default function GroupBookingForm() {
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div>
                         <h3 className="text-lg font-semibold text-foreground">Passenger Information</h3>
-                        <p className="text-sm text-muted-foreground">First, select a vehicle, then add passengers.</p>
+                        <p className="text-sm text-muted-foreground">First, select a vehicle, then add passengers. The first passenger is the primary contact.</p>
                     </div>
                     <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!watchVehicleType || fields.length >= maxPassengers}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger

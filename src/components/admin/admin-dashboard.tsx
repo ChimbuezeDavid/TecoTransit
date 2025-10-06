@@ -538,7 +538,9 @@ export default function AdminDashboard() {
                             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
                                 {/* Customer Details */}
                                 <div className="space-y-4">
-                                    <h3 className="font-semibold text-lg">{selectedBooking.bookingType === 'group' ? "Organizer" : "Customer"}</h3>
+                                    <h3 className="font-semibold text-lg">
+                                        {selectedBooking.bookingType === 'group' ? "Primary Contact" : "Customer Details"}
+                                    </h3>
                                     <ul className="space-y-3 text-sm">
                                         <li className="flex items-center gap-3"><User className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.name}</span></li>
                                         <li className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.email}</span></li>
