@@ -20,20 +20,10 @@ export default function Header() {
     return null;
   }
 
-  const getNavLinks = () => {
-    const links: { href: string; label: string; icon?: React.ElementType }[] = [
+  const navLinks: { href: string; label: string; icon?: React.ElementType }[] = [
       { href: "/", label: "Book a Trip" },
       { href: "/faqs", label: "FAQs" },
-    ];
-
-    if (user) {
-      links.push({ href: "/admin", label: "Admin", icon: Shield });
-    }
-    
-    return links;
-  };
-  
-  const navLinks = getNavLinks();
+  ];
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
       <Link href={href} className={cn(
@@ -90,6 +80,17 @@ export default function Header() {
                             </SheetClose>
                         );
                     })}
+                     {user && (
+                        <SheetClose asChild>
+                            <Link href="/admin" className={cn(
+                                "flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary",
+                                pathname.startsWith('/admin') ? "text-primary" : "text-muted-foreground"
+                            )}>
+                                <Shield className="h-5 w-5" />
+                                <span>Admin</span>
+                            </Link>
+                        </SheetClose>
+                    )}
                 </nav>
               </SheetContent>
             </Sheet>
