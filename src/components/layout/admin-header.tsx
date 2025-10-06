@@ -5,7 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Megaphone, Menu, HandCoins } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Megaphone, Menu, HandCoins, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
@@ -26,7 +26,7 @@ export default function AdminHeader() {
   const navLinks = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/admin/payments", icon: HandCoins, label: "Payments" },
-    { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
+    { href: "/admin/pricing", icon: DollarSign, label: "Pricing" },
     { href: "/admin/site-alert", icon: Megaphone, label: "Site Alert" },
   ];
 
