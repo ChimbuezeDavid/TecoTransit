@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import Link from 'next/link';
 import { useBooking } from '@/context/booking-context';
-import type { PriceRule } from '@/lib/types';
+import type { Booking, PriceRule, Passenger } from '@/lib/types';
 import PaymentDialog from './payment-dialog';
 
 import { Button } from '@/components/ui/button';
@@ -20,21 +20,28 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, Users } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, Users, PlusCircle, Trash2, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import { Separator } from './ui/separator';
+
+const passengerSchema = z.object({
+  name: z.string().min(2, { message: 'Name is required.' }),
+  email: z.string().email({ message: 'Valid email is required.' }),
+  phone: z.string().min(10, { message: 'Valid phone is required.' }),
+  luggageCount: z.coerce.number().min(0, 'Cannot be negative.').max(10),
+});
 
 const groupBookingSchema = z.object({
-  name: z.string().min(2, { message: 'Organizer name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Please enter a valid email.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  numberOfPassengers: z.coerce.number().min(5, { message: 'Group booking must have at least 5 passengers.' }),
+  organizerName: z.string().min(2, { message: "Organizer's name is required." }),
+  organizerEmail: z.string().email({ message: 'A valid contact email is required.' }),
+  organizerPhone: z.string().min(10, { message: 'A valid contact phone is required.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
   intendedDate: z.date({ required_error: 'A departure date is required.' }),
   alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
-  luggageCount: z.coerce.number().min(0).max(50),
+  passengers: z.array(passengerSchema).min(1, { message: "You must add at least one passenger." }),
   privacyPolicy: z.literal(true, {
     errorMap: () => ({ message: "You must accept the privacy policy to continue." }),
   }),
@@ -59,29 +66,41 @@ export default function GroupBookingForm() {
   const form = useForm<z.infer<typeof groupBookingSchema>>({
     resolver: zodResolver(groupBookingSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      numberOfPassengers: 5,
-      luggageCount: 0,
+      organizerName: '',
+      organizerEmail: '',
+      organizerPhone: '',
+      passengers: [],
       privacyPolicy: false,
     },
   });
 
-  const { watch, setValue, trigger, getValues } = form;
+  const { control, watch, setValue, trigger, formState: { errors } } = form;
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "passengers",
+  });
+
   const watchAllFields = watch();
+  const watchVehicleType = watch('vehicleType');
+  const watchPassengers = watch('passengers');
+  
+  const selectedVehicleDetails = watchVehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchVehicleType) : null;
+  const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
 
   useEffect(() => {
-    const { pickup, destination, vehicleType, luggageCount, numberOfPassengers } = watchAllFields;
+    const { pickup, destination, vehicleType, passengers } = watchAllFields;
     let newBaseFare = 0;
+    let newTotalFare = 0;
 
     if (pickup && destination && prices) {
         const vehiclesForRoute = prices.filter(p => p.pickup === pickup && p.destination === destination);
         setAvailableVehicles(vehiclesForRoute);
 
         const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
-        if (vehicleRule) {
-            newBaseFare = vehicleRule.price * numberOfPassengers;
+        if (vehicleRule && passengers.length > 0) {
+            newBaseFare = vehicleRule.price * passengers.length;
+            const totalLuggage = passengers.reduce((acc, p) => acc + (p.luggageCount || 0), 0);
+            newTotalFare = newBaseFare + (totalLuggage * LUGGAGE_FARE);
         }
 
         if (!vehiclesForRoute.some(v => v.vehicleType === vehicleType)) {
@@ -92,20 +111,20 @@ export default function GroupBookingForm() {
     }
 
     setBaseFare(newBaseFare);
-    setTotalFare(newBaseFare + (luggageCount * LUGGAGE_FARE));
-  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, watchAllFields.numberOfPassengers, prices, setValue]);
+    setTotalFare(newTotalFare);
+  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchPassengers, prices, setValue]);
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
        if (name === 'pickup') {
           setValue('destination', '');
           setValue('vehicleType', '');
-          trigger('destination');
-          trigger('vehicleType');
+       }
+       if (name === 'vehicleType') {
+           setValue('passengers', []);
        }
        if (name === 'intendedDate' && values.intendedDate) {
             setValue('alternativeDate', undefined as any);
-            trigger('alternativeDate');
        }
     });
     return () => subscription.unsubscribe();
@@ -121,13 +140,16 @@ export default function GroupBookingForm() {
 
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const { privacyPolicy, ...restOfData } = data;
+    const { privacyPolicy, organizerName, organizerEmail, organizerPhone, ...restOfData } = data;
     
     setBookingData({
         ...restOfData,
-        name: data.name,
+        name: organizerName, // Use organizer name as the main contact name
+        email: organizerEmail,
+        phone: organizerPhone,
         totalFare,
         bookingType: 'group',
+        numberOfPassengers: data.passengers.length,
     });
     
     setIsPaymentDialogOpen(true);
@@ -138,73 +160,66 @@ export default function GroupBookingForm() {
     <>
     <Card className="w-full shadow-2xl shadow-primary/10 border-t-0 rounded-t-none">
        <CardHeader>
-        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Group Booking (5+)</CardTitle>
-        <CardDescription className="mt-2">Planning a trip for a group? Fill out the form below to secure your seats and get a group rate.</CardDescription>
+        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Group Booking</CardTitle>
+        <CardDescription className="mt-2">Organize a trip for your group. Select a vehicle, then add passenger details.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8 pt-6">
-            <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Organizer's Name</FormLabel>
-                    <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Jane Smith" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="email" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Contact Email</FormLabel>
-                    <FormControl><div className="relative"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="email" placeholder="group@example.com" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Contact Phone</FormLabel>
-                    <FormControl><div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="tel" placeholder="(123) 456-7890" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                 <FormField control={form.control} name="numberOfPassengers" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Number of Passengers</FormLabel>
-                    <FormControl><div className="relative"><Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input type="number" min="5" {...field} className="pl-9" /></div></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="pickup" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="destination" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!form.watch('pickup')}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!form.watch('pickup') ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
+            
+            {/* Organizer Details */}
+            <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-foreground">Organizer's Contact Information</h3>
+                <div className="grid md:grid-cols-3 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="organizerName" render={({ field }) => (
+                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input placeholder="Jane Smith" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="organizerEmail" render={({ field }) => (
+                        <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="organizer@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="organizerPhone" render={({ field }) => (
+                        <FormItem><FormLabel>Phone Number</FormLabel><FormControl><Input type="tel" placeholder="(123) 456-7890" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+            </div>
+
+            <Separator />
+
+            {/* Trip Details */}
+            <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-foreground">Trip Details</h3>
+                <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                    <FormField control={form.control} name="pickup" render={({ field }) => (
+                        <FormItem><FormLabel>Pickup Location</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger></FormControl><SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="destination" render={({ field }) => (
+                        <FormItem><FormLabel>Destination</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!form.watch('pickup')}><FormControl><SelectTrigger><SelectValue placeholder={!form.watch('pickup') ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger></FormControl><SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                    )} />
+                     <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Preferred Departure Date</FormLabel><Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsIntendedDatePopoverOpen(false); }} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="alternativeDate" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Alternative Departure</FormLabel><Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsAlternativeDatePopoverOpen(false); }} disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                    )} />
+                </div>
+            </div>
+
+            <Separator />
+
+            {/* Passenger Details */}
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                    <div>
+                        <h3 className="text-lg font-semibold text-foreground">Passenger Information</h3>
+                        <p className="text-sm text-muted-foreground">First, select a vehicle, then add passengers.</p>
+                    </div>
+                    <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!watchVehicleType || fields.length >= maxPassengers}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
+                    </Button>
+                </div>
+                
+                 <div className="grid md:grid-cols-2 gap-x-8">
+                    <FormField control={form.control} name="vehicleType" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Vehicle Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
@@ -220,84 +235,55 @@ export default function GroupBookingForm() {
                             </FormControl>
                             <SelectContent>
                             {availableVehicles.map((v) => (
-                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
+                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType} (Max {Object.values(allVehicleOptions).find(opt => opt.name === v.vehicleType)?.capacity} people)</SelectItem>
                             ))}
                             </SelectContent>
                         </Select>
                         <FormMessage />
                         </FormItem>
-                    )}
-                />
-                <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Total Number of Bags for Group</FormLabel>
-                    <FormControl><Input type="number" min="0" {...field} /></FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="intendedDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Preferred Departure Date</FormLabel>
-                    <Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}>
-                        <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={(date) => {
-                                    field.onChange(date);
-                                    setIsIntendedDatePopoverOpen(false);
-                                }}
-                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Alternative Departure</FormLabel>
-                    <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
-                        <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={(date) => {
-                                    field.onChange(date);
-                                    setIsAlternativeDatePopoverOpen(false);
-                                }}
-                                disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
+                    )} />
+                </div>
+
+                {fields.length > 0 && (
+                    <div className="space-y-6 rounded-lg border p-4">
+                        {fields.map((field, index) => (
+                            <div key={field.id} className="space-y-4 rounded-md border border-dashed p-4 relative">
+                                <div className="flex justify-between items-start">
+                                    <h4 className="font-semibold text-md mb-2">Passenger {index + 1}</h4>
+                                     <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => remove(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                     <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
+                                        <FormItem className="md:col-span-2"><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                     <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
+                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                     <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
+                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                     <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
+                                         <FormItem><FormLabel>Bags</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                 {errors.passengers && typeof errors.passengers.message === 'string' && (
+                    <p className="text-sm font-medium text-destructive">{errors.passengers.message}</p>
+                )}
             </div>
+
             <FormField
               control={form.control}
               name="privacyPolicy"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
                   <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>
@@ -305,7 +291,7 @@ export default function GroupBookingForm() {
                       <Link href="/privacy" className="text-primary hover:underline" target="_blank">
                         Privacy Policy
                       </Link>
-                      {" "}and consent to my data being processed for this inquiry.
+                      {" "}and confirm I have consent from all passengers to share their data.
                     </FormLabel>
                     <FormMessage />
                   </div>
@@ -318,18 +304,8 @@ export default function GroupBookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString()}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Proceed to Payment
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0 || fields.length === 0}>
+              {isProcessing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Processing...</>) : (<>Proceed to Payment<ArrowRight className="ml-2 h-5 w-5" /></>)}
             </Button>
           </CardFooter>
         </form>
@@ -349,3 +325,5 @@ export default function GroupBookingForm() {
     </>
   );
 }
+
+    

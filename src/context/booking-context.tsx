@@ -117,6 +117,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     if (paymentReceiptUrl) {
         firestoreBooking.paymentReceiptUrl = paymentReceiptUrl;
     }
+     // For group bookings, ensure luggageCount is the sum from all passengers
+    if (data.bookingType === 'group' && data.passengers) {
+      firestoreBooking.luggageCount = data.passengers.reduce((acc, p) => acc + p.luggageCount, 0);
+    }
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 
@@ -233,3 +237,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    

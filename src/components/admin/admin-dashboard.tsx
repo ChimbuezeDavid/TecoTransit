@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from "react";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
-import type { Booking } from "@/lib/types";
+import type { Booking, Passenger } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 import Link from 'next/link';
 import Image from 'next/image';
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL", "Booking Type", "Passengers"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL", "Booking Type", "Passengers Count", "Passenger Details"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -249,6 +249,7 @@ export default function AdminDashboard() {
             b.paymentReceiptUrl || "",
             b.bookingType || 'individual',
             b.numberOfPassengers || 1,
+            `"${JSON.stringify(b.passengers || []).replace(/"/g, '""')}"`,
         ].join(','))
     ].join('\n');
 
@@ -532,51 +533,73 @@ export default function AdminDashboard() {
                 </DialogHeader>
                 <div className="grid md:grid-cols-3 flex-1 overflow-y-auto">
                      <div className="md:col-span-2 p-6">
-                        <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
-                            {/* Customer Details */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-lg">Customer</h3>
-                                <ul className="space-y-3 text-sm">
-                                    <li className="flex items-center gap-3"><User className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.name}</span></li>
-                                    <li className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.email}</span></li>
-                                    <li className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.phone}</span></li>
-                                    {selectedBooking.bookingType === 'group' && (
-                                    <li className="flex items-center gap-3"><Users className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.numberOfPassengers} Passengers</span></li>
-                                    )}
-                                </ul>
-                            </div>
+                        <ScrollArea className="h-full pr-4">
+                        <div className="space-y-8">
+                            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
+                                {/* Customer Details */}
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-lg">{selectedBooking.bookingType === 'group' ? "Organizer" : "Customer"}</h3>
+                                    <ul className="space-y-3 text-sm">
+                                        <li className="flex items-center gap-3"><User className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.name}</span></li>
+                                        <li className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.email}</span></li>
+                                        <li className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.phone}</span></li>
+                                        {selectedBooking.bookingType === 'group' && (
+                                        <li className="flex items-center gap-3"><Users className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.numberOfPassengers} Passengers</span></li>
+                                        )}
+                                    </ul>
+                                </div>
 
-                            {/* Trip Details */}
-                            <div className="space-y-4">
-                                <h3 className="font-semibold text-lg">Trip</h3>
-                                <ul className="space-y-3 text-sm">
-                                    <li className="flex items-start gap-3"><MapPin className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.pickup} to {selectedBooking.destination}</span></li>
-                                    <li className="flex items-start gap-3"><VehicleIcon className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.vehicleType}</span></li>
-                                    <li className="flex items-start gap-3"><Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.luggageCount} bag(s)</span></li>
-                                </ul>
-                            </div>
-                            
-                            {/* Departure Dates */}
-                            <div className="space-y-4 sm:col-span-2">
-                                <h3 className="font-semibold text-lg">Departure Dates</h3>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="font-medium text-foreground">Intended:</span>
-                                            <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                {/* Trip Details */}
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold text-lg">Trip</h3>
+                                    <ul className="space-y-3 text-sm">
+                                        <li className="flex items-start gap-3"><MapPin className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.pickup} to {selectedBooking.destination}</span></li>
+                                        <li className="flex items-start gap-3"><VehicleIcon className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.vehicleType}</span></li>
+                                        <li className="flex items-start gap-3"><Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.luggageCount} total bag(s)</span></li>
+                                    </ul>
+                                </div>
+                                
+                                {/* Departure Dates */}
+                                <div className="space-y-4 sm:col-span-2">
+                                    <h3 className="font-semibold text-lg">Departure Dates</h3>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div className="flex items-start gap-3">
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <span className="font-medium text-foreground">Intended:</span>
+                                                <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                     <div className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="font-medium text-foreground">Alternative:</span>
-                                            <p>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                        <div className="flex items-start gap-3">
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <span className="font-medium text-foreground">Alternative:</span>
+                                                <p>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
+                            {selectedBooking.bookingType === 'group' && selectedBooking.passengers && selectedBooking.passengers.length > 0 && (
+                                <div>
+                                    <Separator className="my-6" />
+                                    <h3 className="font-semibold text-lg mb-4">Passenger Details</h3>
+                                    <div className="space-y-4">
+                                        {selectedBooking.passengers.map((passenger, index) => (
+                                            <div key={index} className="text-sm p-4 rounded-lg border bg-muted/20">
+                                                <p className="font-semibold text-foreground">Passenger {index + 1}: {passenger.name}</p>
+                                                <p className="text-muted-foreground">Email: {passenger.email}</p>
+                                                <p className="text-muted-foreground">Phone: {passenger.phone}</p>
+                                                <p className="text-muted-foreground">Bags: {passenger.luggageCount}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
+                        </ScrollArea>
                     </div>
                     
                     {/* Right Panel */}
@@ -701,3 +724,5 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+    
