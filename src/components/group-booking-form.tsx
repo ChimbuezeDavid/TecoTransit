@@ -85,6 +85,9 @@ export default function GroupBookingForm() {
 
   const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
+  const luggageOptions = selectedVehicleDetails ? 
+    [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
+    [];
 
   useEffect(() => {
     if (pickup) {
@@ -92,19 +95,22 @@ export default function GroupBookingForm() {
         setValue('vehicleType', '');
         setValue('passengers', []);
     }
-  }, [pickup, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup]);
 
   useEffect(() => {
     if (vehicleType) {
         setValue('passengers', []);
     }
-  }, [vehicleType, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleType]);
   
   useEffect(() => {
     if (intendedDate) {
       setValue('alternativeDate', undefined as any);
     }
-  }, [intendedDate, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intendedDate]);
 
 
   async function onSubmit(data: z.infer<typeof groupBookingSchema>) {
@@ -217,29 +223,40 @@ export default function GroupBookingForm() {
                 {fields.length > 0 && (
                     <div className="space-y-4">
                         {fields.map((field, index) => (
-                            <div key={field.id} className="rounded-lg border bg-muted/20 p-4">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h4 className="font-semibold text-md">Passenger {index + 1}</h4>
-                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
+                            <Card key={field.id} className="bg-muted/20">
+                                <CardHeader className="flex-row items-center justify-between p-4">
+                                    <CardTitle className="text-md">Passenger {index + 1}</CardTitle>
+                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                         <span className="sr-only">Remove passenger</span>
                                     </Button>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                                     <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
-                                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                     <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
-                                         <FormItem><FormLabel>Number of Bags</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="0" /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                     <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
-                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                     <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
-                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                </div>
-                            </div>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                                        <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
+                                            <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Number of Bags</FormLabel>
+                                                <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select bags" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
+                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
+                                            <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 )}
