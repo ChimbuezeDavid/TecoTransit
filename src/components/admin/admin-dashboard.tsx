@@ -61,7 +61,7 @@ function DashboardSkeleton() {
                             <TableHead className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -104,10 +104,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
-  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   
-  // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user) {
@@ -115,7 +112,6 @@ export default function AdminDashboard() {
     } else {
       clearBookings();
     }
-    // Cleanup the listener when the component unmounts or the user logs out
     return () => {
       if (unsubscribe) {
         unsubscribe();
@@ -123,17 +119,20 @@ export default function AdminDashboard() {
     };
   }, [user, statusFilter, fetchBookings, clearBookings]);
 
-  // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
   
-  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(booking => booking.paymentStatus === 'Approved');
+  }, [bookings]);
+
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return bookings.slice(startIndex, endIndex);
-  }, [bookings, currentPage]);
+    return filteredBookings.slice(startIndex, endIndex);
+  }, [filteredBookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -228,7 +227,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL", "Booking Type", "Passengers Count", "Passenger Details"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL", "Booking Type", "Passengers Count", "Passenger Details", "Payment Status"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -250,6 +249,7 @@ export default function AdminDashboard() {
             b.bookingType || 'individual',
             b.numberOfPassengers || 1,
             `"${JSON.stringify(b.passengers || []).replace(/"/g, '""')}"`,
+            b.paymentStatus || "Pending"
         ].join(','))
     ].join('\n');
 
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={6} className="text-center py-10 text-destructive">
+          <TableCell colSpan={5} className="text-center py-10 text-destructive">
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
@@ -289,7 +289,7 @@ export default function AdminDashboard() {
       );
     }
     if (paginatedBookings.length === 0) {
-      return <TableRow><TableCell colSpan={6} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
+      return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings with approved payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
@@ -306,18 +306,6 @@ export default function AdminDashboard() {
         </TableCell>
         <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
-        <TableCell>
-            {booking.paymentReceiptUrl ? (
-                <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => {
-                  setReceiptImageUrl(booking.paymentReceiptUrl!);
-                  setIsReceiptDialogOpen(true);
-                }}>
-                    View
-                </Button>
-            ) : (
-                <span className="text-xs text-muted-foreground">N/A</span>
-            )}
-        </TableCell>
         <TableCell className="text-right">
           <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
             {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Manage'}
@@ -338,7 +326,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
                 <CardTitle>Booking Requests</CardTitle>
-                <CardDescription>A list of all trip requests from customers.</CardDescription>
+                <CardDescription>Manage and confirm trip logistics for bookings with approved payments.</CardDescription>
             </div>
              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
@@ -481,7 +469,6 @@ export default function AdminDashboard() {
                 <TableHead className="hidden md:table-cell">Trip</TableHead>
                 <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Receipt</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -690,39 +677,6 @@ export default function AdminDashboard() {
             </DialogContent>
         </Dialog>
       )}
-
-      <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-md p-0 max-h-[65vh] sm:max-h-full">
-           <DialogHeader className="p-6 pb-4">
-            <DialogTitle>Payment Receipt</DialogTitle>
-            <DialogDescription>
-              This is the payment receipt uploaded by the customer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <div className="relative aspect-video">
-              {receiptImageUrl ? (
-                <Image
-                  src={receiptImageUrl}
-                  alt="Payment Receipt"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 576px"
-                  className="object-contain rounded-md"
-                />
-              ) : (
-                <p>No receipt image to display.</p>
-              )}
-            </div>
-            <Button
-                variant="outline"
-                onClick={() => setIsReceiptDialogOpen(false)}
-                className="mt-6 w-full"
-              >
-                Close
-              </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

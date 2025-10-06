@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -15,9 +16,10 @@ interface BookingContextType {
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
-  fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
+  fetchBookings: (status?: Booking['status'] | 'All') => (() => void) | undefined;
   createBooking: (data: Partial<Booking>, receiptUrl?: string) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
+  updatePaymentStatus: (bookingId: string, paymentStatus: 'Approved' | 'Rejected') => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
   clearBookings: () => void;
@@ -106,6 +108,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       id: bookingUuid,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
+      paymentStatus: 'Pending' as const,
     };
     
     if (data.intendedDate && typeof data.intendedDate !== 'string') {
@@ -124,10 +127,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 
-    // Now include the firestore ID in the returned object
     return {
       ...firestoreBooking,
       firestoreDocId: docRef.id,
+      id: bookingUuid, // Ensure the UUID is what we use going forward
       createdAt: firestoreBooking.createdAt.toMillis(),
     } as Booking;
     
@@ -149,7 +152,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       
       await updateDoc(bookingDocRef, updateData);
 
-      // Send email in the background, don't await it here
       sendBookingStatusEmail({
           name: bookingToUpdate.name,
           email: bookingToUpdate.email,
@@ -161,7 +163,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           totalFare: bookingToUpdate.totalFare,
           confirmedDate: confirmedDate,
       }).catch(emailError => {
-        // If email fails, show a non-blocking toast
         console.error("Failed to send status update email:", emailError);
         toast({
           variant: "destructive",
@@ -172,6 +173,15 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       });
       
   }, [bookings, toast]);
+
+  const updatePaymentStatus = useCallback(async (bookingId: string, paymentStatus: 'Approved' | 'Rejected') => {
+    const bookingToUpdate = bookings.find(b => b.id === bookingId);
+    if (!bookingToUpdate || !bookingToUpdate.firestoreDocId) {
+        throw new Error("Booking not found or is missing Firestore document ID");
+    }
+    const bookingDocRef = doc(db, 'bookings', bookingToUpdate.firestoreDocId);
+    await updateDoc(bookingDocRef, { paymentStatus });
+  }, [bookings]);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingToDelete = bookings.find(b => b.id === id);
@@ -184,7 +194,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
     const startTimestamp = Timestamp.fromDate(startDate);
-    // Add 1 day to the end date to make the range inclusive
     const endOfDay = new Date(endDate);
     endOfDay.setHours(23, 59, 59, 999);
     const endTimestamp = Timestamp.fromDate(endOfDay);
@@ -218,6 +227,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     fetchBookings,
     createBooking,
     updateBookingStatus,
+    updatePaymentStatus,
     deleteBooking,
     deleteBookingsInRange,
     clearBookings,
@@ -237,5 +247,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    

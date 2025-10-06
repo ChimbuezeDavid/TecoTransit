@@ -23,6 +23,7 @@ export type Booking = {
   luggageCount: number; // Total for individual, or sum for group
   totalFare: number;
   status: 'Pending' | 'Confirmed' | 'Cancelled';
+  paymentStatus?: 'Pending' | 'Approved' | 'Rejected';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   paymentReceiptUrl?: string; // URL to the uploaded payment receipt

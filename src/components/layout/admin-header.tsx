@@ -25,6 +25,7 @@ export default function AdminHeader() {
 
   const navLinks = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/admin/payments", icon: HandCoins, label: "Payments" },
     { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
     { href: "/admin/site-alert", icon: Megaphone, label: "Site Alert" },
   ];
