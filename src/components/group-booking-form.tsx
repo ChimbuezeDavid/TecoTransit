@@ -55,9 +55,7 @@ export default function GroupBookingForm() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
-  const [totalFare, setTotalFare] = useState(0);
-  const [baseFare, setBaseFare] = useState(0);
-  const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
+
   const [bookingData, setBookingData] = useState<any>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
@@ -75,55 +73,44 @@ export default function GroupBookingForm() {
     name: "passengers",
   });
 
-  const watchAllFields = watch();
-  const watchVehicleType = watch('vehicleType');
-  const watchPassengers = watch('passengers');
+  const pickup = watch('pickup');
+  const destination = watch('destination');
+  const vehicleType = watch('vehicleType');
+  const passengers = watch('passengers');
+  const intendedDate = watch('intendedDate');
   
-  const selectedVehicleDetails = watchVehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchVehicleType) : null;
+  const availableVehicles = prices.filter(p => p.pickup === pickup && p.destination === destination);
+  const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
+  const baseFare = (vehicleRule?.price ?? 0) * passengers.length;
+  const totalLuggage = passengers.reduce((acc, p) => acc + (p.luggageCount || 0), 0);
+  const totalFare = baseFare + (totalLuggage * LUGGAGE_FARE);
+
+  const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
 
   useEffect(() => {
-    const { pickup, destination, vehicleType, passengers } = watchAllFields;
-    let newBaseFare = 0;
-    let newTotalFare = 0;
-
-    if (pickup && destination && prices) {
-        const vehiclesForRoute = prices.filter(p => p.pickup === pickup && p.destination === destination);
-        setAvailableVehicles(vehiclesForRoute);
-
-        const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
-        if (vehicleRule && passengers.length > 0) {
-            newBaseFare = vehicleRule.price * passengers.length;
-            const totalLuggage = passengers.reduce((acc, p) => acc + (p.luggageCount || 0), 0);
-            newTotalFare = newBaseFare + (totalLuggage * LUGGAGE_FARE);
-        }
-
-        if (!vehiclesForRoute.some(v => v.vehicleType === vehicleType)) {
-            setValue('vehicleType', '');
-        }
-    } else {
-        setAvailableVehicles([]);
+    if (pickup) {
+        setValue('destination', '');
+        setValue('vehicleType', '');
+        setValue('passengers', []);
     }
-
-    setBaseFare(newBaseFare);
-    setTotalFare(newTotalFare);
-  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchPassengers, prices, setValue]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup]);
 
   useEffect(() => {
-    const subscription = watch((values, { name }) => {
-       if (name === 'pickup') {
-          setValue('destination', '');
-          setValue('vehicleType', '');
-       }
-       if (name === 'vehicleType') {
-           setValue('passengers', []);
-       }
-       if (name === 'intendedDate' && values.intendedDate) {
-            setValue('alternativeDate', undefined as any);
-       }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, setValue, trigger]);
+    if (vehicleType) {
+        setValue('passengers', []);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleType]);
+  
+  useEffect(() => {
+    if (intendedDate) {
+      setValue('alternativeDate', undefined as any);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intendedDate]);
+
 
   async function onSubmit(data: z.infer<typeof groupBookingSchema>) {
     setIsProcessing(true);
@@ -176,13 +163,13 @@ export default function GroupBookingForm() {
                         <FormItem><FormLabel>Pickup Location</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}><FormControl><SelectTrigger><SelectValue placeholder="Select a location" /></SelectTrigger></FormControl><SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="destination" render={({ field }) => (
-                        <FormItem><FormLabel>Destination</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!form.watch('pickup')}><FormControl><SelectTrigger><SelectValue placeholder={!form.watch('pickup') ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger></FormControl><SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Destination</FormLabel><Select onValueChange={field.onChange} value={field.value || ''} disabled={!pickup}><FormControl><SelectTrigger><SelectValue placeholder={!pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger></FormControl><SelectContent>{locations.filter(loc => loc !== pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                     )} />
                      <FormField control={form.control} name="intendedDate" render={({ field }) => (
                         <FormItem className="flex flex-col"><FormLabel>Preferred Departure Date</FormLabel><Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsIntendedDatePopoverOpen(false); }} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                     )} />
                     <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Alternative Departure</FormLabel><Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsAlternativeDatePopoverOpen(false); }} disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col"><FormLabel>Alternative Departure</FormLabel><Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!intendedDate}><CalendarIcon className="mr-2 h-4 w-4" />{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsAlternativeDatePopoverOpen(false); }} disabled={(date) => date <= (intendedDate || new Date(new Date().setHours(0,0,0,0)))} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                     )} />
                 </div>
             </div>
@@ -196,7 +183,7 @@ export default function GroupBookingForm() {
                         <h3 className="text-lg font-semibold text-foreground">Passenger Information</h3>
                         <p className="text-sm text-muted-foreground">First, select a vehicle, then add passengers. The first passenger is the primary contact.</p>
                     </div>
-                    <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!watchVehicleType || fields.length >= maxPassengers}>
+                    <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
                     </Button>
                 </div>
@@ -210,7 +197,7 @@ export default function GroupBookingForm() {
                             <SelectTrigger>
                                 <SelectValue placeholder={
                                     pricesLoading ? 'Loading vehicles...' : 
-                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
+                                    !pickup || !destination ? 'Select route first' : 
                                     availableVehicles.length === 0 ? 'No vehicles for this route' :
                                     'Select a vehicle'
                                 } />
