@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route, Menu, Shield, HelpCircle } from "lucide-react";
+import { Route, Menu, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,6 @@ export default function Header() {
   const navLinks: { href: string; label: string; icon?: React.ElementType }[] = [
       { href: "/", label: "Book a Trip" },
       { href: "/faqs", label: "FAQs" },
-      { href: "/contact", label: "Help Center", icon: HelpCircle },
   ];
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
@@ -48,12 +47,6 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
              {navLinks.map(link => <NavLink key={link.href} href={link.href} label={link.label}/>)}
-             {user && (
-                <Link href="/admin" className="flex items-center gap-2 text-sm font-medium transition-colors text-muted-foreground hover:text-primary">
-                    <Shield className="h-4 w-4" />
-                    Admin
-                </Link>
-             )}
              <ThemeToggle />
           </nav>
 
