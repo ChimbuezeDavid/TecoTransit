@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, Users } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL", "Booking Type", "Passengers"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -246,7 +246,9 @@ export default function AdminDashboard() {
             b.status,
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
-            b.paymentReceiptUrl || ""
+            b.paymentReceiptUrl || "",
+            b.bookingType || 'individual',
+            b.numberOfPassengers || 1,
         ].join(','))
     ].join('\n');
 
@@ -291,7 +293,10 @@ export default function AdminDashboard() {
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
         <TableCell>
-          <div className="font-medium">{booking.name}</div>
+          <div className="font-medium flex items-center gap-2">
+            {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
+            {booking.name}
+          </div>
           <div className="text-sm text-muted-foreground hidden sm:block">{booking.email}</div>
         </TableCell>
         <TableCell className="hidden md:table-cell">
@@ -515,7 +520,10 @@ export default function AdminDashboard() {
             <DialogContent className="p-0 max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
-                        <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
+                        <DialogTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
+                            {selectedBooking.bookingType === 'group' ? <Users className="h-5 w-5 text-muted-foreground"/> : <User className="h-5 w-5 text-muted-foreground" />}
+                            Manage Booking: {selectedBooking.id.substring(0,8)}
+                        </DialogTitle>
                          <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
                     </div>
                      <DialogDescription>
@@ -532,6 +540,9 @@ export default function AdminDashboard() {
                                     <li className="flex items-center gap-3"><User className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.name}</span></li>
                                     <li className="flex items-center gap-3"><Mail className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.email}</span></li>
                                     <li className="flex items-center gap-3"><Phone className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.phone}</span></li>
+                                    {selectedBooking.bookingType === 'group' && (
+                                    <li className="flex items-center gap-3"><Users className="h-4 w-4 text-muted-foreground" /><span>{selectedBooking.numberOfPassengers} Passengers</span></li>
+                                    )}
                                 </ul>
                             </div>
 

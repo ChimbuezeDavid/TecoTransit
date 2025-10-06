@@ -1,14 +1,17 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import Link from 'next/link';
+import { useBooking } from '@/context/booking-context';
+import type { PriceRule } from '@/lib/types';
+import PaymentDialog from './payment-dialog';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,20 +20,21 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 
 const groupBookingSchema = z.object({
-  organizerName: z.string().min(2, { message: 'Organizer name must be at least 2 characters.' }),
+  name: z.string().min(2, { message: 'Organizer name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Please enter a valid email.' }),
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   numberOfPassengers: z.coerce.number().min(5, { message: 'Group booking must have at least 5 passengers.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
-  departureDate: z.date({ required_error: 'A departure date is required.' }),
-  message: z.string().optional(),
+  intendedDate: z.date({ required_error: 'A departure date is required.' }),
+  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
+  vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
+  luggageCount: z.coerce.number().min(0).max(50),
   privacyPolicy: z.literal(true, {
     errorMap: () => ({ message: "You must accept the privacy policy to continue." }),
   }),
@@ -42,49 +46,106 @@ const groupBookingSchema = z.object({
 
 export default function GroupBookingForm() {
   const { toast } = useToast();
+  const { prices, loading: pricesLoading } = useBooking();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
+  const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
+  const [totalFare, setTotalFare] = useState(0);
+  const [baseFare, setBaseFare] = useState(0);
+  const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
+  const [bookingData, setBookingData] = useState<any>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof groupBookingSchema>>({
     resolver: zodResolver(groupBookingSchema),
     defaultValues: {
-      organizerName: '',
+      name: '',
       email: '',
       phone: '',
       numberOfPassengers: 5,
+      luggageCount: 0,
       privacyPolicy: false,
     },
   });
 
+  const { watch, setValue, trigger, getValues } = form;
+  const watchAllFields = watch();
+
+  useEffect(() => {
+    const { pickup, destination, vehicleType, luggageCount, numberOfPassengers } = watchAllFields;
+    let newBaseFare = 0;
+
+    if (pickup && destination && prices) {
+        const vehiclesForRoute = prices.filter(p => p.pickup === pickup && p.destination === destination);
+        setAvailableVehicles(vehiclesForRoute);
+
+        const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
+        if (vehicleRule) {
+            newBaseFare = vehicleRule.price * numberOfPassengers;
+        }
+
+        if (!vehiclesForRoute.some(v => v.vehicleType === vehicleType)) {
+            setValue('vehicleType', '');
+        }
+    } else {
+        setAvailableVehicles([]);
+    }
+
+    setBaseFare(newBaseFare);
+    setTotalFare(newBaseFare + (luggageCount * LUGGAGE_FARE));
+  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, watchAllFields.numberOfPassengers, prices, setValue]);
+
+  useEffect(() => {
+    const subscription = watch((values, { name }) => {
+       if (name === 'pickup') {
+          setValue('destination', '');
+          setValue('vehicleType', '');
+          trigger('destination');
+          trigger('vehicleType');
+       }
+       if (name === 'intendedDate' && values.intendedDate) {
+            setValue('alternativeDate', undefined as any);
+            trigger('alternativeDate');
+       }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setValue, trigger]);
+
   async function onSubmit(data: z.infer<typeof groupBookingSchema>) {
     setIsProcessing(true);
+    if (baseFare === 0) {
+        toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable for booking. Please select different options." });
+        setIsProcessing(false);
+        return;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Here you would typically send this data to your backend or an email service
-    // For now, we will just simulate a success message
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    console.log("Group Booking Data:", data);
-
-    toast({
-      title: "Inquiry Sent!",
-      description: "Your group booking request has been sent. We will contact you shortly to finalize the details.",
+    const { privacyPolicy, ...restOfData } = data;
+    
+    setBookingData({
+        ...restOfData,
+        name: data.name,
+        totalFare,
+        bookingType: 'group',
     });
-
-    form.reset();
+    
+    setIsPaymentDialogOpen(true);
     setIsProcessing(false);
   }
   
   return (
+    <>
     <Card className="w-full shadow-2xl shadow-primary/10 border-t-0 rounded-t-none">
        <CardHeader>
-        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Group Booking Inquiry</CardTitle>
-        <CardDescription className="mt-2">Planning a trip for a group of 5 or more? Fill out the form below and we'll get back to you with a custom quote.</CardDescription>
+        <CardTitle className="font-headline text-2xl md:text-3xl text-primary">Group Booking (5+)</CardTitle>
+        <CardDescription className="mt-2">Planning a trip for a group? Fill out the form below to secure your seats and get a group rate.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-                <FormField control={form.control} name="organizerName" render={({ field }) => (
+                <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Organizer's Name</FormLabel>
                     <FormControl><div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input placeholder="Jane Smith" {...field} className="pl-9" /></div></FormControl>
@@ -140,10 +201,44 @@ export default function GroupBookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="departureDate" render={({ field }) => (
-                    <FormItem className="flex flex-col md:col-span-2">
+                <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Vehicle Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={
+                                    pricesLoading ? 'Loading vehicles...' : 
+                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
+                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
+                                    'Select a vehicle'
+                                } />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {availableVehicles.map((v) => (
+                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField control={form.control} name="luggageCount" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Total Number of Bags for Group</FormLabel>
+                    <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="intendedDate" render={({ field }) => (
+                    <FormItem className="flex flex-col">
                     <FormLabel>Preferred Departure Date</FormLabel>
-                    <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+                    <Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}>
                         <PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
@@ -156,7 +251,7 @@ export default function GroupBookingForm() {
                                 selected={field.value} 
                                 onSelect={(date) => {
                                     field.onChange(date);
-                                    setIsDatePopoverOpen(false);
+                                    setIsIntendedDatePopoverOpen(false);
                                 }}
                                 disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
                                 initialFocus 
@@ -166,17 +261,30 @@ export default function GroupBookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="message" render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                        <FormLabel>Additional Information (Optional)</FormLabel>
-                        <FormControl>
-                            <Textarea
-                                placeholder="Let us know if you have any special requests, such as needing a specific type of vehicle, multiple stops, or a charter service."
-                                className="min-h-[100px]"
-                                {...field}
+                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                    <FormLabel>Alternative Departure</FormLabel>
+                    <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
+                        <PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}>
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                            </Button>
+                        </FormControl></PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsAlternativeDatePopoverOpen(false);
+                                }}
+                                disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
+                                initialFocus 
                             />
-                        </FormControl>
-                        <FormMessage />
+                        </PopoverContent>
+                    </Popover>
+                    <FormMessage />
                     </FormItem>
                 )} />
             </div>
@@ -205,16 +313,20 @@ export default function GroupBookingForm() {
               )}
             />
           </CardContent>
-          <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex justify-end rounded-b-lg">
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing}>
+          <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
+            <div className="text-center sm:text-left mb-4 sm:mb-0">
+                <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
+                <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString()}</p>
+            </div>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Sending Inquiry...
+                  Processing...
                 </>
               ) : (
                 <>
-                  Send Inquiry
+                  Proceed to Payment
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </>
               )}
@@ -223,5 +335,17 @@ export default function GroupBookingForm() {
         </form>
       </Form>
     </Card>
+    {bookingData && (
+        <PaymentDialog
+            isOpen={isPaymentDialogOpen}
+            onClose={() => setIsPaymentDialogOpen(false)}
+            bookingData={bookingData}
+            onBookingComplete={() => {
+                form.reset();
+                setBookingData(null);
+            }}
+        />
+    )}
+    </>
   );
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { BookingFormData } from '@/lib/types';
+import type { Booking } from '@/lib/types';
 import { useBooking } from '@/context/booking-context';
 import { useToast } from '@/hooks/use-toast';
 import { uploadReceipt } from '@/app/actions/upload-receipt';
@@ -22,7 +22,7 @@ import { bankAccountDetails } from '@/lib/constants';
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  bookingData: BookingFormData;
+  bookingData: Partial<Booking>;
   onBookingComplete: () => void;
 }
 
@@ -122,7 +122,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
                            <p className="text-sm text-center">Transfer the total fare to the account below.</p>
                            <div className="text-center bg-muted/50 p-4 rounded-lg">
                               <p className="text-sm text-muted-foreground">Total Amount</p>
-                              <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare.toLocaleString()}</p>
+                              <p className="text-2xl font-bold text-primary">₦{bookingData.totalFare?.toLocaleString()}</p>
                            </div>
                            <div className="text-sm space-y-2 pt-2">
                               <div className="flex justify-between"><span className="text-muted-foreground">Bank:</span> <span className="font-medium">{bankAccountDetails.bankName}</span></div>

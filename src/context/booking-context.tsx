@@ -16,7 +16,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData, receiptUrl: string) => Promise<Booking>;
+  createBooking: (data: Partial<Booking>, receiptUrl?: string) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -98,19 +98,25 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData, paymentReceiptUrl: string) => {
-    const { privacyPolicy, ...restOfData } = data;
+  const createBooking = useCallback(async (data: Partial<Booking>, paymentReceiptUrl?: string) => {
     const bookingUuid = uuidv4();
 
-    const firestoreBooking = {
-      ...restOfData,
+    const firestoreBooking: any = {
+      ...data,
       id: bookingUuid,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
-      intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
-      alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
-      paymentReceiptUrl,
     };
+    
+    if (data.intendedDate && typeof data.intendedDate !== 'string') {
+        firestoreBooking.intendedDate = format(data.intendedDate, 'yyyy-MM-dd');
+    }
+    if (data.alternativeDate && typeof data.alternativeDate !== 'string') {
+        firestoreBooking.alternativeDate = format(data.alternativeDate, 'yyyy-MM-dd');
+    }
+    if (paymentReceiptUrl) {
+        firestoreBooking.paymentReceiptUrl = paymentReceiptUrl;
+    }
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 

@@ -65,7 +65,7 @@ export default function BookingForm() {
   const [totalFare, setTotalFare] = useState(0);
   const [baseFare, setBaseFare] = useState(0);
   const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
-  const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
+  const [bookingData, setBookingData] = useState<Partial<Booking> | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -151,8 +151,10 @@ export default function BookingForm() {
     
     // Simulate a brief delay to show loading state
     await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const { privacyPolicy, ...restOfData } = data;
 
-    setBookingData({ ...data, totalFare });
+    setBookingData({ ...restOfData, totalFare, bookingType: 'individual', numberOfPassengers: 1 });
     setIsPaymentDialogOpen(true);
     setIsProcessing(false);
   }

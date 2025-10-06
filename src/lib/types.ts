@@ -19,6 +19,8 @@ export type Booking = {
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   paymentReceiptUrl?: string; // URL to the uploaded payment receipt
+  bookingType?: 'individual' | 'group';
+  numberOfPassengers?: number;
 };
 
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReceiptUrl'> & {
