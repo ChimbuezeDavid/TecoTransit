@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import Link from 'next/link';
 import { useBooking } from '@/context/booking-context';
-import type { Booking } from '@/lib/types';
+import type { Booking, Passenger } from '@/lib/types';
 import PaymentDialog from './payment-dialog';
 
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,8 @@ export default function GroupBookingForm() {
   
   const availableVehicles = prices.filter(p => p.pickup === pickup && p.destination === destination);
   const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
-  const totalFare = (vehicleRule?.price ?? 0) * passengers.length;
+
+  const totalFare = (vehicleRule?.price ?? 0) * (passengers?.length || 0);
 
   const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
@@ -92,22 +92,19 @@ export default function GroupBookingForm() {
         setValue('vehicleType', '');
         setValue('passengers', []);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup]);
+  }, [pickup, setValue]);
 
   useEffect(() => {
     if (vehicleType) {
         setValue('passengers', []);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicleType]);
+  }, [vehicleType, setValue]);
   
   useEffect(() => {
     if (intendedDate) {
       setValue('alternativeDate', undefined as any);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [intendedDate]);
+  }, [intendedDate, setValue]);
 
 
   async function onSubmit(data: z.infer<typeof groupBookingSchema>) {
@@ -128,6 +125,8 @@ export default function GroupBookingForm() {
     const { privacyPolicy, ...restOfData } = data;
     const firstPassenger = data.passengers[0];
     
+    const totalLuggage = data.passengers.reduce((acc, p) => acc + p.luggageCount, 0);
+    
     setBookingData({
         ...restOfData,
         name: firstPassenger.name,
@@ -136,6 +135,7 @@ export default function GroupBookingForm() {
         totalFare,
         bookingType: 'group',
         numberOfPassengers: data.passengers.length,
+        luggageCount: totalLuggage,
     });
     
     setIsPaymentDialogOpen(true);
@@ -176,17 +176,14 @@ export default function GroupBookingForm() {
 
             {/* Passenger Details */}
             <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h3 className="text-lg font-semibold text-foreground">Passenger Information</h3>
                         <p className="text-sm text-muted-foreground">First, select a vehicle, then add passengers. The first passenger is the primary contact.</p>
                     </div>
-                    <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
-                    </Button>
                 </div>
                 
-                 <div className="grid md:grid-cols-2 gap-x-8">
+                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                     <FormField control={form.control} name="vehicleType" render={({ field }) => (
                         <FormItem>
                         <FormLabel>Vehicle Type</FormLabel>
@@ -210,30 +207,36 @@ export default function GroupBookingForm() {
                         <FormMessage />
                         </FormItem>
                     )} />
+                    <div className="flex items-end">
+                      <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers} className="w-full sm:w-auto">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Passenger
+                      </Button>
+                    </div>
                 </div>
 
                 {fields.length > 0 && (
-                    <div className="space-y-6 rounded-lg border p-4">
+                    <div className="space-y-4">
                         {fields.map((field, index) => (
-                            <div key={field.id} className="space-y-4 rounded-md border border-dashed p-4 relative">
-                                <div className="flex justify-between items-start">
-                                    <h4 className="font-semibold text-md mb-2">Passenger {index + 1}</h4>
-                                     <Button type="button" variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => remove(index)}>
+                            <div key={field.id} className="rounded-lg border bg-muted/20 p-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-semibold text-md">Passenger {index + 1}</h4>
+                                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
                                         <Trash2 className="h-4 w-4 text-destructive" />
+                                        <span className="sr-only">Remove passenger</span>
                                     </Button>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                                      <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
-                                        <FormItem className="md:col-span-2"><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                     <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
-                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
-                                     )} />
-                                     <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
-                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
                                      )} />
                                      <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
-                                         <FormItem><FormLabel>Bags</FormLabel><FormControl><Input type="number" min="0" {...field} /></FormControl><FormMessage /></FormItem>
+                                         <FormItem><FormLabel>Number of Bags</FormLabel><FormControl><Input type="number" min="0" {...field} placeholder="0" /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                     <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
+                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
+                                     )} />
+                                     <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
+                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
                                      )} />
                                 </div>
                             </div>
