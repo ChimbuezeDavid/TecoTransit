@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
+import type { Booking } from '@/lib/types';
 import PaymentDialog from './payment-dialog';
 import Link from 'next/link';
 
@@ -80,18 +80,16 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue, trigger } = form;
+  const { watch, setValue } = form;
   
   const pickup = watch('pickup');
   const destination = watch('destination');
   const vehicleType = watch('vehicleType');
-  const luggageCount = watch('luggageCount');
   const intendedDate = watch('intendedDate');
 
   const availableVehicles = prices.filter(p => p.pickup === pickup && p.destination === destination);
   const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
-  const baseFare = vehicleRule?.price ?? 0;
-  const totalFare = baseFare + (luggageCount * LUGGAGE_FARE);
+  const totalFare = vehicleRule?.price ?? 0;
 
   useEffect(() => {
     if (pickup) {
@@ -119,7 +117,7 @@ export default function BookingForm() {
 
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
     setIsProcessing(true);
-    if (baseFare === 0) {
+    if (totalFare === 0) {
         toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
         setIsProcessing(false);
         return;
@@ -354,7 +352,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare === 0}>
               {isProcessing ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />

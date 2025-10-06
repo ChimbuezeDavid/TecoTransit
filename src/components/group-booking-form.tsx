@@ -8,10 +8,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
+import { locations, vehicleOptions as allVehicleOptions } from '@/lib/constants';
 import Link from 'next/link';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, PriceRule, Passenger } from '@/lib/types';
+import type { Booking } from '@/lib/types';
 import PaymentDialog from './payment-dialog';
 
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, Users, PlusCircle, Trash2, Briefcase } from 'lucide-react';
+import { CalendarIcon, ArrowRight, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
@@ -67,7 +67,7 @@ export default function GroupBookingForm() {
     },
   });
 
-  const { control, watch, setValue, trigger, formState: { errors } } = form;
+  const { control, watch, setValue, formState: { errors } } = form;
   const { fields, append, remove } = useFieldArray({
     control,
     name: "passengers",
@@ -81,9 +81,7 @@ export default function GroupBookingForm() {
   
   const availableVehicles = prices.filter(p => p.pickup === pickup && p.destination === destination);
   const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
-  const baseFare = (vehicleRule?.price ?? 0) * passengers.length;
-  const totalLuggage = passengers.reduce((acc, p) => acc + (p.luggageCount || 0), 0);
-  const totalFare = baseFare + (totalLuggage * LUGGAGE_FARE);
+  const totalFare = (vehicleRule?.price ?? 0) * passengers.length;
 
   const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const maxPassengers = selectedVehicleDetails?.capacity ?? 0;
@@ -114,7 +112,7 @@ export default function GroupBookingForm() {
 
   async function onSubmit(data: z.infer<typeof groupBookingSchema>) {
     setIsProcessing(true);
-    if (baseFare === 0) {
+    if (totalFare === 0) {
         toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable for booking. Please select different options." });
         setIsProcessing(false);
         return;
@@ -274,7 +272,7 @@ export default function GroupBookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString()}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0 || fields.length === 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare === 0 || fields.length === 0}>
               {isProcessing ? (<><Loader2 className="mr-2 h-5 w-5 animate-spin" />Processing...</>) : (<>Proceed to Payment<ArrowRight className="ml-2 h-5 w-5" /></>)}
             </Button>
           </CardFooter>
