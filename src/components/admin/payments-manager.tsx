@@ -48,6 +48,7 @@ function PaymentsManagerSkeleton() {
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -60,6 +61,7 @@ function PaymentsManagerSkeleton() {
                                 </TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                                 <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                             </TableRow>
@@ -152,12 +154,21 @@ export default function PaymentsManager() {
         return 'secondary';
     }
   };
+  
+  const getBookingStatusVariant = (status: Booking['status']) => {
+    switch (status) {
+      case 'Confirmed': return 'default';
+      case 'Cancelled': return 'destructive';
+      case 'Pending': return 'secondary';
+      default: return 'outline';
+    }
+  };
 
   const renderTableContent = () => {
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={5} className="text-center py-10 text-destructive">
+          <TableCell colSpan={6} className="text-center py-10 text-destructive">
             <div className="flex flex-col items-center gap-2">
               <AlertCircle className="h-8 w-8" />
               <span className="font-semibold">An Error Occurred</span>
@@ -168,7 +179,7 @@ export default function PaymentsManager() {
       );
     }
     if (paginatedBookings.length === 0) {
-      return <TableRow><TableCell colSpan={5} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
+      return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
@@ -185,12 +196,23 @@ export default function PaymentsManager() {
         </TableCell>
         <TableCell className="hidden md:table-cell">{format(booking.createdAt, 'PP')}</TableCell>
         <TableCell>
-          <Badge variant={getPaymentStatusVariant(booking.paymentStatus || 'Pending')}>
-            {booking.paymentStatus || 'Pending'}
+          <Badge variant={getBookingStatusVariant(booking.status)}>
+            {booking.status}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge variant={getPaymentStatusVariant(booking.paymentStatus)}>
+            {booking.paymentStatus}
           </Badge>
         </TableCell>
         <TableCell className="text-right">
-          <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => openDialog(booking)} 
+            disabled={isProcessing[booking.id] || booking.paymentStatus !== 'Pending'}
+            title={booking.paymentStatus !== 'Pending' ? "This payment has already been reviewed." : "Review Payment"}
+          >
             {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Review'}
           </Button>
         </TableCell>
@@ -240,7 +262,8 @@ export default function PaymentsManager() {
                   <TableHead>Customer</TableHead>
                   <TableHead className="hidden sm:table-cell">Amount</TableHead>
                   <TableHead className="hidden md:table-cell">Date</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Booking Status</TableHead>
+                  <TableHead>Payment Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

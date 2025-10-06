@@ -23,7 +23,7 @@ export type Booking = {
   luggageCount: number; // Total for individual, or sum for group
   totalFare: number;
   status: 'Pending' | 'Confirmed' | 'Cancelled';
-  paymentStatus?: 'Pending' | 'Approved' | 'Rejected';
+  paymentStatus: 'Pending' | 'Approved' | 'Rejected';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   paymentReceiptUrl?: string; // URL to the uploaded payment receipt
@@ -32,7 +32,7 @@ export type Booking = {
   passengers?: Passenger[]; // For group bookings
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReceiptUrl'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReceiptUrl' | 'paymentStatus'> & {
     intendedDate: Date;
     alternativeDate: Date;
     privacyPolicy: boolean;
@@ -59,3 +59,4 @@ export type PriceAlert = {
     
 
     
+

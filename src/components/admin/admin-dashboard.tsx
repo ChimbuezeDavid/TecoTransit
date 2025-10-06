@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, Users } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, Users, XCircle, Clock } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -123,16 +123,12 @@ export default function AdminDashboard() {
     setCurrentPage(1);
   }, [statusFilter]);
   
-  const filteredBookings = useMemo(() => {
-    return bookings.filter(booking => booking.paymentStatus === 'Approved');
-  }, [bookings]);
-
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredBookings.slice(startIndex, endIndex);
-  }, [filteredBookings, currentPage]);
+    return bookings.slice(startIndex, endIndex);
+  }, [bookings, currentPage]);
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
@@ -151,6 +147,16 @@ export default function AdminDashboard() {
         });
         return;
     }
+    
+    if (status === 'Confirmed' && selectedBooking.paymentStatus !== 'Approved') {
+        toast({
+            variant: "destructive",
+            title: "Payment Not Approved",
+            description: "You cannot confirm a booking until the payment has been approved.",
+        });
+        return;
+    }
+
 
     setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     
@@ -272,13 +278,23 @@ export default function AdminDashboard() {
     }
   };
   
+  const getPaymentStatusVariant = (status: Booking['paymentStatus']) => {
+    switch (status) {
+      case 'Approved': return 'default';
+      case 'Rejected': return 'destructive';
+      case 'Pending':
+      default:
+        return 'secondary';
+    }
+  };
+  
   const VehicleIcon = selectedBooking?.vehicleType.includes('Bus') ? Bus : Car;
 
   const renderTableContent = () => {
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={5} className="text-center py-10 text-destructive">
+          <TableCell colSpan={6} className="text-center py-10 text-destructive">
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
@@ -289,7 +305,7 @@ export default function AdminDashboard() {
       );
     }
     if (paginatedBookings.length === 0) {
-      return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings with approved payments match the current filter.</TableCell></TableRow>;
+      return <TableRow><TableCell colSpan={6} className="text-center py-10">No bookings match the current filters.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
@@ -305,6 +321,7 @@ export default function AdminDashboard() {
           <div className="text-sm text-muted-foreground">to {booking.destination}</div>
         </TableCell>
         <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
+        <TableCell><Badge variant={getPaymentStatusVariant(booking.paymentStatus)}>{booking.paymentStatus}</Badge></TableCell>
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
         <TableCell className="text-right">
           <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
@@ -326,7 +343,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
                 <CardTitle>Booking Requests</CardTitle>
-                <CardDescription>Manage and confirm trip logistics for bookings with approved payments.</CardDescription>
+                <CardDescription>Manage and confirm trip logistics for customer bookings.</CardDescription>
             </div>
              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
@@ -452,7 +469,7 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="All">All</SelectItem>
+                    <SelectItem value="All">All Statuses</SelectItem>
                     <SelectItem value="Pending">Pending</SelectItem>
                     <SelectItem value="Confirmed">Confirmed</SelectItem>
                     <SelectItem value="Cancelled">Cancelled</SelectItem>
@@ -468,6 +485,7 @@ export default function AdminDashboard() {
                 <TableHead>Customer</TableHead>
                 <TableHead className="hidden md:table-cell">Trip</TableHead>
                 <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -594,43 +612,57 @@ export default function AdminDashboard() {
                     {/* Right Panel */}
                     <div className="md:col-span-1 bg-muted/30 flex flex-col">
                         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                            {/* Fare Details */}
+                           
+                            {/* Payment Status */}
                             <div className="space-y-3">
-                                <h3 className="font-semibold text-lg">Fare</h3>
-                                    <div>
-                                    <p className="text-xs text-muted-foreground">Total Paid</p>
-                                    <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
+                                <h3 className="font-semibold text-lg">Payment Status</h3>
+                                <div className={cn(
+                                    "flex items-center gap-3 font-semibold p-3 rounded-lg",
+                                    selectedBooking.paymentStatus === 'Approved' && "bg-primary/10 text-primary",
+                                    selectedBooking.paymentStatus === 'Rejected' && "bg-destructive/10 text-destructive",
+                                    selectedBooking.paymentStatus === 'Pending' && "bg-secondary"
+                                )}>
+                                    {selectedBooking.paymentStatus === 'Approved' && <CheckCircle className="h-5 w-5 flex-shrink-0" />}
+                                    {selectedBooking.paymentStatus === 'Rejected' && <XCircle className="h-5 w-5 flex-shrink-0" />}
+                                    {selectedBooking.paymentStatus === 'Pending' && <Clock className="h-5 w-5 flex-shrink-0" />}
+                                    <span>{selectedBooking.paymentStatus}</span>
                                 </div>
+                                <p className="text-xs text-muted-foreground">
+                                    Manage payment verification on the <Link href="/admin/payments" className="underline hover:text-primary">Payments</Link> page.
+                                </p>
                             </div>
-                            
-                            <Separator/>
 
-                                {selectedBooking.status === 'Pending' && (
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-lg">Confirm Departure</h3>
-                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
-                                            <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Intended</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                            <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Alternative</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                        </RadioGroup>
-                                    </div>
-                                )}
+                            <Separator />
+                            
+                            {selectedBooking.status === 'Pending' && (
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold text-lg">Confirm Departure</h3>
+                                    <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
+                                        <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
+                                            <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">Intended</span>
+                                                <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
+                                            </div>
+                                        </Label>
+                                        <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
+                                            <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
+                                            <div className="flex flex-col">
+                                                <span className="font-semibold">Alternative</span>
+                                                <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
+                                            </div>
+                                        </Label>
+                                    </RadioGroup>
+                                </div>
+                            )}
 
                             {selectedBooking.status === 'Confirmed' && (
-                                <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
-                                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
-                                    <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
+                                <div className="space-y-3">
+                                    <h3 className="font-semibold text-lg">Trip Confirmed</h3>
+                                    <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
+                                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                                        <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -664,7 +696,13 @@ export default function AdminDashboard() {
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
+                                <Button 
+                                    size="lg" 
+                                    className="w-full" 
+                                    onClick={() => handleUpdateBooking('Confirmed')} 
+                                    disabled={isProcessing[selectedBooking.id] || !confirmedDate || selectedBooking.paymentStatus !== 'Approved'}
+                                    title={selectedBooking.paymentStatus !== 'Approved' ? "Payment must be approved before confirming." : ""}
+                                >
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Confirm Booking
                                 </Button>
