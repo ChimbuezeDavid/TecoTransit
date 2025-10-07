@@ -219,44 +219,45 @@ export default function GroupBookingForm() {
                     )} />
                 </div>
 
-                {fields.length > 0 && (
-                    <div className="space-y-4">
-                        {fields.map((field, index) => (
-                            <div key={field.id} className="border bg-muted/20 rounded-lg p-4">
-                                <div className="flex-row items-center justify-between flex mb-4">
-                                    <p className="font-semibold text-foreground">Passenger {index + 1}</p>
-                                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                        <span className="sr-only">Remove passenger</span>
-                                    </Button>
+                <div className="space-y-4">
+                    {fields.map((field, index) => (
+                        <Card key={field.id} className="bg-muted/20">
+                            <CardHeader className="flex flex-row items-center justify-between pb-4">
+                                <div>
+                                    <CardTitle className="text-base">Passenger {index + 1}</CardTitle>
+                                    {index === 0 && <CardDescription className="text-xs">This passenger is the primary contact.</CardDescription>}
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                    <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
-                                        <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
-                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
-                                        <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Number of Bags</FormLabel>
-                                            <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select bags" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(index)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Remove passenger</span>
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                <FormField control={control} name={`passengers.${index}.name`} render={({ field }) => (
+                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="John Doe" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={control} name={`passengers.${index}.email`} render={({ field }) => (
+                                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} placeholder="john@example.com" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={control} name={`passengers.${index}.phone`} render={({ field }) => (
+                                    <FormItem><FormLabel>Phone</FormLabel><FormControl><Input type="tel" {...field} placeholder="08012345678" /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={control} name={`passengers.${index}.luggageCount`} render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Number of Bags</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select bags" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
 
                 <div className="pt-2">
                     <Button type="button" onClick={() => append({ name: '', email: '', phone: '', luggageCount: 0 })} disabled={!vehicleType || fields.length >= maxPassengers} className="w-full sm:w-auto">

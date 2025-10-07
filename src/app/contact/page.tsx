@@ -27,7 +27,7 @@ export default function ContactPage() {
             <CardContent className="space-y-6">
                 <div className="space-y-4">
                     <h3 className="font-semibold text-lg">Chat with Us on WhatsApp</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {contactOptions.map(contact => (
                             <Button asChild key={contact.name} className="w-full" size="lg" variant="outline">
                                 <Link href={contact.link} target="_blank">
@@ -36,6 +36,12 @@ export default function ContactPage() {
                                 </Link>
                             </Button>
                         ))}
+                         <Button asChild key="group-chat" className="w-full sm:col-span-2" size="lg">
+                                <Link href="https://chat.whatsapp.com/J3aZ1nJ2wzS6wX2gX4Y3Ea" target="_blank">
+                                    <MessageCircle className="mr-2 h-5 w-5" />
+                                    Join the General Group Chat
+                                </Link>
+                         </Button>
                     </div>
                 </div>
 

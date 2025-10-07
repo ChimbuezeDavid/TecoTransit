@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -300,7 +301,7 @@ export default function PaymentsManager() {
 
       {selectedBooking && (
         <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-          <DialogContent className="max-w-md p-0 max-h-[90vh] flex flex-col">
+          <DialogContent className="max-w-md p-0 h-full max-h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
             <DialogHeader className="p-6 pb-4 border-b">
               <DialogTitle>Review Payment</DialogTitle>
               <DialogDescription>
@@ -327,7 +328,7 @@ export default function PaymentsManager() {
                 </div>
             </div>
             {(selectedBooking.paymentStatus === 'Pending' || !selectedBooking.paymentStatus) && (
-              <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30">
+              <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto">
                 <Button variant="destructive" size="lg" className="w-full" onClick={() => handleUpdatePaymentStatus('Rejected')} disabled={isProcessing[selectedBooking.id]}>
                   {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
                   Reject
@@ -339,7 +340,7 @@ export default function PaymentsManager() {
               </DialogFooter>
             )}
             {selectedBooking.paymentStatus && selectedBooking.paymentStatus !== 'Pending' && (
-                <DialogFooter className="p-6 border-t bg-muted/30">
+                <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
                     <Button variant="outline" className="w-full" onClick={() => setIsReviewDialogOpen(false)}>Close</Button>
                 </DialogFooter>
             )}

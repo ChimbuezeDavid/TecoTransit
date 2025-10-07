@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                     <DialogTrigger asChild>
                          <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
                     </DialogTrigger>
-                    <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
+                    <DialogContent className="p-0">
                         <DialogHeader className="p-6 pb-4">
                             <DialogTitle>Bulk Delete Bookings</DialogTitle>
                             <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
@@ -523,7 +523,7 @@ export default function AdminDashboard() {
       
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
-            <DialogContent className="p-0 max-w-4xl max-h-[90vh] flex flex-col">
+            <DialogContent className="p-0 max-w-4xl h-full max-h-screen sm:max-h-[90vh] flex flex-col">
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
@@ -536,10 +536,9 @@ export default function AdminDashboard() {
                         Created on {format(selectedBooking.createdAt, 'PPP p')}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid md:grid-cols-3 flex-1 overflow-y-auto">
-                     <div className="md:col-span-2 p-6">
-                        <ScrollArea className="h-full pr-4">
-                        <div className="space-y-8">
+                <div className="grid md:grid-cols-3 flex-1 overflow-hidden">
+                     <ScrollArea className="md:col-span-2 h-full">
+                        <div className="p-6 space-y-8">
                             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
                                 {/* Customer Details */}
                                 <div className="space-y-4">
@@ -604,14 +603,12 @@ export default function AdminDashboard() {
                                     </div>
                                 </div>
                             )}
-
                         </div>
-                        </ScrollArea>
-                    </div>
+                     </ScrollArea>
                     
                     {/* Right Panel */}
-                    <div className="md:col-span-1 bg-muted/30 flex flex-col">
-                        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                    <ScrollArea className="md:col-span-1 bg-muted/30 h-full">
+                        <div className="p-6 space-y-6">
                            
                             {/* Payment Status */}
                             <div className="space-y-3">
@@ -666,9 +663,9 @@ export default function AdminDashboard() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </ScrollArea>
                 </div>
-                 <DialogFooter className="flex-wrap items-center justify-between sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2">
+                 <DialogFooter className="flex-wrap items-center justify-between sm:flex-row sm:justify-between p-6 border-t bg-muted/30 gap-2 mt-auto">
                     <div>
                          <AlertDialog>
                             <AlertDialogTrigger asChild>

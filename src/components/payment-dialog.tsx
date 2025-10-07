@@ -98,7 +98,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onBookingC
   return (
     <div>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0 flex flex-col h-full max-h-[90vh]">
+        <DialogContent className="max-w-md p-0 h-full max-h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle className="text-2xl font-headline flex items-center gap-2">
               <Banknote className="h-6 w-6 text-primary" />
