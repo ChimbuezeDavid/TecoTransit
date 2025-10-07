@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, ExternalLink, Users, XCircle, Clock } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
@@ -708,16 +709,28 @@ export default function AdminDashboard({ openBookingId }: AdminDashboardProps) {
                                     {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                     Cancel Booking
                                 </Button>
-                                <Button 
-                                    size="lg" 
-                                    className="w-full" 
-                                    onClick={() => handleUpdateBooking('Confirmed')} 
-                                    disabled={isProcessing[selectedBooking.id] || !confirmedDate || selectedBooking.paymentStatus !== 'Approved'}
-                                    title={selectedBooking.paymentStatus !== 'Approved' ? "Payment must be approved before confirming." : ""}
-                                >
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Confirm Booking
-                                </Button>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="w-full">
+                                                <Button 
+                                                    size="lg" 
+                                                    className="w-full" 
+                                                    onClick={() => handleUpdateBooking('Confirmed')} 
+                                                    disabled={isProcessing[selectedBooking.id] || !confirmedDate || selectedBooking.paymentStatus !== 'Approved'}
+                                                >
+                                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                    Confirm Booking
+                                                </Button>
+                                            </div>
+                                        </TooltipTrigger>
+                                        {selectedBooking.paymentStatus !== 'Approved' && (
+                                            <TooltipContent>
+                                                <p>Payment must be 'Approved' before confirming a booking.</p>
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
                             </>
                         ) : (
                             <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
@@ -730,5 +743,3 @@ export default function AdminDashboard({ openBookingId }: AdminDashboardProps) {
     </>
   );
 }
-
-    
