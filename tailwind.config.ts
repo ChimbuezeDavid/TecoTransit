@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 export default {
@@ -24,6 +25,11 @@ export default {
         'roboto-mono': ['var(--font-roboto-mono)', 'monospace'],
         lobster: ['var(--font-lobster)', 'cursive'],
         pacifico: ['var(--font-pacifico)', 'cursive'],
+        arial: ['Arial', 'sans-serif'],
+        helvetica: ['Helvetica', 'sans-serif'],
+        montserrat: ['Montserrat', 'sans-serif'],
+        times: ['Times New Roman', 'serif'],
+        garamond: ['Garamond', 'serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
