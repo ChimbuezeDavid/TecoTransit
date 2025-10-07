@@ -86,6 +86,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
         return {
           id: doc.id, // Use firestore doc id as primary id
           ...data,
+          paymentStatus: data.paymentStatus || 'Pending', // Ensure fallback for old records
           firestoreDocId: doc.id,
           createdAt: createdAtMillis,
         } as Booking;

@@ -112,7 +112,7 @@ export default function PaymentsManager() {
       ) 
       .filter(booking => {
         if (paymentStatusFilter === 'All') return true;
-        return (booking.paymentStatus || 'Pending') === paymentStatusFilter;
+        return booking.paymentStatus === paymentStatusFilter;
       });
   }, [bookings, paymentStatusFilter]);
 
@@ -187,7 +187,7 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id} className={cn((booking.paymentStatus || 'Pending') !== 'Pending' && "text-muted-foreground")}>
+      <TableRow key={booking.id} className={cn(booking.paymentStatus !== 'Pending' && "text-muted-foreground")}>
         <TableCell>
           <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
@@ -207,7 +207,7 @@ export default function PaymentsManager() {
         </TableCell>
         <TableCell>
           <Badge variant={getPaymentStatusVariant(booking.paymentStatus)}>
-            {booking.paymentStatus || 'Pending'}
+            {booking.paymentStatus}
           </Badge>
         </TableCell>
         <TableCell className="text-right">
@@ -337,7 +337,7 @@ export default function PaymentsManager() {
                     </Link>
                 </Button>
             </div>
-            {(selectedBooking.paymentStatus || 'Pending') === 'Pending' ? (
+            {selectedBooking.paymentStatus === 'Pending' ? (
               <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto gap-2">
                 <Button variant="destructive" size="lg" className="w-full" onClick={() => handleUpdatePaymentStatus('Rejected')} disabled={isProcessing[selectedBooking.id]}>
                   {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
@@ -350,7 +350,7 @@ export default function PaymentsManager() {
               </DialogFooter>
             ) : (
               <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
-                <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {(selectedBooking.paymentStatus || '').toLowerCase()}.</p>
+                <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {selectedBooking.paymentStatus.toLowerCase()}.</p>
               </DialogFooter>
             )}
           </DialogContent>
