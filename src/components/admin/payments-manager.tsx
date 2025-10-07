@@ -15,8 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X, ExternalLink } from "lucide-react";
@@ -188,7 +187,7 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id} className={booking.paymentStatus !== 'Pending' ? 'text-muted-foreground' : ''}>
+      <TableRow key={booking.id} className={cn(booking.paymentStatus !== 'Pending' && "text-muted-foreground")}>
         <TableCell>
           <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
@@ -338,7 +337,7 @@ export default function PaymentsManager() {
                     </Link>
                 </Button>
             </div>
-            {(selectedBooking.paymentStatus === 'Pending') && (
+            {selectedBooking.paymentStatus === 'Pending' ? (
               <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto gap-2">
                 <Button variant="destructive" size="lg" className="w-full" onClick={() => handleUpdatePaymentStatus('Rejected')} disabled={isProcessing[selectedBooking.id]}>
                   {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
@@ -349,11 +348,10 @@ export default function PaymentsManager() {
                   Approve
                 </Button>
               </DialogFooter>
-            )}
-            {selectedBooking.paymentStatus && selectedBooking.paymentStatus !== 'Pending' && (
-                <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
-                    <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {selectedBooking.paymentStatus.toLowerCase()}.</p>
-                </DialogFooter>
+            ) : (
+              <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
+                <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {selectedBooking.paymentStatus.toLowerCase()}.</p>
+              </DialogFooter>
             )}
           </DialogContent>
         </Dialog>
