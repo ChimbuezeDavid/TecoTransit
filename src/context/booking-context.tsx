@@ -22,6 +22,7 @@ interface BookingContextType {
   updatePaymentStatus: (bookingId: string, paymentStatus: 'Approved' | 'Rejected') => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
+  deleteProcessedPayments: () => Promise<number>;
   clearBookings: () => void;
 }
 
@@ -55,7 +56,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     } finally {
         setLoading(false);
     }
-  }, [toast]);
+  }, []);
   
   useEffect(() => {
     fetchPrices();
@@ -99,7 +100,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return unsubscribe;
-  }, [toast]);
+  }, []);
 
   const createBooking = useCallback(async (data: Partial<Booking>, paymentReceiptUrl?: string) => {
     const bookingUuid = uuidv4();
@@ -215,6 +216,24 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return snapshot.size;
   }, []);
   
+  const deleteProcessedPayments = useCallback(async () => {
+    const bookingsQuery = query(
+      collection(db, 'bookings'),
+      where('paymentStatus', 'in', ['Approved', 'Rejected'])
+    );
+    
+    const snapshot = await getDocs(bookingsQuery);
+    if (snapshot.empty) return 0;
+    
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    return snapshot.size;
+  }, []);
+  
   const clearBookings = useCallback(() => {
     setBookings([]);
     setLoading(true);
@@ -231,6 +250,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     updatePaymentStatus,
     deleteBooking,
     deleteBookingsInRange,
+    deleteProcessedPayments,
     clearBookings,
   };
 

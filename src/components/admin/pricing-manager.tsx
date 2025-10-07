@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
 import type { PriceRule } from "@/lib/types";
@@ -18,8 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, X } from "lucide-react";
+import { Trash2, Edit, X, ListX, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { buttonVariants } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -67,8 +70,13 @@ function PricingManagerSkeleton() {
              <div className="md:col-span-2">
                 <Card>
                     <CardHeader>
-                        <Skeleton className="h-7 w-40" />
-                        <Skeleton className="h-4 w-64 mt-2" />
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                            <div>
+                                <Skeleton className="h-7 w-40" />
+                                <Skeleton className="h-4 w-64 mt-2" />
+                            </div>
+                            <Skeleton className="h-9 w-32" />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -108,6 +116,7 @@ export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -251,6 +260,39 @@ export default function PricingManager() {
       });
     }
   }
+  
+  const handleBulkDeleteAll = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const pricesQuery = query(collection(db, 'prices'));
+      const snapshot = await getDocs(pricesQuery);
+      if (snapshot.empty) {
+        toast({ title: "No price rules to delete." });
+        setIsBulkDeleting(false);
+        return;
+      }
+      
+      const batch = writeBatch(db);
+      snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      
+      toast({
+        title: "Bulk Delete Successful",
+        description: `${snapshot.size} price rule(s) have been permanently deleted.`,
+      });
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Bulk Delete Failed",
+        description: `Could not delete all price rules. Please try again. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+        setIsBulkDeleting(false);
+    }
+  };
+
 
   if (loading) {
     return <PricingManagerSkeleton />;
@@ -329,8 +371,32 @@ export default function PricingManager() {
       <div className="md:col-span-2">
         <Card>
             <CardHeader>
-                <CardTitle>Current Price List</CardTitle>
-                <CardDescription>A list of all active pricing rules.</CardDescription>
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div>
+                        <CardTitle>Current Price List</CardTitle>
+                        <CardDescription>A list of all active pricing rules.</CardDescription>
+                    </div>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button variant="destructive" size="sm" disabled={priceList.length === 0}><ListX className="mr-2 h-4 w-4" />Bulk Delete</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete All Price Rules?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete all pricing rules. This is irreversible and will prevent new bookings until new rules are added.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleBulkDeleteAll} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                    {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Yes, delete all rules
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">

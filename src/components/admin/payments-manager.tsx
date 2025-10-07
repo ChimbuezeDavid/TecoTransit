@@ -15,12 +15,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X, ExternalLink } from "lucide-react";
+import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X, ExternalLink, ListX } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "../ui/button";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -35,6 +37,7 @@ function PaymentsManagerSkeleton() {
                     </div>
                     <div className="flex items-center gap-2">
                         <Skeleton className="h-9 w-24" />
+                         <Skeleton className="h-9 w-32" />
                         <Skeleton className="h-9 w-9" />
                     </div>
                 </div>
@@ -78,10 +81,11 @@ function PaymentsManagerSkeleton() {
 
 export default function PaymentsManager() {
   const { user } = useAuth();
-  const { bookings, loading, error, fetchBookings, updatePaymentStatus, clearBookings } = useBooking();
+  const { bookings, loading, error, fetchBookings, updatePaymentStatus, deleteProcessedPayments, clearBookings } = useBooking();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<Booking['paymentStatus'] | 'All'>('Pending');
@@ -149,6 +153,25 @@ export default function PaymentsManager() {
       setIsProcessing(prev => ({ ...prev, [selectedBooking.id]: false }));
     }
   };
+  
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const count = await deleteProcessedPayments();
+      toast({
+        title: "Bulk Delete Successful",
+        description: `${count} processed payment record(s) have been deleted.`,
+      });
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Bulk Delete Failed",
+        description: `Could not delete payments. Please try again. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+        setIsBulkDeleting(false);
+    }
+  };
 
   const getPaymentStatusVariant = (status: Booking['paymentStatus']) => {
     switch (status) {
@@ -187,7 +210,7 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id} className={cn(booking.paymentStatus !== 'Pending' && "text-muted-foreground line-through")}>
+      <TableRow key={booking.id} className={cn((booking.paymentStatus === 'Approved' || booking.paymentStatus === 'Rejected') && "text-muted-foreground")}>
         <TableCell>
           <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
@@ -237,6 +260,26 @@ export default function PaymentsManager() {
               <CardDescription>Review uploaded receipts and approve or reject payments for active bookings.</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+               <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bulk Delete Processed Payments</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete all booking records where the payment status is 'Approved' or 'Rejected'. This is useful for cleaning up the list but is irreversible.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                         <AlertDialogAction onClick={handleBulkDelete} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                            {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Yes, delete processed payments
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button variant="outline" size="icon" onClick={() => fetchBookings()} disabled={loading}>
                 {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
               </Button>
@@ -311,7 +354,7 @@ export default function PaymentsManager() {
               </DialogDescription>
             </DialogHeader>
             <div className="p-6 flex-1 overflow-y-auto">
-                <div className="relative aspect-[9/16] sm:aspect-video bg-muted rounded-md mb-6 hover:opacity-80 transition-opacity">
+                <div className="relative aspect-[9/16] sm:aspect-auto sm:h-80 bg-muted rounded-md mb-6">
                 {selectedBooking.paymentReceiptUrl ? (
                     <Link href={selectedBooking.paymentReceiptUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full" title="Click to open full image in a new tab">
                         <Image
@@ -360,4 +403,3 @@ export default function PaymentsManager() {
     </>
   );
 }
-
