@@ -187,7 +187,7 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id} className={cn(booking.paymentStatus !== 'Pending' && "text-muted-foreground")}>
+      <TableRow key={booking.id} className={cn(booking.paymentStatus !== 'Pending' && "text-muted-foreground line-through")}>
         <TableCell>
           <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
@@ -214,10 +214,9 @@ export default function PaymentsManager() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => openDialog(booking)} 
-            disabled={isProcessing[booking.id]}
+            onClick={() => openDialog(booking)}
           >
-            {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Review'}
+            Review
           </Button>
         </TableCell>
       </TableRow>
@@ -312,15 +311,17 @@ export default function PaymentsManager() {
               </DialogDescription>
             </DialogHeader>
             <div className="p-6 flex-1 overflow-y-auto">
-                <div className="relative aspect-[9/16] sm:aspect-video bg-muted rounded-md mb-6">
+                <div className="relative aspect-[9/16] sm:aspect-video bg-muted rounded-md mb-6 hover:opacity-80 transition-opacity">
                 {selectedBooking.paymentReceiptUrl ? (
-                    <Image
-                    src={selectedBooking.paymentReceiptUrl}
-                    alt="Payment Receipt"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 400px"
-                    className="object-contain rounded-md"
-                    />
+                    <Link href={selectedBooking.paymentReceiptUrl} target="_blank" rel="noopener noreferrer" className="block w-full h-full" title="Click to open full image in a new tab">
+                        <Image
+                        src={selectedBooking.paymentReceiptUrl}
+                        alt="Payment Receipt"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 400px"
+                        className="object-contain rounded-md"
+                        />
+                    </Link>
                 ) : (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
                         <p>No receipt image available.</p>
@@ -350,7 +351,7 @@ export default function PaymentsManager() {
               </DialogFooter>
             ) : (
               <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
-                <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {selectedBooking.paymentStatus.toLowerCase()}.</p>
+                <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {(selectedBooking.paymentStatus || 'processed').toLowerCase()}.</p>
               </DialogFooter>
             )}
           </DialogContent>
@@ -359,3 +360,4 @@ export default function PaymentsManager() {
     </>
   );
 }
+
