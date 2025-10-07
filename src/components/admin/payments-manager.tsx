@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X, ExternalLink } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -187,7 +188,7 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id} className={booking.paymentStatus !== 'Pending' ? 'text-muted-foreground line-through opacity-70' : ''}>
+      <TableRow key={booking.id} className={booking.paymentStatus !== 'Pending' ? 'text-muted-foreground' : ''}>
         <TableCell>
           <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
@@ -197,7 +198,7 @@ export default function PaymentsManager() {
         </TableCell>
         <TableCell className="hidden sm:table-cell">
             <div className="font-medium text-foreground">₦{booking.totalFare.toLocaleString()}</div>
-            <div className="text-sm ">{booking.vehicleType}</div>
+            <div className="text-sm">{booking.vehicleType}</div>
         </TableCell>
         <TableCell className="hidden md:table-cell">{format(booking.createdAt, 'PP')}</TableCell>
         <TableCell>
@@ -304,7 +305,7 @@ export default function PaymentsManager() {
 
       {selectedBooking && (
         <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-          <DialogContent className="max-w-md p-0 h-full max-h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
+          <DialogContent className="max-w-md w-full p-0 h-full max-h-screen sm:h-auto sm:max-h-[90vh] flex flex-col">
             <DialogHeader className="p-6 pb-4 border-b">
               <DialogTitle>Review Payment</DialogTitle>
               <DialogDescription>
@@ -312,13 +313,13 @@ export default function PaymentsManager() {
               </DialogDescription>
             </DialogHeader>
             <div className="p-6 flex-1 overflow-y-auto">
-                <div className="relative aspect-video bg-muted rounded-md mb-6">
+                <div className="relative aspect-[9/16] sm:aspect-video bg-muted rounded-md mb-6">
                 {selectedBooking.paymentReceiptUrl ? (
                     <Image
                     src={selectedBooking.paymentReceiptUrl}
                     alt="Payment Receipt"
                     fill
-                    sizes="(max-width: 768px) 100vw, 576px"
+                    sizes="(max-width: 768px) 100vw, 400px"
                     className="object-contain rounded-md"
                     />
                 ) : (
@@ -338,7 +339,7 @@ export default function PaymentsManager() {
                 </Button>
             </div>
             {(selectedBooking.paymentStatus === 'Pending') && (
-              <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto">
+              <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto gap-2">
                 <Button variant="destructive" size="lg" className="w-full" onClick={() => handleUpdatePaymentStatus('Rejected')} disabled={isProcessing[selectedBooking.id]}>
                   {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
                   Reject
