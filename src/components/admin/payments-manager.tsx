@@ -3,8 +3,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
@@ -14,10 +15,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X } from "lucide-react";
+import { User, Filter, RefreshCw, AlertCircle, Loader2, Users, Check, X, ExternalLink } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 const ITEMS_PER_PAGE = 10;
@@ -82,7 +84,7 @@ export default function PaymentsManager() {
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<Booking['paymentStatus'] | 'All'>('All');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<Booking['paymentStatus'] | 'All'>('Pending');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -105,7 +107,9 @@ export default function PaymentsManager() {
 
   const filteredBookings = useMemo(() => {
     return bookings
-      .filter(booking => booking.paymentReceiptUrl) // Only show bookings with receipts
+      .filter(booking => 
+        booking.paymentReceiptUrl && booking.status !== 'Cancelled'
+      ) 
       .filter(booking => {
         if (paymentStatusFilter === 'All') return true;
         return (booking.paymentStatus || 'Pending') === paymentStatusFilter;
@@ -183,17 +187,17 @@ export default function PaymentsManager() {
       return <TableRow><TableCell colSpan={6} className="text-center py-10">No payments match the current filter.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
-      <TableRow key={booking.id}>
+      <TableRow key={booking.id} className={booking.paymentStatus !== 'Pending' ? 'text-muted-foreground line-through opacity-70' : ''}>
         <TableCell>
-          <div className="font-medium flex items-center gap-2">
+          <div className="font-medium flex items-center gap-2 text-foreground">
             {booking.bookingType === 'group' ? <Users className="h-4 w-4 text-muted-foreground" /> : <User className="h-4 w-4 text-muted-foreground" />}
             {booking.name}
           </div>
-          <div className="text-sm text-muted-foreground hidden sm:block">{booking.email}</div>
+          <div className="text-sm hidden sm:block">{booking.email}</div>
         </TableCell>
         <TableCell className="hidden sm:table-cell">
-            <div className="font-medium">₦{booking.totalFare.toLocaleString()}</div>
-            <div className="text-sm text-muted-foreground">{booking.vehicleType}</div>
+            <div className="font-medium text-foreground">₦{booking.totalFare.toLocaleString()}</div>
+            <div className="text-sm ">{booking.vehicleType}</div>
         </TableCell>
         <TableCell className="hidden md:table-cell">{format(booking.createdAt, 'PP')}</TableCell>
         <TableCell>
@@ -211,8 +215,7 @@ export default function PaymentsManager() {
             variant="outline" 
             size="sm" 
             onClick={() => openDialog(booking)} 
-            disabled={isProcessing[booking.id] || booking.paymentStatus !== 'Pending'}
-            title={booking.paymentStatus !== 'Pending' ? "This payment has already been reviewed." : "Review Payment"}
+            disabled={isProcessing[booking.id]}
           >
             {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Review'}
           </Button>
@@ -232,7 +235,7 @@ export default function PaymentsManager() {
           <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
               <CardTitle>Payment Verification</CardTitle>
-              <CardDescription>Review uploaded receipts and approve or reject payments.</CardDescription>
+              <CardDescription>Review uploaded receipts and approve or reject payments for active bookings.</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
               <Button variant="outline" size="icon" onClick={() => fetchBookings()} disabled={loading}>
@@ -242,15 +245,15 @@ export default function PaymentsManager() {
           </div>
           <div className="flex items-center gap-2 pt-4">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select onValueChange={(value) => setPaymentStatusFilter(value as any)} defaultValue="All">
+            <Select onValueChange={(value) => setPaymentStatusFilter(value as any)} defaultValue="Pending">
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Payments</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Approved">Approved</SelectItem>
                 <SelectItem value="Rejected">Rejected</SelectItem>
+                <SelectItem value="All">All</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -319,15 +322,22 @@ export default function PaymentsManager() {
                     className="object-contain rounded-md"
                     />
                 ) : (
-                    <p>No receipt image to display.</p>
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <p>No receipt image available.</p>
+                    </div>
                 )}
                 </div>
                 <div className="text-center bg-muted/50 p-4 rounded-lg">
                     <p className="text-sm text-muted-foreground">Expected Amount</p>
                     <p className="text-2xl font-bold text-primary">₦{selectedBooking.totalFare?.toLocaleString()}</p>
                 </div>
+                <Button variant="link" size="sm" asChild className="mt-4 mx-auto flex items-center gap-1">
+                    <Link href={`/admin?bookingId=${selectedBooking.id}`} target="_blank">
+                        View Booking Details <ExternalLink className="h-3 w-3" />
+                    </Link>
+                </Button>
             </div>
-            {(selectedBooking.paymentStatus === 'Pending' || !selectedBooking.paymentStatus) && (
+            {(selectedBooking.paymentStatus === 'Pending') && (
               <DialogFooter className="flex-col sm:flex-row p-6 border-t bg-muted/30 mt-auto">
                 <Button variant="destructive" size="lg" className="w-full" onClick={() => handleUpdatePaymentStatus('Rejected')} disabled={isProcessing[selectedBooking.id]}>
                   {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
@@ -341,7 +351,7 @@ export default function PaymentsManager() {
             )}
             {selectedBooking.paymentStatus && selectedBooking.paymentStatus !== 'Pending' && (
                 <DialogFooter className="p-6 border-t bg-muted/30 mt-auto">
-                    <Button variant="outline" className="w-full" onClick={() => setIsReviewDialogOpen(false)}>Close</Button>
+                    <p className="text-sm text-center text-muted-foreground w-full">This payment has already been {selectedBooking.paymentStatus.toLowerCase()}.</p>
                 </DialogFooter>
             )}
           </DialogContent>

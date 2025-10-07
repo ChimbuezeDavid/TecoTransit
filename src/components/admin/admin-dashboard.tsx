@@ -16,14 +16,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, Users, XCircle, Clock } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, ExternalLink, Users, XCircle, Clock } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -32,6 +32,10 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
 
 const ITEMS_PER_PAGE = 10;
+
+interface AdminDashboardProps {
+    openBookingId?: string;
+}
 
 function DashboardSkeleton() {
     return (
@@ -90,7 +94,7 @@ function DashboardSkeleton() {
 }
 
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ openBookingId }: AdminDashboardProps) {
   const { user } = useAuth();
   const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings, deleteBookingsInRange } = useBooking();
   const { toast } = useToast();
@@ -118,6 +122,17 @@ export default function AdminDashboard() {
       }
     };
   }, [user, statusFilter, fetchBookings, clearBookings]);
+
+  useEffect(() => {
+    if (openBookingId && bookings.length > 0) {
+      const bookingToOpen = bookings.find(b => b.id === openBookingId);
+      if (bookingToOpen) {
+        openDialog(bookingToOpen);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openBookingId, bookings]);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -715,5 +730,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
