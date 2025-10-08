@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -37,7 +38,7 @@ export default function PriceAlertManager() {
     defaultValues: {
       content: "",
       display: true,
-      font: "font-body",
+      font: "font-arial",
       fontSize: "text-sm",
       bold: false,
       italic: false,
@@ -129,13 +130,12 @@ export default function PriceAlertManager() {
                                 <SelectTrigger><SelectValue placeholder="Select a font" /></SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="font-body">PT Sans (Default)</SelectItem>
-                                <SelectItem value="font-sans">System Sans-Serif</SelectItem>
-                                <SelectItem value="font-serif">System Serif</SelectItem>
-                                <SelectItem value="font-playfair">Playfair Display (Serif)</SelectItem>
-                                <SelectItem value="font-roboto-mono">Roboto Mono (Monospace)</SelectItem>
-                                <SelectItem value="font-lobster">Lobster (Cursive)</SelectItem>
-                                <SelectItem value="font-pacifico">Pacifico (Handwriting)</SelectItem>
+                                <SelectItem value="font-arial">Arial</SelectItem>
+                                <SelectItem value="font-helvetica">Helvetica</SelectItem>
+                                <SelectItem value="font-montserrat">Montserrat</SelectItem>
+                                <SelectItem value="font-times-new-roman">Times New Roman</SelectItem>
+                                <SelectItem value="font-garamond">Garamond</SelectItem>
+                                <SelectItem value="font-playfair">Playfair Display</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
