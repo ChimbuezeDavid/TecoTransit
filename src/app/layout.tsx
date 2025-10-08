@@ -1,3 +1,4 @@
+
 // THIS FILE IS MANAGED BY AN AI ASSISTANT. DO NOT EDIT DIRECTLY.
 
 'use client';
@@ -10,7 +11,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
-import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico } from 'next/font/google';
+import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico, EB_Garamond } from 'next/font/google';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -42,6 +43,13 @@ const pacifico = Pacifico({
   variable: '--font-pacifico',
 });
 
+const ebGaramond = EB_Garamond({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-garamond',
+});
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,29 +61,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                  if (registrations.length > 0) {
-                    console.log('Found active service workers. Unregistering...');
-                    for (let registration of registrations) {
-                      registration.unregister();
-                    }
-                    console.log('All service workers unregistered. Reloading page...');
-                    window.location.reload();
-                  }
-                });
-              }
-            `,
-          }}
-        />
+        <link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
       </head>
       <body
-        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
+        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} ${ebGaramond.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
       >
         <ThemeProvider
           attribute="class"
