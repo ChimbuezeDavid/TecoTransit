@@ -10,7 +10,7 @@ import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
-import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico } from 'next/font/google';
+import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico, Montserrat, EB_Garamond } from 'next/font/google';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -42,6 +42,18 @@ const pacifico = Pacifico({
   variable: '--font-pacifico',
 });
 
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+});
+
+const garamond = EB_Garamond({
+    subsets: ['latin'],
+    weight: ['400', '700'],
+    variable: '--font-garamond',
+});
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,11 +65,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
+                navigator.service-worker.getRegistrations().then(registrations => {
                   if (registrations.length > 0) {
                     console.log('Found active service workers. Unregistering...');
                     for (let registration of registrations) {
@@ -76,7 +89,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#D4AF37" />
       </head>
       <body
-        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
+        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} ${montserrat.variable} ${garamond.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
       >
         <ThemeProvider
           attribute="class"

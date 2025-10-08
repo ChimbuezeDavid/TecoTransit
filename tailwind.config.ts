@@ -24,6 +24,11 @@ export default {
         'roboto-mono': ['var(--font-roboto-mono)', 'monospace'],
         lobster: ['var(--font-lobster)', 'cursive'],
         pacifico: ['var(--font-pacifico)', 'cursive'],
+        arial: ['Arial', 'sans-serif'],
+        helvetica: ['Helvetica', 'sans-serif'],
+        montserrat: ['var(--font-montserrat)', 'sans-serif'],
+        'times-new-roman': ['"Times New Roman"', 'serif'],
+        garamond: ['var(--font-garamond)', 'serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
