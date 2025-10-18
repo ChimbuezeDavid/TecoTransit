@@ -11,6 +11,7 @@ import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico, Montserrat, EB_Garamond } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -112,6 +113,7 @@ export default function RootLayout({
             </BookingProvider>
           </AuthProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
