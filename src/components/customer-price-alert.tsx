@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import type { PriceAlert } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ export default function CustomerPriceAlert() {
         const alertData = doc.data() as PriceAlert;
         setAlert(alertData);
         // If it's a dialog, check if it's already been viewed this session
-        if (alertData.display && alertData.alertType === 'dialog') {
+        if (alertData.display && alertData.alertType === 'dialog' && alertData.dialogImageUrl) {
           const alreadyViewed = sessionStorage.getItem(`${SESSION_STORAGE_KEY}_${alertData.updatedAt}`);
           if (!alreadyViewed) {
             setIsDialogOpen(true);
@@ -59,26 +59,25 @@ export default function CustomerPriceAlert() {
     );
   }
 
-  if (!alert || !alert.content || !alert.display) {
-    return null; // Don't render if no alert, no content, or display is off
+  if (!alert || !alert.display) {
+    return null;
   }
 
-  const commonTextClass = cn(
-    "prose prose-sm max-w-none text-muted-foreground",
-    alert.font,
-    alert.fontSize,
-    alert.bold && "font-bold",
-    alert.italic && "italic",
-  );
-
   // Render the inline alert
-  if (alert.alertType === 'alert') {
+  if (alert.alertType === 'alert' && alert.content) {
+    const textClass = cn(
+        "prose prose-sm max-w-none text-muted-foreground",
+        alert.font,
+        alert.fontSize,
+        alert.bold && "font-bold",
+        alert.italic && "italic",
+    );
     return (
       <div className="max-w-3xl mx-auto mb-12">
         <Alert>
           <Megaphone className="h-4 w-4" />
           <AlertTitle>An Important Update from TecoTransit!</AlertTitle>
-          <AlertDescription className={commonTextClass}>
+          <AlertDescription className={textClass}>
             {alert.content}
           </AlertDescription>
         </Alert>
@@ -86,23 +85,14 @@ export default function CustomerPriceAlert() {
     );
   }
 
-  // Render the dialog
-  if (alert.alertType === 'dialog') {
+  // Render the dialog (image only)
+  if (alert.alertType === 'dialog' && alert.dialogImageUrl) {
     return (
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-md p-0">
-           <DialogHeader className="p-6 pb-4">
-            {alert.dialogTitle && <DialogTitle>{alert.dialogTitle}</DialogTitle>}
-            {!alert.dialogTitle && <DialogTitle>An Important Update</DialogTitle>}
-          </DialogHeader>
-          <div className="px-6 pb-6 space-y-4">
-             {alert.dialogImageUrl && (
-               <div className="relative aspect-video w-full rounded-lg overflow-hidden">
-                 <Image src={alert.dialogImageUrl} alt={alert.dialogTitle || 'Alert Image'} fill style={{ objectFit: 'cover' }} />
-               </div>
-             )}
-            <p className={commonTextClass}>{alert.content}</p>
-          </div>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+           <div className="relative aspect-video w-full">
+             <Image src={alert.dialogImageUrl} alt={'Site Announcement'} fill style={{ objectFit: 'contain' }} />
+           </div>
           <DialogFooter className="p-4 bg-muted/50 border-t">
             <Button onClick={handleCloseDialog}>Close</Button>
           </DialogFooter>

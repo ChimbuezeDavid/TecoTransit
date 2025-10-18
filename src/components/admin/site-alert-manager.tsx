@@ -26,15 +26,33 @@ import { Loader2, Upload, X } from "lucide-react";
 
 
 const formSchema = z.object({
-  content: z.string().min(10, { message: "Alert content must be at least 10 characters." }),
   display: z.boolean().default(true),
   alertType: z.enum(['alert', 'dialog']).default('alert'),
-  dialogTitle: z.string().optional(),
+  
+  // Fields for 'alert' type
+  content: z.string().optional(),
+  font: z.string().optional(),
+  fontSize: z.string().optional(),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+
+  // Fields for 'dialog' type
   dialogImageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
-  font: z.string(),
-  fontSize: z.string(),
-  bold: z.boolean().default(false),
-  italic: z.boolean().default(false),
+}).superRefine((data, ctx) => {
+    if (data.alertType === 'alert' && (!data.content || data.content.length < 10)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['content'],
+            message: "Alert content must be at least 10 characters for an inline alert.",
+        });
+    }
+    if (data.alertType === 'dialog' && !data.dialogImageUrl) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['dialogImageUrl'],
+            message: "An image must be uploaded for a dialog alert.",
+        });
+    }
 });
 
 export default function PriceAlertManager() {
@@ -46,15 +64,14 @@ export default function PriceAlertManager() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      content: "",
       display: true,
       alertType: 'alert',
-      dialogTitle: '',
-      dialogImageUrl: '',
+      content: "",
       font: "font-arial",
       fontSize: "text-sm",
       bold: false,
       italic: false,
+      dialogImageUrl: '',
     }
   });
 
@@ -130,7 +147,7 @@ export default function PriceAlertManager() {
     if (!imageUrl) return;
 
     // Optimistically update UI
-    form.setValue('dialogImageUrl', '');
+    form.setValue('dialogImageUrl', '', { shouldValidate: true });
     setCurrentImageUrl(null);
 
     try {
@@ -149,13 +166,24 @@ export default function PriceAlertManager() {
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const alertRef = doc(db, "alerts", "current");
     
-    // Ensure optional fields are not undefined
-    const alertData: PriceAlert = {
-      ...data,
-      dialogTitle: data.dialogTitle ?? '',
-      dialogImageUrl: data.dialogImageUrl ?? '',
+    // Clean data before saving
+    const alertData: Partial<PriceAlert> = {
+      display: data.display,
+      alertType: data.alertType,
       updatedAt: Date.now(),
     };
+
+    if (data.alertType === 'alert') {
+        alertData.content = data.content;
+        alertData.font = data.font;
+        alertData.fontSize = data.fontSize;
+        alertData.bold = data.bold;
+        alertData.italic = data.italic;
+        alertData.dialogImageUrl = ''; // Clear image url if it's an alert
+    } else { // dialog
+        alertData.dialogImageUrl = data.dialogImageUrl;
+        alertData.content = ''; // Clear content for dialog
+    }
 
     try {
       await setDoc(alertRef, alertData, { merge: true });
@@ -199,7 +227,7 @@ export default function PriceAlertManager() {
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="alert">Inline Alert</SelectItem>
-                            <SelectItem value="dialog">Popup Dialog</SelectItem>
+                            <SelectItem value="dialog">Popup Dialog (Image only)</SelectItem>
                         </SelectContent>
                         </Select>
                         <FormDescription>Choose how to display the alert to users.</FormDescription>
@@ -210,20 +238,10 @@ export default function PriceAlertManager() {
                 <Separator />
 
                 {watchAlertType === 'dialog' && (
-                  <div className="space-y-6 p-4 border rounded-lg">
-                    <CardTitle className="text-xl">Dialog Settings</CardTitle>
-                    <FormField control={form.control} name="dialogTitle" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dialog Title</FormLabel>
-                        <FormControl>
-                          <Input placeholder="E.g., Important Announcement" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                  <div className="space-y-6 p-4 border rounded-lg bg-muted/20">
                      <FormField control={form.control} name="dialogImageUrl" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Dialog Image (Optional)</FormLabel>
+                          <FormLabel>Dialog Image</FormLabel>
                           <FormControl>
                             <div>
                                 {currentImageUrl ? (
@@ -284,100 +302,105 @@ export default function PriceAlertManager() {
                   </div>
                 )}
                 
-                <FormField control={form.control} name="content" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{watchAlertType === 'dialog' ? 'Dialog Message' : 'Alert Content'}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter the main message for your users here."
-                        className="min-h-[150px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                {watchAlertType === 'alert' && (
+                  <div className="space-y-6 p-4 border rounded-lg bg-muted/20">
+                    <FormField control={form.control} name="content" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Alert Content</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Enter the main message for your users here."
+                            className="min-h-[150px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
 
-                <Separator />
-                
-                <div className="space-y-4">
-                    <CardTitle className="text-xl">Text Styling</CardTitle>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       <FormField control={form.control} name="font" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Font Family</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select a font" /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="font-arial">Arial</SelectItem>
-                                <SelectItem value="font-helvetica">Helvetica</SelectItem>
-                                <SelectItem value="font-montserrat">Montserrat</SelectItem>
-                                <SelectItem value="font-times-new-roman">Times New Roman</SelectItem>
-                                <SelectItem value="font-garamond">Garamond</SelectItem>
-                                <SelectItem value="font-playfair">Playfair Display</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
-                       <FormField control={form.control} name="fontSize" render={({ field }) => (
-                           <FormItem>
-                            <FormLabel>Font Size</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger><SelectValue placeholder="Select a size" /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="text-xs">Extra Small</SelectItem>
-                                <SelectItem value="text-sm">Small (Default)</SelectItem>
-                                <SelectItem value="text-base">Medium</SelectItem>
-                                <SelectItem value="text-lg">Large</SelectItem>
-                                <SelectItem value="text-xl">Extra Large</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+                    <Separator />
+                    
+                    <div className="space-y-4">
+                        <CardTitle className="text-xl">Text Styling</CardTitle>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="font" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Font Family</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Select a font" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="font-arial">Arial</SelectItem>
+                                    <SelectItem value="font-helvetica">Helvetica</SelectItem>
+                                    <SelectItem value="font-montserrat">Montserrat</SelectItem>
+                                    <SelectItem value="font-times-new-roman">Times New Roman</SelectItem>
+                                    <SelectItem value="font-garamond">Garamond</SelectItem>
+                                    <SelectItem value="font-playfair">Playfair Display</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                        <FormField control={form.control} name="fontSize" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Font Size</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger><SelectValue placeholder="Select a size" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="text-xs">Extra Small</SelectItem>
+                                    <SelectItem value="text-sm">Small (Default)</SelectItem>
+                                    <SelectItem value="text-base">Medium</SelectItem>
+                                    <SelectItem value="text-lg">Large</SelectItem>
+                                    <SelectItem value="text-xl">Extra Large</SelectItem>
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 pt-4">
+                            <FormField
+                                control={form.control}
+                                name="bold"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Bold</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    </FormItem>
+                                )}
+                                />
+                            <FormField
+                                control={form.control}
+                                name="italic"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Italic</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        />
+                                    </FormControl>
+                                    </FormItem>
+                                )}
+                                />
+                        </div>
                     </div>
-                     <div className="grid grid-cols-2 gap-4 pt-4">
-                         <FormField
-                            control={form.control}
-                            name="bold"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                <div className="space-y-0.5">
-                                    <FormLabel>Bold</FormLabel>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                            />
-                        <FormField
-                            control={form.control}
-                            name="italic"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                <div className="space-y-0.5">
-                                    <FormLabel>Italic</FormLabel>
-                                </div>
-                                <FormControl>
-                                    <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    />
-                                </FormControl>
-                                </FormItem>
-                            )}
-                            />
-                     </div>
                 </div>
+                )}
+
 
                 <Separator/>
                 
@@ -414,7 +437,3 @@ export default function PriceAlertManager() {
     </Card>
   );
 }
-
-    
-
-    
