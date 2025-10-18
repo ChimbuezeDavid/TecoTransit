@@ -670,7 +670,7 @@ export default function AdminDashboard() {
                   src={receiptImageUrl}
                   alt="Payment Receipt"
                   fill
-                  sizes="(max-width: 768px) 100vw, 576px"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   className="object-contain rounded-md"
                 />
               ) : (

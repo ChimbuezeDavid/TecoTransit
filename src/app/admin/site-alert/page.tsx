@@ -1,4 +1,4 @@
-import PriceAlertManager from "@/components/admin/price-alert-manager";
+import PriceAlertManager from "@/components/admin/site-alert-manager";
 
 export default function AdminSiteAlertPage() {
   return (

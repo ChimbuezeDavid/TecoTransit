@@ -75,12 +75,18 @@ export default function RootLayout({
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                   if (registrations.length > 0) {
                     console.log('Found active service workers. Unregistering...');
-                    for (let registration of registrations) {
-                      registration.unregister();
-                    }
-                    console.log('All service workers unregistered. Reloading page...');
-                    window.location.reload();
+                    const unregisterPromises = registrations.map(reg => reg.unregister());
+                    Promise.all(unregisterPromises).then(() => {
+                        console.log('All service workers unregistered. Reloading page...');
+                        window.location.reload(true);
+                    });
                   }
+                });
+                
+                // Add a listener to prevent new service workers from being installed.
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                  console.log('New service worker detected, reloading page to take control.');
+                  window.location.reload(true);
                 });
               }
             `,

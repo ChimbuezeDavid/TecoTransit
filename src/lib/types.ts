@@ -36,13 +36,16 @@ export type PriceRule = {
 }
 
 export type PriceAlert = {
-    content: string;
+    content?: string;
     display: boolean;
-    font: string;
-    fontSize: string;
-    bold: boolean;
-    italic: boolean;
+    font?: string;
+    fontSize?: string;
+    bold?: boolean;
+    italic?: boolean;
     updatedAt: number;
+    alertType: 'alert' | 'dialog';
+    dialogTitle?: string;
+    dialogImageUrl?: string;
 }
 
     
