@@ -11,6 +11,8 @@ import Footer from '@/components/layout/footer';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PT_Sans, Playfair_Display, Roboto_Mono, Lobster, Pacifico, Montserrat, EB_Garamond } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -70,7 +72,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.service-worker.getRegistrations().then(registrations => {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
                   if (registrations.length > 0) {
                     console.log('Found active service workers. Unregistering...');
                     for (let registration of registrations) {
@@ -112,6 +114,8 @@ export default function RootLayout({
             </BookingProvider>
           </AuthProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
