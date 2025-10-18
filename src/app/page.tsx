@@ -9,7 +9,7 @@ export default function Home() {
         <h1 className="text-3xl md:text-4xl font-bold font-headline text-primary tracking-tight">
           Book Your Trip with TecoTransit
         </h1>
-        <p className="text-lg md:text-xl text-muted-foreground mt-2 max-w-2xl mx-auto">
+        <p className="text-lg md:text-xl text-foreground mt-2 max-w-2xl mx-auto">
           Fast, reliable, and comfortable rides to your destination.
         </p>
       </div>
