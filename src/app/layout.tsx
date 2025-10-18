@@ -71,17 +71,22 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !sessionStorage.getItem('swUnregistered')) {
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                   if (registrations.length > 0) {
                     console.log('Found active service workers. Unregistering...');
-                    sessionStorage.setItem('swUnregistered', 'true');
                     const unregisterPromises = registrations.map(reg => reg.unregister());
                     Promise.all(unregisterPromises).then(() => {
                         console.log('All service workers unregistered. Reloading page...');
-                        window.location.reload();
+                        window.location.reload(true);
                     });
                   }
+                });
+                
+                // Add a listener to prevent new service workers from being installed.
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                  console.log('New service worker detected, reloading page to take control.');
+                  window.location.reload(true);
                 });
               }
             `,
