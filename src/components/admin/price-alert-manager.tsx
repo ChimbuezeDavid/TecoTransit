@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { PriceAlert } from "@/lib/types";
+import { uploadImage, deleteImage } from "@/app/actions/upload-image";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +21,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { CardDescription } from "../ui/card";
+import { Loader2, Upload, X } from "lucide-react";
 
 
 const formSchema = z.object({
@@ -36,6 +39,8 @@ const formSchema = z.object({
 export default function PriceAlertManager() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -62,6 +67,9 @@ export default function PriceAlertManager() {
         if (alertDoc.exists()) {
           const data = alertDoc.data() as PriceAlert;
           form.reset(data);
+          if(data.dialogImageUrl) {
+            setCurrentImageUrl(data.dialogImageUrl);
+          }
         }
       } catch (error) {
         console.error("Error fetching alert:", error);
@@ -72,6 +80,70 @@ export default function PriceAlertManager() {
     };
     fetchAlert();
   }, [form, toast]);
+
+   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 4.5 * 1024 * 1024) { // Vercel Blob free tier limit
+      toast({
+        variant: "destructive",
+        title: "File Too Large",
+        description: "Image must be smaller than 4.5MB.",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    if (currentImageUrl) {
+        await deleteImage(currentImageUrl).catch(e => console.error("Failed to delete old image, continuing...", e));
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const blob = await uploadImage(formData);
+      
+      form.setValue('dialogImageUrl', blob.url, { shouldValidate: true });
+      setCurrentImageUrl(blob.url);
+
+      toast({
+        title: "Image Uploaded",
+        description: "The new image has been uploaded successfully.",
+      });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Could not upload the image.",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    const imageUrl = form.getValues('dialogImageUrl');
+    if (!imageUrl) return;
+
+    // Optimistically update UI
+    form.setValue('dialogImageUrl', '');
+    setCurrentImageUrl(null);
+
+    try {
+        await deleteImage(imageUrl);
+        toast({ title: "Image Removed" });
+    } catch (error) {
+        console.error("Failed to delete image from blob storage", error);
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: "Could not remove the image from storage, but it is unlinked from the alert."
+        })
+    }
+  }
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const alertRef = doc(db, "alerts", "current");
@@ -145,14 +217,65 @@ export default function PriceAlertManager() {
                       </FormItem>
                     )} />
                      <FormField control={form.control} name="dialogImageUrl" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Dialog Image URL (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com/image.png" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
+                        <FormItem>
+                          <FormLabel>Dialog Image (Optional)</FormLabel>
+                          <FormControl>
+                            <div>
+                                {currentImageUrl ? (
+                                    <div className="relative group w-full max-w-sm">
+                                        <Image
+                                            src={currentImageUrl}
+                                            alt="Dialog preview"
+                                            width={400}
+                                            height={225}
+                                            className="rounded-md border object-cover aspect-video"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={handleRemoveImage}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                      <Input
+                                        id="image-upload"
+                                        type="file"
+                                        accept="image/png, image/jpeg, image/jpg, image/gif"
+                                        onChange={handleImageUpload}
+                                        disabled={isUploading}
+                                        className="hidden"
+                                      />
+                                      <Label
+                                        htmlFor="image-upload"
+                                        className="flex-grow"
+                                      >
+                                        <div className="w-full flex items-center justify-center gap-2 h-10 px-4 py-2 text-sm font-medium border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground">
+                                          {isUploading ? (
+                                            <>
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                              <span>Uploading...</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Upload className="h-4 w-4" />
+                                              <span>Upload Image</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </Label>
+                                  </div>
+                                )}
+                            </div>
+                          </FormControl>
+                          <FormDescription>Upload an image to display in the dialog popup (max 4.5MB).</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
                   </div>
                 )}
                 
@@ -277,7 +400,7 @@ export default function PriceAlertManager() {
             )}
           </CardContent>
           <div className="px-6 pb-6">
-            <Button type="submit" disabled={form.formState.isSubmitting || loading}>
+            <Button type="submit" disabled={form.formState.isSubmitting || loading || isUploading}>
                 {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>
