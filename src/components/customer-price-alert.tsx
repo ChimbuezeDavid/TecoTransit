@@ -8,6 +8,7 @@ import type { PriceAlert } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Skeleton } from './ui/skeleton';
 
 export default function CustomerPriceAlert() {
   const [alert, setAlert] = useState<PriceAlert | null>(null);
@@ -32,7 +33,7 @@ export default function CustomerPriceAlert() {
   if (loading) {
     return (
         <div className="mb-12">
-            <div className="h-24 w-full bg-muted rounded-lg animate-pulse" />
+            <Skeleton className="h-24 w-full" />
         </div>
     );
   }
