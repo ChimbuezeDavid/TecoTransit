@@ -251,6 +251,7 @@ export default function PriceAlertManager() {
                                             alt="Dialog preview"
                                             width={400}
                                             height={225}
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                             className="rounded-md border object-cover aspect-video"
                                         />
                                         <Button
