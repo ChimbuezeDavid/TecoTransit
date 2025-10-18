@@ -148,8 +148,12 @@ export default function PriceAlertManager() {
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const alertRef = doc(db, "alerts", "current");
+    
+    // Ensure optional fields are not undefined
     const alertData: PriceAlert = {
       ...data,
+      dialogTitle: data.dialogTitle ?? '',
+      dialogImageUrl: data.dialogImageUrl ?? '',
       updatedAt: Date.now(),
     };
 
@@ -410,5 +414,7 @@ export default function PriceAlertManager() {
     </Card>
   );
 }
+
+    
 
     
