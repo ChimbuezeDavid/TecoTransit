@@ -12,8 +12,9 @@ import type { PriceAlert } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +24,9 @@ import { CardDescription } from "../ui/card";
 const formSchema = z.object({
   content: z.string().min(10, { message: "Alert content must be at least 10 characters." }),
   display: z.boolean().default(true),
+  alertType: z.enum(['alert', 'dialog']).default('alert'),
+  dialogTitle: z.string().optional(),
+  dialogImageUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
   font: z.string(),
   fontSize: z.string(),
   bold: z.boolean().default(false),
@@ -38,12 +42,17 @@ export default function PriceAlertManager() {
     defaultValues: {
       content: "",
       display: true,
+      alertType: 'alert',
+      dialogTitle: '',
+      dialogImageUrl: '',
       font: "font-arial",
       fontSize: "text-sm",
       bold: false,
       italic: false,
     }
   });
+
+  const watchAlertType = form.watch("alertType");
 
   useEffect(() => {
     const fetchAlert = async () => {
@@ -97,18 +106,62 @@ export default function PriceAlertManager() {
           <CardContent className="space-y-6">
             {loading ? (
               <div className="space-y-4">
+                <div className="h-10 w-full bg-muted rounded animate-pulse" />
                 <div className="h-24 w-full bg-muted rounded animate-pulse" />
                 <div className="h-10 w-full bg-muted rounded animate-pulse" />
                 <div className="h-10 w-full bg-muted rounded animate-pulse" />
               </div>
             ) : (
               <>
+                <FormField control={form.control} name="alertType" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Alert Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select an alert type" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="alert">Inline Alert</SelectItem>
+                            <SelectItem value="dialog">Popup Dialog</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormDescription>Choose how to display the alert to users.</FormDescription>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+
+                <Separator />
+
+                {watchAlertType === 'dialog' && (
+                  <div className="space-y-6 p-4 border rounded-lg">
+                    <CardTitle className="text-xl">Dialog Settings</CardTitle>
+                    <FormField control={form.control} name="dialogTitle" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dialog Title</FormLabel>
+                        <FormControl>
+                          <Input placeholder="E.g., Important Announcement" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                     <FormField control={form.control} name="dialogImageUrl" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Dialog Image URL (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/image.png" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                )}
+                
                 <FormField control={form.control} name="content" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Alert Content</FormLabel>
+                    <FormLabel>{watchAlertType === 'dialog' ? 'Dialog Message' : 'Alert Content'}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="E.g., Special notice: Fares to Lagos will be increasing by 10% starting next month."
+                        placeholder="Enter the main message for your users here."
                         className="min-h-[150px]"
                         {...field}
                       />
@@ -120,7 +173,7 @@ export default function PriceAlertManager() {
                 <Separator />
                 
                 <div className="space-y-4">
-                    <CardTitle className="text-xl">Alert Styling</CardTitle>
+                    <CardTitle className="text-xl">Text Styling</CardTitle>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <FormField control={form.control} name="font" render={({ field }) => (
                           <FormItem>

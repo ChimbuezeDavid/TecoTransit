@@ -43,6 +43,9 @@ export type PriceAlert = {
     bold: boolean;
     italic: boolean;
     updatedAt: number;
+    alertType: 'alert' | 'dialog';
+    dialogTitle?: string;
+    dialogImageUrl?: string;
 }
 
     
