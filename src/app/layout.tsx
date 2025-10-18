@@ -71,15 +71,16 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !sessionStorage.getItem('swUnregistered')) {
                 navigator.serviceWorker.getRegistrations().then(registrations => {
                   if (registrations.length > 0) {
                     console.log('Found active service workers. Unregistering...');
-                    for (let registration of registrations) {
-                      registration.unregister();
-                    }
-                    console.log('All service workers unregistered. Reloading page...');
-                    window.location.reload();
+                    sessionStorage.setItem('swUnregistered', 'true');
+                    const unregisterPromises = registrations.map(reg => reg.unregister());
+                    Promise.all(unregisterPromises).then(() => {
+                        console.log('All service workers unregistered. Reloading page...');
+                        window.location.reload();
+                    });
                   }
                 });
               }
