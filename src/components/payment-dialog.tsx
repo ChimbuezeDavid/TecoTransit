@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import type { BookingFormData } from '@/lib/types';
+import type { BookingFormData, PriceRule } from '@/lib/types';
 import { useBooking } from '@/context/booking-context';
 import { useToast } from '@/hooks/use-toast';
 import PaystackButton from './paystack-button';
@@ -11,7 +11,7 @@ import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Banknote, Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { type UseFormReturn } from 'react-hook-form';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -114,5 +114,3 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, form, pric
     </>
   );
 }
-
-    
