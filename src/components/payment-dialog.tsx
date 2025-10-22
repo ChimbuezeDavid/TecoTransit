@@ -24,18 +24,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
     email: bookingData?.email || '',
     amount: Math.round((bookingData?.totalFare || 0) * 100),
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-    currency: 'NGN', // Add the required currency
-    metadata: {
-        name: bookingData?.name,
-        phone: bookingData?.phone,
-        custom_fields: [
-          {
-            display_name: 'Route',
-            variable_name: 'route',
-            value: `${bookingData?.pickup} to ${bookingData?.destination}`,
-          },
-        ],
-      },
+    currency: 'NGN',
   };
 
   const initializePayment = usePaystackPayment(paystackConfig);
