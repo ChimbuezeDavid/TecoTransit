@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -557,15 +557,15 @@ export default function AdminDashboard() {
                     <div className="md:col-span-1 bg-muted/30 flex flex-col">
                         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                             {/* Fare Details */}
-                            <div className="space-y-3">
+                             <div className="space-y-3">
                                 <h3 className="font-semibold text-lg">Payment</h3>
-                                    <div>
-                                    <p className="text-xs text-muted-foreground">Total Paid</p>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Estimated Fare</p>
                                     <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <CreditCard className="h-4 w-4" />
-                                    <span>Paid via Paystack</span>
+                                    <Ban className="h-4 w-4" />
+                                    <span>Payment not yet processed</span>
                                 </div>
                             </div>
                             
@@ -646,5 +646,7 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+    
 
     

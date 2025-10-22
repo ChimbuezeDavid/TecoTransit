@@ -23,7 +23,6 @@ import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, He
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
-import PaymentDialog from './payment-dialog';
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -62,10 +61,7 @@ export default function BookingForm() {
   const { toast } = useToast();
   const { prices, loading: pricesLoading, createBooking } = useBooking();
 
-  const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
@@ -130,15 +126,21 @@ export default function BookingForm() {
   }, [watch, getValues, setValue, trigger, availableVehicles]);
 
 
-  const handleBookingComplete = () => {
-      form.reset();
-      setBookingData(null);
-  };
-
-  const completeBooking = async (data: BookingFormData, paystackReference: string) => {
+  const handleSubmit = async (formData: z.infer<typeof bookingSchema>) => {
     setIsProcessing(true);
+     if (baseFare <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Route Unavailable',
+        description: 'This route is currently not available for booking. Please select another.',
+      });
+      setIsProcessing(false);
+      return;
+    }
+    
     try {
-      await createBooking(data, paystackReference);
+      const bookingData: BookingFormData = { ...formData, totalFare };
+      await createBooking(bookingData);
 
       toast({
         title: "Booking Submitted!",
@@ -146,8 +148,7 @@ export default function BookingForm() {
       });
 
       setIsConfirmationOpen(true);
-      handleBookingComplete();
-
+      form.reset();
     } catch (error) {
       console.error("Booking submission error:", error);
       toast({
@@ -156,33 +157,8 @@ export default function BookingForm() {
         description: `There was a problem submitting your booking. Please try again. ${error instanceof Error ? error.message : ''}`,
       });
     } finally {
-        setIsProcessing(false);
-        setIsPaymentDialogOpen(false);
+      setIsProcessing(false);
     }
-  };
-
-  const handleProceedToPayment = async () => {
-    const isValid = await form.trigger();
-    if (!isValid) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Form',
-        description: 'Please fill all required fields correctly before proceeding.',
-      });
-      return;
-    }
-    
-    if (baseFare <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Route Unavailable',
-        description: 'This route is currently not available for booking. Please select another.',
-      });
-      return;
-    }
-    
-    setBookingData({ ...getValues(), totalFare });
-    setIsPaymentDialogOpen(true);
   };
   
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
@@ -228,7 +204,7 @@ export default function BookingForm() {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={(e) => e.preventDefault()}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
@@ -404,15 +380,15 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="button" size="lg" className="w-full sm:w-auto" onClick={handleProceedToPayment} disabled={isProcessing || totalFare <= 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare <= 0}>
                 {isProcessing ? (
                     <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processing...
+                        Submitting...
                     </>
                 ) : (
                     <>
-                        Proceed to Payment
+                        Submit Booking
                         <ArrowRight className="ml-2 h-5 w-5" />
                     </>
                 )}
@@ -422,16 +398,6 @@ export default function BookingForm() {
       </Form>
     </Card>
     
-    {bookingData && (
-        <PaymentDialog
-            isOpen={isPaymentDialogOpen}
-            onClose={() => setIsPaymentDialogOpen(false)}
-            bookingData={bookingData}
-            onSuccess={(data, ref) => completeBooking(data, ref)}
-            isProcessing={isProcessing}
-        />
-    )}
-
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
       onClose={() => setIsConfirmationOpen(false)}

@@ -16,7 +16,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData, paymentReference: string | null) => Promise<Booking>;
+  createBooking: (data: BookingFormData) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -49,7 +49,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           const pricesSnapshot = await getDocs(pricesCollection);
           const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
           setPrices(pricesData);
-        } catch (err) {
+        } catch (err) => {
           handleFirestoreError(err, 'fetching prices');
         } finally {
             setLoading(false);
@@ -97,7 +97,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData, paymentReference: string | null) => {
+  const createBooking = useCallback(async (data: BookingFormData) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
 
@@ -108,12 +108,11 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
-      paymentReference: paymentReference,
+      paymentReference: null,
     };
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 
-    // Now include the firestore ID in the returned object
     return {
       ...firestoreBooking,
       firestoreDocId: docRef.id,
@@ -226,3 +225,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    
