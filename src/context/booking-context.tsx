@@ -41,23 +41,22 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     toast({ variant: 'destructive', title: `Error ${context}`, description: message, duration: 10000 });
   };
 
-  const fetchPrices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const pricesCollection = collection(db, "prices");
-      const pricesSnapshot = await getDocs(pricesCollection);
-      const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
-      setPrices(pricesData);
-    } catch (err) {
-      handleFirestoreError(err, 'fetching prices');
-    } finally {
-        setLoading(false);
-    }
-  }, [toast]);
-  
   useEffect(() => {
+    const fetchPrices = async () => {
+        setLoading(true);
+        try {
+          const pricesCollection = collection(db, "prices");
+          const pricesSnapshot = await getDocs(pricesCollection);
+          const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
+          setPrices(pricesData);
+        } catch (err) {
+          handleFirestoreError(err, 'fetching prices');
+        } finally {
+            setLoading(false);
+        }
+    }
     fetchPrices();
-  }, [fetchPrices]);
+  }, [toast]);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
     setLoading(true);
@@ -227,5 +226,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    

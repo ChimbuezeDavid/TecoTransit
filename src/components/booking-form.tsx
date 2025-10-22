@@ -23,8 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
-
-const PaymentDialog = dynamic(() => import('./payment-dialog'), { ssr: false });
+import PaystackButton from './paystack-button';
+import BookingConfirmationDialog from './booking-confirmation-dialog';
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -61,14 +61,14 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading } = useBooking();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
 
   const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -130,21 +130,52 @@ export default function BookingForm() {
   }, [watch, getValues, setValue, trigger, availableVehicles]);
 
 
-  async function onSubmit(data: z.infer<typeof bookingSchema>) {
-    setIsProcessing(true);
-    if (baseFare === 0) {
-        toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
-        setIsProcessing(false);
-        return;
-    }
-    
-    // Simulate a brief delay to show loading state
-    await new Promise(resolve => setTimeout(resolve, 500));
+  const handleBookingComplete = () => {
+      form.reset();
+      setBookingData(null);
+  };
 
-    setBookingData({ ...data, totalFare });
-    setIsPaymentDialogOpen(true);
-    setIsProcessing(false);
-  }
+  const completeBooking = async (data: BookingFormData, paystackReference: string | null) => {
+    setIsProcessing(true);
+    try {
+      await createBooking(data, paystackReference);
+
+      toast({
+        title: "Booking Submitted!",
+        description: "Your request is now pending review. We'll be in touch shortly.",
+      });
+
+      setIsConfirmationOpen(true);
+      handleBookingComplete();
+
+    } catch (error) {
+      console.error("Booking submission error:", error);
+      toast({
+        variant: "destructive",
+        title: "Oh no! Something went wrong.",
+        description: `There was a problem submitting your booking. Please try again. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  const handlePaystackSuccess = async () => {
+    const data = getValues();
+    if(baseFare > 0) {
+        await completeBooking({ ...data, totalFare }, null);
+    }
+  };
+  
+  const handlePaystackClose = () => {
+    if (!isProcessing) {
+      toast({
+        variant: 'destructive',
+        title: 'Payment Cancelled',
+        description: 'You have cancelled the payment process.',
+      });
+    }
+  };
   
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
@@ -189,7 +220,7 @@ export default function BookingForm() {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
@@ -365,38 +396,24 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Proceed to Payment
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </Button>
+            <PaystackButton
+                form={form}
+                totalFare={totalFare}
+                onSuccess={handlePaystackSuccess}
+                onClose={handlePaystackClose}
+                isProcessing={isProcessing}
+                baseFare={baseFare}
+                prices={prices}
+            />
           </CardFooter>
         </form>
       </Form>
     </Card>
-    {bookingData && (
-        <PaymentDialog
-            isOpen={isPaymentDialogOpen}
-            onClose={() => setIsPaymentDialogOpen(false)}
-            bookingData={bookingData}
-            form={form as UseFormReturn<BookingFormData>}
-            prices={prices}
-            onBookingComplete={() => {
-                form.reset();
-                setBookingData(null);
-            }}
-        />
-    )}
+    
+    <BookingConfirmationDialog
+      isOpen={isConfirmationOpen}
+      onClose={() => setIsConfirmationOpen(false)}
+    />
     </>
   );
 }
-
-    
