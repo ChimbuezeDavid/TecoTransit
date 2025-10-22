@@ -100,4 +100,3 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
 };
 
 export default PaystackButton;
-
