@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { BookingFormData, PriceRule } from '@/lib/types';
+import type { BookingFormData } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';

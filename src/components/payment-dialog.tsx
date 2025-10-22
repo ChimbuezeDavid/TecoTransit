@@ -9,42 +9,18 @@ import type { BookingFormData } from '@/lib/types';
 import { ArrowRight, Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { PaystackProps } from 'react-paystack/dist/types';
+import { useEffect, useState } from 'react';
 
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  bookingData: BookingFormData;
+  bookingData: BookingFormData | null;
   onSuccess: (data: BookingFormData, reference: string | null) => void;
   isProcessing: boolean;
 }
 
 const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingData, onSuccess, isProcessing }) => {
   const { toast } = useToast();
-  const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
-  
-  const config: PaystackProps = {
-    publicKey: paystackPublicKey,
-    email: bookingData.email,
-    amount: Math.round(bookingData.totalFare * 100), // Amount in kobo
-    reference: `tec_${uuidv4().split('-').join('')}`,
-    metadata: {
-      name: bookingData.name,
-      phone: bookingData.phone,
-      custom_fields: [
-        {
-          display_name: 'Route',
-          variable_name: 'route',
-          value: `${bookingData.pickup} to ${bookingData.destination}`,
-        },
-      ],
-    },
-  };
-
-  const initializePayment = usePaystackPayment(config);
-
-  const handlePaystackSuccess = (reference: any) => {
-    onSuccess(bookingData, reference.reference);
-  };
 
   const handlePaystackClose = () => {
     if (!isProcessing) {
@@ -56,8 +32,49 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
       onClose();
     }
   };
+  
+  const handlePaystackSuccess = (reference: any) => {
+    if (bookingData) {
+        onSuccess(bookingData, reference.reference);
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Booking data was not available on payment success.',
+        });
+    }
+  };
 
+  const config: PaystackProps = {
+      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+      email: bookingData?.email || '',
+      amount: Math.round((bookingData?.totalFare || 0) * 100), // Amount in kobo
+      reference: `tec_${uuidv4().split('-').join('')}`,
+      metadata: {
+        name: bookingData?.name,
+        phone: bookingData?.phone,
+        custom_fields: [
+          {
+            display_name: 'Route',
+            variable_name: 'route',
+            value: `${bookingData?.pickup} to ${bookingData?.destination}`,
+          },
+        ],
+      },
+  };
+
+  const initializePayment = usePaystackPayment(config);
+  
   const handlePayment = () => {
+     if (!bookingData) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Booking details are not available. Please try again.',
+        });
+        return;
+     }
+    
      if (typeof handlePaystackSuccess === 'function' && typeof handlePaystackClose === 'function') {
         initializePayment({
             onSuccess: handlePaystackSuccess,
@@ -69,10 +86,23 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
             title: 'Initialization Error',
             description: 'Could not initialize payment. Callbacks are missing.',
         });
-        console.error("Paystack callbacks are not valid functions.");
     }
   };
 
+  if (!bookingData) {
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Loading...</DialogTitle>
+                </DialogHeader>
+                <div className="flex items-center justify-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -125,4 +155,3 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
 };
 
 export default PaymentDialog;
-
