@@ -24,21 +24,21 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
   const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
 
   const { getValues } = form;
-  const bookingData = getValues();
+  
 
   const config: PaystackProps = {
     publicKey: paystackPublicKey,
-    email: bookingData.email,
+    email: getValues("email"),
     amount: Math.round(totalFare * 100), // Amount in kobo
     reference: `tec_${uuidv4().split('-').join('')}`,
     metadata: {
-      name: bookingData.name,
-      phone: bookingData.phone,
+      name: getValues("name"),
+      phone: getValues("phone"),
       custom_fields: [
         {
           display_name: 'Route',
           variable_name: 'route',
-          value: `${bookingData.pickup} to ${bookingData.destination}`,
+          value: `${getValues("pickup")} to ${getValues("destination")}`,
         },
       ],
     },
@@ -66,10 +66,19 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
       return;
     }
     
-    initializePayment({
-        onSuccess,
-        onClose,
-    });
+    if (typeof onSuccess === 'function' && typeof onClose === 'function') {
+        initializePayment({
+            onSuccess,
+            onClose,
+        });
+    } else {
+        toast({
+            variant: 'destructive',
+            title: 'Initialization Error',
+            description: 'Could not initialize payment. Callbacks are missing.',
+        });
+        console.error("Paystack callbacks are not valid functions.");
+    }
   };
 
 
@@ -92,4 +101,3 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
 
 export default PaystackButton;
 
-    
