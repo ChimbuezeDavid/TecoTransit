@@ -75,6 +75,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         return;
     }
 
+    if (paystackConfig.amount <= 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Amount',
+            description: 'Payment amount must be greater than zero.',
+        });
+        return;
+    }
+
     initializePayment({
         onSuccess: handlePaystackSuccess,
         onClose: handlePaystackClose
@@ -149,3 +158,5 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
 };
 
 export default PaymentDialog;
+
+    

@@ -404,7 +404,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="button" size="lg" className="w-full sm:w-auto" onClick={handleProceedToPayment} disabled={isProcessing}>
+            <Button type="button" size="lg" className="w-full sm:w-auto" onClick={handleProceedToPayment} disabled={isProcessing || totalFare <= 0}>
                 {isProcessing ? (
                     <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
