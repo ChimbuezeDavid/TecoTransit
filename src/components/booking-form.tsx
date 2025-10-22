@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { useForm, type UseFormReturn } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
@@ -23,8 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
-import PaystackButton from './paystack-button';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
+import PaymentDialog from './payment-dialog';
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -65,6 +64,7 @@ export default function BookingForm() {
 
   const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
@@ -157,24 +157,32 @@ export default function BookingForm() {
       });
     } finally {
         setIsProcessing(false);
+        setIsPaymentDialogOpen(false);
     }
   };
 
-  const handlePaystackSuccess = async () => {
-    const data = getValues();
-    if(baseFare > 0) {
-        await completeBooking({ ...data, totalFare }, null);
-    }
-  };
-  
-  const handlePaystackClose = () => {
-    if (!isProcessing) {
+  const handleProceedToPayment = async () => {
+    const isValid = await form.trigger();
+    if (!isValid) {
       toast({
         variant: 'destructive',
-        title: 'Payment Cancelled',
-        description: 'You have cancelled the payment process.',
+        title: 'Invalid Form',
+        description: 'Please fill all required fields correctly before proceeding.',
       });
+      return;
     }
+    
+    if (baseFare <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Route Unavailable',
+        description: 'This route is currently not available for booking. Please select another.',
+      });
+      return;
+    }
+    
+    setBookingData({ ...getValues(), totalFare });
+    setIsPaymentDialogOpen(true);
   };
   
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
@@ -220,7 +228,7 @@ export default function BookingForm() {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form>
+        <form onSubmit={(e) => e.preventDefault()}>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
@@ -396,19 +404,34 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <PaystackButton
-                form={form}
-                totalFare={totalFare}
-                onSuccess={handlePaystackSuccess}
-                onClose={handlePaystackClose}
-                isProcessing={isProcessing}
-                baseFare={baseFare}
-            />
+            <Button type="button" size="lg" className="w-full sm:w-auto" onClick={handleProceedToPayment} disabled={isProcessing}>
+                {isProcessing ? (
+                    <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
+                    </>
+                ) : (
+                    <>
+                        Proceed to Payment
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                    </>
+                )}
+            </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
     
+    {bookingData && (
+        <PaymentDialog
+            isOpen={isPaymentDialogOpen}
+            onClose={() => setIsPaymentDialogOpen(false)}
+            bookingData={bookingData}
+            onSuccess={completeBooking}
+            isProcessing={isProcessing}
+        />
+    )}
+
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
       onClose={() => setIsConfirmationOpen(false)}
