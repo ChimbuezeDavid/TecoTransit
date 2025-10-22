@@ -1,18 +1,17 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
-import PaymentDialog from './payment-dialog';
+import type { BookingFormData, PriceRule } from '@/lib/types';
 import Link from 'next/link';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -24,6 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+
+const PaymentDialog = dynamic(() => import('./payment-dialog'), { ssr: false });
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -62,9 +63,6 @@ export default function BookingForm() {
   const { toast } = useToast();
   const { prices, loading: pricesLoading } = useBooking();
 
-  const [totalFare, setTotalFare] = useState(0);
-  const [baseFare, setBaseFare] = useState(0);
-  const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
   const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -86,42 +84,33 @@ export default function BookingForm() {
   const { watch, getValues, setValue, trigger } = form;
   const watchAllFields = watch();
 
-  useEffect(() => {
-    const { pickup, destination, vehicleType, luggageCount } = watchAllFields;
-
-    let newBaseFare = 0;
-
+  const availableVehicles = useMemo(() => {
+    const { pickup, destination } = watchAllFields;
     if (pickup && destination && prices) {
-      const vehiclesForRoute = prices.filter(
+      return prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
-      setAvailableVehicles(vehiclesForRoute);
-
-      const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
-      if (vehicleRule) {
-        newBaseFare = vehicleRule.price;
-      }
-      
-      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === vehicleType);
-      if (!currentVehicleStillAvailable) {
-        setValue('vehicleType', '');
-      }
-    } else {
-      setAvailableVehicles([]);
     }
+    return [];
+  }, [watchAllFields.pickup, watchAllFields.destination, prices]);
 
-    setBaseFare(newBaseFare);
-    setTotalFare(newBaseFare + (luggageCount * LUGGAGE_FARE));
+  const { totalFare, baseFare } = useMemo(() => {
+    const { vehicleType, luggageCount } = watchAllFields;
+    const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
+    const newBaseFare = vehicleRule ? vehicleRule.price : 0;
+    const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
+    return { totalFare: newTotalFare, baseFare: newBaseFare };
+  }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
 
-  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, prices, setValue]);
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
-       if (name === 'pickup') {
-          setValue('destination', '');
-          setValue('vehicleType', '');
-          trigger('destination');
-          trigger('vehicleType');
+       if (name === 'pickup' || name === 'destination') {
+            const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === values.vehicleType);
+            if (!currentVehicleStillAvailable) {
+                setValue('vehicleType', '');
+                trigger('vehicleType');
+            }
        }
        if (name === 'intendedDate' && values.intendedDate) {
             setValue('alternativeDate', undefined as any);
@@ -138,7 +127,7 @@ export default function BookingForm() {
        }
     });
     return () => subscription.unsubscribe();
-  }, [watch, getValues, setValue, trigger]);
+  }, [watch, getValues, setValue, trigger, availableVehicles]);
 
 
   async function onSubmit(data: z.infer<typeof bookingSchema>) {
@@ -407,5 +396,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    

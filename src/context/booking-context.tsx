@@ -16,7 +16,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData, receiptUrl: string) => Promise<Booking>;
+  createBooking: (data: BookingFormData, receiptUrl: string | null) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -98,18 +98,18 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData, paymentReceiptUrl: string) => {
+  const createBooking = useCallback(async (data: BookingFormData, paymentReceiptUrl: string | null) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
 
-    const firestoreBooking = {
+    const firestoreBooking: Omit<Booking, 'firestoreDocId' | 'createdAt'> & {createdAt: Timestamp} = {
       ...restOfData,
       id: bookingUuid,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
-      paymentReceiptUrl,
+      paymentReceiptUrl: paymentReceiptUrl ?? '',
     };
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);

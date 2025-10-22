@@ -18,7 +18,7 @@ export type Booking = {
   status: 'Pending' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
-  paymentReceiptUrl?: string; // URL to the uploaded payment receipt
+  paymentReceiptUrl: string; // URL to the uploaded payment receipt
 };
 
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReceiptUrl'> & {
@@ -47,5 +47,3 @@ export type PriceAlert = {
     dialogTitle?: string;
     dialogImageUrl?: string;
 }
-
-    
