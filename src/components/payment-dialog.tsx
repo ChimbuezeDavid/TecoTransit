@@ -4,11 +4,9 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BookingFormData } from '@/lib/types';
-import { Loader2, CreditCard } from 'lucide-react';
-import { PaystackButton } from './paystack-button';
-import type { PaystackProps } from 'react-paystack/dist/types';
+import { Loader2, CreditCard, ArrowRight } from 'lucide-react';
+import PaystackPop from '@paystack/inline-js';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -21,27 +19,56 @@ interface PaymentDialogProps {
 const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingData, onSuccess, isProcessing }) => {
   const { toast } = useToast();
 
-  const handlePaystackClose = () => {
-    if (!isProcessing) {
+  const handlePayment = () => {
+    if (!bookingData) {
       toast({
         variant: 'destructive',
-        title: 'Payment Cancelled',
-        description: 'You have closed the payment process.',
+        title: 'Error',
+        description: 'Booking data is missing.',
       });
-      onClose();
+      return;
     }
-  };
-  
-  const handlePaystackSuccess = (reference: any) => {
-    if (bookingData) {
-        onSuccess(bookingData, reference.reference);
-    } else {
+    
+    if (!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY) {
         toast({
             variant: 'destructive',
-            title: 'Error',
-            description: 'Booking data was not available on payment success.',
+            title: 'Configuration Error',
+            description: 'Paystack public key is not configured.',
         });
+        return;
     }
+
+    const paystack = new PaystackPop();
+    paystack.newTransaction({
+      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      email: bookingData.email,
+      amount: Math.round(bookingData.totalFare * 100),
+      ref: `tec_${Date.now()}`,
+      metadata: {
+        name: bookingData.name,
+        phone: bookingData.phone,
+        custom_fields: [
+          {
+            display_name: 'Route',
+            variable_name: 'route',
+            value: `${bookingData.pickup} to ${bookingData.destination}`,
+          },
+        ],
+      },
+      onSuccess: (transaction) => {
+        onSuccess(bookingData, transaction.reference);
+      },
+      onCancel: () => {
+        if (!isProcessing) {
+          toast({
+            variant: 'destructive',
+            title: 'Payment Cancelled',
+            description: 'You have cancelled the payment process.',
+          });
+          onClose();
+        }
+      },
+    });
   };
 
   if (!bookingData) {
@@ -58,24 +85,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         </Dialog>
     );
   }
-
-  const config: PaystackProps = {
-      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-      email: bookingData.email,
-      amount: Math.round(bookingData.totalFare * 100), // Amount in kobo
-      reference: `tec_${uuidv4().split('-').join('')}`,
-      metadata: {
-        name: bookingData.name,
-        phone: bookingData.phone,
-        custom_fields: [
-          {
-            display_name: 'Route',
-            variable_name: 'route',
-            value: `${bookingData.pickup} to ${bookingData.destination}`,
-          },
-        ],
-      },
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -108,12 +117,19 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         </div>
 
         <DialogFooter className="p-6 mt-4 bg-muted/50">
-            <PaystackButton
-                config={config}
-                onSuccess={handlePaystackSuccess}
-                onClose={handlePaystackClose}
-                isProcessing={isProcessing}
-            />
+           <Button type="button" size="lg" className="w-full" onClick={handlePayment} disabled={isProcessing}>
+            {isProcessing ? (
+                <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Finalizing...
+                </>
+            ) : (
+                <>
+                    Pay with Paystack
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+            )}
+        </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
