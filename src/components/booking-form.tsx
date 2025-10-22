@@ -403,7 +403,6 @@ export default function BookingForm() {
                 onClose={handlePaystackClose}
                 isProcessing={isProcessing}
                 baseFare={baseFare}
-                prices={prices}
             />
           </CardFooter>
         </form>
@@ -417,3 +416,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    

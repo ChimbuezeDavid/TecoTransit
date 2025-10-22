@@ -5,10 +5,10 @@ import { usePaystackPayment } from 'react-paystack';
 import { Button } from '@/components/ui/button';
 import type { BookingFormData } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
-import type { PaystackProps } from 'react-paystack/dist/types';
 import { useToast } from '@/hooks/use-toast';
 import { type UseFormReturn } from 'react-hook-form';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import type { PaystackProps } from 'react-paystack/dist/types';
 
 interface PaystackButtonProps {
     form: UseFormReturn<BookingFormData>;
@@ -66,7 +66,10 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
       return;
     }
     
-    initializePayment({ onSuccess, onClose });
+    initializePayment({
+        onSuccess,
+        onClose,
+    });
   };
 
 
@@ -88,3 +91,5 @@ const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFa
 };
 
 export default PaystackButton;
+
+    
