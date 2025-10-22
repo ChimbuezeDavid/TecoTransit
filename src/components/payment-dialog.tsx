@@ -5,20 +5,57 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BookingFormData } from '@/lib/types';
 import { Loader2, CreditCard, ArrowRight } from 'lucide-react';
-import PaystackPop from '@paystack/inline-js';
+import { usePaystackPayment } from 'react-paystack';
 import { useToast } from '@/hooks/use-toast';
 
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   bookingData: BookingFormData | null;
-  onSuccess: (data: BookingFormData, reference: string | null) => void;
+  onSuccess: (data: BookingFormData, reference: string) => void;
   isProcessing: boolean;
 }
 
 const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingData, onSuccess, isProcessing }) => {
   const { toast } = useToast();
 
+  const paystackConfig = {
+    reference: `tec_${Date.now()}`,
+    email: bookingData?.email || '',
+    amount: Math.round((bookingData?.totalFare || 0) * 100),
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+    metadata: {
+        name: bookingData?.name,
+        phone: bookingData?.phone,
+        custom_fields: [
+          {
+            display_name: 'Route',
+            variable_name: 'route',
+            value: `${bookingData?.pickup} to ${bookingData?.destination}`,
+          },
+        ],
+      },
+  };
+
+  const initializePayment = usePaystackPayment(paystackConfig);
+
+  const handlePaystackSuccess = (reference: { reference: string }) => {
+    if (bookingData) {
+      onSuccess(bookingData, reference.reference);
+    }
+  };
+
+  const handlePaystackClose = () => {
+    if (!isProcessing) {
+        toast({
+            variant: 'destructive',
+            title: 'Payment Cancelled',
+            description: 'You have cancelled the payment process.',
+        });
+        onClose();
+    }
+  };
+  
   const handlePayment = () => {
     if (!bookingData) {
       toast({
@@ -29,7 +66,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
       return;
     }
     
-    if (!process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY) {
+    if (!paystackConfig.publicKey) {
         toast({
             variant: 'destructive',
             title: 'Configuration Error',
@@ -38,36 +75,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         return;
     }
 
-    const paystack = new PaystackPop();
-    paystack.newTransaction({
-      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-      email: bookingData.email,
-      amount: Math.round(bookingData.totalFare * 100),
-      ref: `tec_${Date.now()}`,
-      metadata: {
-        name: bookingData.name,
-        phone: bookingData.phone,
-        custom_fields: [
-          {
-            display_name: 'Route',
-            variable_name: 'route',
-            value: `${bookingData.pickup} to ${bookingData.destination}`,
-          },
-        ],
-      },
-      onSuccess: (transaction) => {
-        onSuccess(bookingData, transaction.reference);
-      },
-      onCancel: () => {
-        if (!isProcessing) {
-          toast({
-            variant: 'destructive',
-            title: 'Payment Cancelled',
-            description: 'You have cancelled the payment process.',
-          });
-          onClose();
-        }
-      },
+    initializePayment({
+        onSuccess: handlePaystackSuccess,
+        onClose: handlePaystackClose
     });
   };
 

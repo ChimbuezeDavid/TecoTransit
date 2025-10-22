@@ -135,7 +135,7 @@ export default function BookingForm() {
       setBookingData(null);
   };
 
-  const completeBooking = async (data: BookingFormData, paystackReference: string | null) => {
+  const completeBooking = async (data: BookingFormData, paystackReference: string) => {
     setIsProcessing(true);
     try {
       await createBooking(data, paystackReference);
@@ -427,7 +427,7 @@ export default function BookingForm() {
             isOpen={isPaymentDialogOpen}
             onClose={() => setIsPaymentDialogOpen(false)}
             bookingData={bookingData}
-            onSuccess={completeBooking}
+            onSuccess={(data, ref) => completeBooking(data, ref)}
             isProcessing={isProcessing}
         />
     )}
@@ -439,3 +439,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
