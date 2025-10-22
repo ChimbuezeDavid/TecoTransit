@@ -1,15 +1,14 @@
 
 "use client";
 
-import { usePaystackPayment } from 'react-paystack';
-import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import type { BookingFormData } from '@/lib/types';
-import { ArrowRight, Loader2, CreditCard } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, CreditCard } from 'lucide-react';
+import { PaystackButton } from './paystack-button';
 import type { PaystackProps } from 'react-paystack/dist/types';
-import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 interface PaymentDialogProps {
   isOpen: boolean;
@@ -45,50 +44,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
     }
   };
 
-  const config: PaystackProps = {
-      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-      email: bookingData?.email || '',
-      amount: Math.round((bookingData?.totalFare || 0) * 100), // Amount in kobo
-      reference: `tec_${uuidv4().split('-').join('')}`,
-      metadata: {
-        name: bookingData?.name,
-        phone: bookingData?.phone,
-        custom_fields: [
-          {
-            display_name: 'Route',
-            variable_name: 'route',
-            value: `${bookingData?.pickup} to ${bookingData?.destination}`,
-          },
-        ],
-      },
-  };
-
-  const initializePayment = usePaystackPayment(config);
-  
-  const handlePayment = () => {
-     if (!bookingData) {
-        toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'Booking details are not available. Please try again.',
-        });
-        return;
-     }
-    
-     if (typeof handlePaystackSuccess === 'function' && typeof handlePaystackClose === 'function') {
-        initializePayment({
-            onSuccess: handlePaystackSuccess,
-            onClose: handlePaystackClose,
-        });
-    } else {
-        toast({
-            variant: 'destructive',
-            title: 'Initialization Error',
-            description: 'Could not initialize payment. Callbacks are missing.',
-        });
-    }
-  };
-
   if (!bookingData) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -103,6 +58,24 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         </Dialog>
     );
   }
+
+  const config: PaystackProps = {
+      publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+      email: bookingData.email,
+      amount: Math.round(bookingData.totalFare * 100), // Amount in kobo
+      reference: `tec_${uuidv4().split('-').join('')}`,
+      metadata: {
+        name: bookingData.name,
+        phone: bookingData.phone,
+        custom_fields: [
+          {
+            display_name: 'Route',
+            variable_name: 'route',
+            value: `${bookingData.pickup} to ${bookingData.destination}`,
+          },
+        ],
+      },
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -135,19 +108,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({ isOpen, onClose, bookingD
         </div>
 
         <DialogFooter className="p-6 mt-4 bg-muted/50">
-            <Button type="button" size="lg" className="w-full" onClick={handlePayment} disabled={isProcessing}>
-                {isProcessing ? (
-                <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Finalizing...
-                </>
-                ) : (
-                <>
-                    Pay with Paystack
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-                )}
-            </Button>
+            <PaystackButton
+                config={config}
+                onSuccess={handlePaystackSuccess}
+                onClose={handlePaystackClose}
+                isProcessing={isProcessing}
+            />
         </DialogFooter>
       </DialogContent>
     </Dialog>
