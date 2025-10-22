@@ -49,7 +49,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           const pricesSnapshot = await getDocs(pricesCollection);
           const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
           setPrices(pricesData);
-        } catch (err) => {
+        } catch (err) {
           handleFirestoreError(err, 'fetching prices');
         } finally {
             setLoading(false);
@@ -225,5 +225,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    
