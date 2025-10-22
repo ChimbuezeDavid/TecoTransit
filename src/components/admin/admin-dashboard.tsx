@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -104,9 +104,7 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
-  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-  
+
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -228,7 +226,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Receipt URL"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Payment Reference"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -246,7 +244,7 @@ export default function AdminDashboard() {
             b.status,
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
-            b.paymentReceiptUrl || ""
+            b.paymentReference || ""
         ].join(','))
     ].join('\n');
 
@@ -286,7 +284,7 @@ export default function AdminDashboard() {
       );
     }
     if (paginatedBookings.length === 0) {
-      return <TableRow><TableCell colSpan={6} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
+      return <TableRow><TableCell colSpan={5} className="text-center py-10">No bookings found for this status.</TableCell></TableRow>;
     }
     return paginatedBookings.map((booking) => (
       <TableRow key={booking.id}>
@@ -300,18 +298,6 @@ export default function AdminDashboard() {
         </TableCell>
         <TableCell className="hidden lg:table-cell">{booking.vehicleType}</TableCell>
         <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
-        <TableCell>
-            {booking.paymentReceiptUrl ? (
-                <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => {
-                  setReceiptImageUrl(booking.paymentReceiptUrl!);
-                  setIsReceiptDialogOpen(true);
-                }}>
-                    View
-                </Button>
-            ) : (
-                <span className="text-xs text-muted-foreground">N/A</span>
-            )}
-        </TableCell>
         <TableCell className="text-right">
           <Button variant="outline" size="sm" onClick={() => openDialog(booking)} disabled={isProcessing[booking.id]}>
             {isProcessing[booking.id] ? <Loader2 className="animate-spin" /> : 'Manage'}
@@ -475,7 +461,6 @@ export default function AdminDashboard() {
                 <TableHead className="hidden md:table-cell">Trip</TableHead>
                 <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Receipt</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
@@ -573,10 +558,14 @@ export default function AdminDashboard() {
                         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                             {/* Fare Details */}
                             <div className="space-y-3">
-                                <h3 className="font-semibold text-lg">Fare</h3>
+                                <h3 className="font-semibold text-lg">Payment</h3>
                                     <div>
                                     <p className="text-xs text-muted-foreground">Total Paid</p>
                                     <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <CreditCard className="h-4 w-4" />
+                                    <span>Paid via Paystack</span>
                                 </div>
                             </div>
                             
@@ -654,39 +643,8 @@ export default function AdminDashboard() {
             </DialogContent>
         </Dialog>
       )}
-
-      <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent className="max-w-md p-0 max-h-[65vh] sm:max-h-full">
-           <DialogHeader className="p-6 pb-4">
-            <DialogTitle>Payment Receipt</DialogTitle>
-            <DialogDescription>
-              This is the payment receipt uploaded by the customer.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <div className="relative aspect-video">
-              {receiptImageUrl ? (
-                <Image
-                  src={receiptImageUrl}
-                  alt="Payment Receipt"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-contain rounded-md"
-                />
-              ) : (
-                <p>No receipt image to display.</p>
-              )}
-            </div>
-            <Button
-                variant="outline"
-                onClick={() => setIsReceiptDialogOpen(false)}
-                className="mt-6 w-full"
-              >
-                Close
-              </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
+
+    

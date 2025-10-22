@@ -18,10 +18,10 @@ export type Booking = {
   status: 'Pending' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
-  paymentReceiptUrl: string; // URL to the uploaded payment receipt
+  paymentReference?: string | null; // Paystack reference or similar
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReceiptUrl'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'intendedDate' | 'alternativeDate' | 'firestoreDocId' | 'paymentReference'> & {
     intendedDate: Date;
     alternativeDate: Date;
     privacyPolicy: boolean;
@@ -47,3 +47,5 @@ export type PriceAlert = {
     dialogTitle?: string;
     dialogImageUrl?: string;
 }
+
+    

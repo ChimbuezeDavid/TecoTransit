@@ -387,6 +387,8 @@ export default function BookingForm() {
             isOpen={isPaymentDialogOpen}
             onClose={() => setIsPaymentDialogOpen(false)}
             bookingData={bookingData}
+            form={form as UseFormReturn<BookingFormData>}
+            prices={prices}
             onBookingComplete={() => {
                 form.reset();
                 setBookingData(null);
@@ -396,3 +398,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
