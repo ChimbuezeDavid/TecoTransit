@@ -3,12 +3,11 @@
 
 import { usePaystackPayment } from 'react-paystack';
 import { Button } from '@/components/ui/button';
-import type { BookingFormData, PriceRule } from '@/lib/types';
+import type { BookingFormData } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { PaystackProps } from 'react-paystack/dist/types';
 import { useToast } from '@/hooks/use-toast';
 import { type UseFormReturn } from 'react-hook-form';
-import { LUGGAGE_FARE } from '@/lib/constants';
 import { ArrowRight, Loader2 } from 'lucide-react';
 
 interface PaystackButtonProps {
@@ -18,10 +17,9 @@ interface PaystackButtonProps {
     onSuccess: () => void;
     onClose: () => void;
     isProcessing: boolean;
-    prices: PriceRule[];
 }
 
-const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFare, onSuccess, onClose, isProcessing, prices }) => {
+const PaystackButton: React.FC<PaystackButtonProps> = ({ form, totalFare, baseFare, onSuccess, onClose, isProcessing }) => {
   const { toast } = useToast();
   const paystackPublicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
 
