@@ -226,7 +226,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At", "Payment Reference"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -244,7 +244,6 @@ export default function AdminDashboard() {
             b.status,
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
-            b.paymentReference || ""
         ].join(','))
     ].join('\n');
 
@@ -646,7 +645,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
-
-    

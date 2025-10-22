@@ -141,12 +141,6 @@ export default function BookingForm() {
     try {
       const bookingData: BookingFormData = { ...formData, totalFare };
       await createBooking(bookingData);
-
-      toast({
-        title: "Booking Submitted!",
-        description: "Your request is now pending review. We'll be in touch shortly.",
-      });
-
       setIsConfirmationOpen(true);
       form.reset();
     } catch (error) {
@@ -405,5 +399,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    
