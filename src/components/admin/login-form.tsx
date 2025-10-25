@@ -73,7 +73,7 @@ export function LoginForm() {
     setLoading(true);
 
     const actionCodeSettings = {
-      url: `${window.location.origin}/admin/login`,
+      url: `https://tecotransit.org/admin/login`,
       handleCodeInApp: false, // Set to false for web
     };
 
