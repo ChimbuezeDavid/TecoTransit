@@ -248,7 +248,7 @@ export default function PricingManager() {
                     <DialogDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</DialogDescription>
                 </DialogHeader>
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="px-1 py-4 space-y-6">
                         <FormField control={form.control} name="pickup" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Pickup Location</FormLabel>
