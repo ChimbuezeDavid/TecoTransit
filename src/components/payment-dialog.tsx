@@ -4,7 +4,7 @@
 import { PaystackButton } from 'react-paystack';
 import type { PaystackProps } from 'react-paystack/dist/types';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { BookingFormData } from '@/lib/types';
 import { CreditCard, Loader2 } from 'lucide-react';
@@ -75,7 +75,7 @@ export default function PaymentDialog({ isOpen, onClose, bookingData, onPaymentS
             <PaystackButton
               {...paystackConfig}
               text="Pay Now"
-              className={Button({ className: "w-full" })}
+              className={buttonVariants({ className: "w-full" })}
               onSuccess={handleSuccess}
               onClose={handleClose}
             />
