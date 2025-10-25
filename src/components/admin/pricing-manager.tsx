@@ -18,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Trash2, Edit, X, PlusCircle } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 const formSchema = z.object({
@@ -33,73 +34,44 @@ const formSchema = z.object({
 
 function PricingManagerSkeleton() {
     return (
-        <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-48" />
-                        <Skeleton className="h-4 w-full mt-2" />
-                        <Skeleton className="h-4 w-3/4 mt-1" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                         <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Skeleton className="h-10 w-32" />
-                    </CardFooter>
-                </Card>
-            </div>
-             <div className="md:col-span-2">
-                <Card>
-                    <CardHeader>
+        <div className="space-y-8">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
                         <Skeleton className="h-7 w-40" />
                         <Skeleton className="h-4 w-64 mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                                    <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+                    </div>
+                     <Skeleton className="h-10 w-40" />
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                            <TableBody>
+                            {[...Array(5)].map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell>
+                                        <Skeleton className="h-5 w-20" />
+                                        <Skeleton className="h-4 w-28 mt-2" />
+                                    </TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                    <TableCell className="text-right flex justify-end gap-2">
+                                        <Skeleton className="h-8 w-8" />
+                                        <Skeleton className="h-8 w-8" />
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                             <TableBody>
-                                {[...Array(3)].map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell>
-                                            <Skeleton className="h-5 w-20" />
-                                            <Skeleton className="h-4 w-28 mt-2" />
-                                        </TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                        <TableCell className="text-right flex justify-end gap-2">
-                                            <Skeleton className="h-8 w-8" />
-                                            <Skeleton className="h-8 w-8" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </div>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
 }
@@ -108,6 +80,7 @@ export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -137,6 +110,27 @@ export default function PricingManager() {
     });
     return () => unsubscribe();
   }, [toast]);
+  
+  // Effect to open/close dialog based on editMode
+  useEffect(() => {
+    if (editMode) {
+      setIsFormOpen(true);
+    }
+  }, [editMode]);
+
+  // Effect to reset form when dialog closes
+  useEffect(() => {
+    if (!isFormOpen) {
+        setEditMode(null);
+        form.reset({
+            pickup: "",
+            destination: "",
+            vehicleType: "",
+            price: 0
+        });
+    }
+  }, [isFormOpen, form]);
+
 
   const formatNumberWithCommas = (value: string | number) => {
     const num = String(value).replace(/,/g, '');
@@ -162,17 +156,6 @@ export default function PricingManager() {
         price: rule.price
     });
   };
-
-  const cancelEdit = () => {
-    setEditMode(null);
-    form.reset({
-        pickup: "",
-        destination: "",
-        vehicleType: "",
-        price: 0
-    });
-  };
-
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const priceId = `${data.pickup}_${data.destination}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
@@ -220,7 +203,7 @@ export default function PricingManager() {
         title: `Price Rule ${editMode ? 'Updated' : 'Saved'}`,
         description: `The prices for the trip and its return have been ${editMode ? 'updated' : 'saved'}.`,
       });
-      cancelEdit();
+      setIsFormOpen(false);
     } catch (error) {
       console.error("Error saving price:", error);
       toast({
@@ -241,7 +224,7 @@ export default function PricingManager() {
         description: "The price rule and its reciprocal have been removed.",
       });
       if (editMode && editMode.id === rule.id) {
-          cancelEdit();
+          setIsFormOpen(false);
       }
     } catch (error) {
        toast({
@@ -257,80 +240,81 @@ export default function PricingManager() {
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-8">
-      <div className="md:col-span-1">
+    <div className="space-y-8">
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</DialogTitle>
+                    <DialogDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</DialogDescription>
+                </DialogHeader>
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField control={form.control} name="pickup" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Pickup Location</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
+                            <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                        <FormField control={form.control} name="destination" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Destination</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
+                            <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                        <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Vehicle Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
+                            <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )} />
+                        <FormField control={form.control} name="price" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Price (NGN)</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        id="price"
+                                        type="text"
+                                        inputMode="decimal" 
+                                        placeholder="50,000"
+                                        value={field.value ? formatNumberWithCommas(field.value) : ''}
+                                        onChange={(e) => handlePriceChange(e, field)}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                         <DialogFooter>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Price" : "Save Price")}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+      
         <Card>
-          <CardHeader>
-            <CardTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</CardTitle>
-            <CardDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</CardDescription>
-          </CardHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="space-y-4">
-                <FormField control={form.control} name="pickup" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
-                      <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="destination" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
-                      <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
-                      <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="price" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Price (NGN)</FormLabel>
-                        <FormControl>
-                            <Input 
-                                id="price"
-                                type="text"
-                                inputMode="decimal" 
-                                placeholder="50,000"
-                                value={field.value ? formatNumberWithCommas(field.value) : ''}
-                                onChange={(e) => handlePriceChange(e, field)}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Price" : "Save Price")}
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Current Price List</CardTitle>
+                    <CardDescription>A list of all active pricing rules.</CardDescription>
+                </div>
+                <Button onClick={() => setIsFormOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add New Rule
                 </Button>
-                {editMode && (
-                    <Button type="button" variant="ghost" onClick={cancelEdit}><X className="mr-2 h-4 w-4" />Cancel</Button>
-                )}
-              </CardFooter>
-            </form>
-          </Form>
-        </Card>
-      </div>
-      <div className="md:col-span-2">
-        <Card>
-            <CardHeader>
-                <CardTitle>Current Price List</CardTitle>
-                <CardDescription>A list of all active pricing rules.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto">
@@ -386,7 +370,6 @@ export default function PricingManager() {
                 </div>
             </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
