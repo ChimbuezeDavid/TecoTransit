@@ -96,6 +96,7 @@ export default function CustomerPriceAlert() {
             alt="Site Announcement" 
             width={1200} // Set a large base width
             height={1200} // Set a large base height
+            priority
             style={{ 
               width: 'auto', 
               height: 'auto', 

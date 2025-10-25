@@ -2,39 +2,42 @@
 'use server';
 
 import { put, del } from '@vercel/blob';
-import { v4 as uuidv4 } from 'uuid';
+import { customAlphabet } from 'nanoid';
+import { z } from 'zod';
+
+// Define a schema for validating the file
+const fileSchema = z.object({
+  file: z.instanceof(File).refine(file => file.size > 0, { message: 'File is empty.' }),
+});
 
 export async function uploadImage(formData: FormData) {
   const file = formData.get('file') as File;
-  if (!file) {
-    throw new Error('No file provided');
+
+  // Validate the file
+  const validationResult = fileSchema.safeParse({ file });
+  if (!validationResult.success) {
+    throw new Error(validationResult.error.errors.map(e => e.message).join(', '));
   }
 
-  // Sanitize the filename to remove special characters
-  const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
-  const filename = `${uuidv4()}-${sanitizedFilename}`;
+  // Generate a unique filename
+  const nanoid = customAlphabet(
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+    7
+  );
+  const extension = file.name.split('.').pop();
+  const filename = `Teco-${nanoid()}.${extension}`;
 
-  try {
-    const blob = await put(filename, file, {
-      access: 'public',
-    });
+  // Upload to Vercel Blob
+  const blob = await put(filename, file, {
+    access: 'public',
+  });
 
-    return blob;
-  } catch (error) {
-    console.error('Error uploading file to Vercel Blob:', error);
-    throw new Error('Failed to upload image.');
-  }
+  return blob;
 }
 
 export async function deleteImage(url: string) {
     if (!url) {
-        throw new Error('No URL provided');
+        throw new Error('No URL provided for deletion.');
     }
-    try {
-        await del(url);
-    } catch (error) {
-        console.error('Error deleting file from Vercel Blob:', error);
-        // We don't throw here, as the user can continue even if deletion fails.
-        // It might be an old/invalid URL.
-    }
+    await del(url);
 }

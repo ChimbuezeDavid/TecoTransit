@@ -13,12 +13,13 @@ import type { PriceRule } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, X } from "lucide-react";
+import { Trash2, Edit, PlusCircle } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 const formSchema = z.object({
@@ -33,74 +34,40 @@ const formSchema = z.object({
 
 function PricingManagerSkeleton() {
     return (
-        <div className="grid md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-48" />
-                        <Skeleton className="h-4 w-full mt-2" />
-                        <Skeleton className="h-4 w-3/4 mt-1" />
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                         <div className="space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Skeleton className="h-10 w-32" />
-                    </CardFooter>
-                </Card>
-            </div>
-             <div className="md:col-span-2">
-                <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-40" />
-                        <Skeleton className="h-4 w-64 mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                                    <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                             <TableBody>
-                                {[...Array(3)].map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell>
-                                            <Skeleton className="h-5 w-20" />
-                                            <Skeleton className="h-4 w-28 mt-2" />
-                                        </TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                                        <TableCell className="text-right flex justify-end gap-2">
-                                            <Skeleton className="h-8 w-8" />
-                                            <Skeleton className="h-8 w-8" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-7 w-48" />
+                <Skeleton className="h-4 w-72 mt-2" />
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                            <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {[...Array(5)].map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell>
+                                    <Skeleton className="h-5 w-20" />
+                                    <Skeleton className="h-4 w-28 mt-2" />
+                                </TableCell>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell className="text-right flex justify-end gap-2">
+                                    <Skeleton className="h-8 w-8" />
+                                    <Skeleton className="h-8 w-8" />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -108,6 +75,7 @@ export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -137,6 +105,45 @@ export default function PricingManager() {
     });
     return () => unsubscribe();
   }, [toast]);
+  
+
+  useEffect(() => {
+    if (isDialogOpen) {
+        if (editMode) {
+            form.reset({
+                pickup: editMode.pickup,
+                destination: editMode.destination,
+                vehicleType: editMode.vehicleType,
+                price: editMode.price
+            });
+        } else {
+            form.reset({
+                pickup: "",
+                destination: "",
+                vehicleType: "",
+                price: 0,
+            });
+        }
+    }
+  }, [isDialogOpen, editMode, form]);
+
+  const handleAddNew = () => {
+    setEditMode(null);
+    setIsDialogOpen(true);
+  };
+  
+  const handleEdit = (rule: PriceRule) => {
+    setEditMode(rule);
+    setIsDialogOpen(true);
+  };
+  
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    // Give time for dialog to close before resetting state
+    setTimeout(() => {
+      setEditMode(null);
+    }, 300);
+  }
 
   const formatNumberWithCommas = (value: string | number) => {
     const num = String(value).replace(/,/g, '');
@@ -152,27 +159,6 @@ export default function PricingManager() {
       field.onChange(rawValue ? Number(rawValue) : '');
     }
   };
-  
-  const handleEdit = (rule: PriceRule) => {
-    setEditMode(rule);
-    form.reset({
-        pickup: rule.pickup,
-        destination: rule.destination,
-        vehicleType: rule.vehicleType,
-        price: rule.price
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditMode(null);
-    form.reset({
-        pickup: "",
-        destination: "",
-        vehicleType: "",
-        price: 0
-    });
-  };
-
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     const priceId = `${data.pickup}_${data.destination}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
@@ -220,7 +206,7 @@ export default function PricingManager() {
         title: `Price Rule ${editMode ? 'Updated' : 'Saved'}`,
         description: `The prices for the trip and its return have been ${editMode ? 'updated' : 'saved'}.`,
       });
-      cancelEdit();
+      handleCloseDialog();
     } catch (error) {
       console.error("Error saving price:", error);
       toast({
@@ -241,7 +227,7 @@ export default function PricingManager() {
         description: "The price rule and its reciprocal have been removed.",
       });
       if (editMode && editMode.id === rule.id) {
-          cancelEdit();
+          handleCloseDialog();
       }
     } catch (error) {
        toast({
@@ -257,137 +243,137 @@ export default function PricingManager() {
   }
 
   return (
-    <div className="grid md:grid-cols-3 gap-8">
-      <div className="md:col-span-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</CardTitle>
-            <CardDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</CardDescription>
-          </CardHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="space-y-4">
-                <FormField control={form.control} name="pickup" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
-                      <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                    </Select>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Card>
+        <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div>
+                    <CardTitle>Current Price List</CardTitle>
+                    <CardDescription>A list of all active pricing rules.</CardDescription>
+                </div>
+                 <Button onClick={handleAddNew}>
+                    <PlusCircle className="mr-2" />
+                    Add New Rule
+                 </Button>
+            </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Route</TableHead>
+                  <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
+                  <TableHead className="hidden sm:table-cell">Price</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {priceList.length === 0 ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                ) : (
+                  priceList.map((rule) => (
+                    <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
+                      <TableCell>
+                        <div className="font-medium">{rule.pickup}</div>
+                        <div className="text-sm text-muted-foreground">to {rule.destination}</div>
+                        <div className="sm:hidden text-sm text-muted-foreground mt-1">{rule.vehicleType} - ₦{rule.price.toLocaleString()}</div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
+                      <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogHeader className="p-6 pb-4">
+          <DialogTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</DialogTitle>
+          <DialogDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 pb-6 space-y-6">
+            <FormField control={form.control} name="pickup" render={({ field }) => (
+            <FormItem>
+                <FormLabel>Pickup Location</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
+                <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem>
+            )} />
+            <FormField control={form.control} name="destination" render={({ field }) => (
+            <FormItem>
+                <FormLabel>Destination</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
+                <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem>
+            )} />
+            <FormField control={form.control} name="vehicleType" render={({ field }) => (
+            <FormItem>
+                <FormLabel>Vehicle Type</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
+                <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem>
+            )} />
+            <FormField control={form.control} name="price" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Price (NGN)</FormLabel>
+                    <FormControl>
+                        <Input 
+                            id="price"
+                            type="text"
+                            inputMode="decimal" 
+                            placeholder="50,000"
+                            value={field.value ? formatNumberWithCommas(field.value) : ''}
+                            onChange={(e) => handlePriceChange(e, field)}
+                        />
+                    </FormControl>
                     <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="destination" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
-                      <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="vehicleType" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
-                      <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="price" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Price (NGN)</FormLabel>
-                        <FormControl>
-                            <Input 
-                                id="price"
-                                type="text"
-                                inputMode="decimal" 
-                                placeholder="50,000"
-                                value={field.value ? formatNumberWithCommas(field.value) : ''}
-                                onChange={(e) => handlePriceChange(e, field)}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                </FormItem>
+            )} />
+            <DialogFooter className="pt-4">
+                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                     {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Price" : "Save Price")}
                 </Button>
-                {editMode && (
-                    <Button type="button" variant="ghost" onClick={cancelEdit}><X className="mr-2 h-4 w-4" />Cancel</Button>
-                )}
-              </CardFooter>
-            </form>
-          </Form>
-        </Card>
-      </div>
-      <div className="md:col-span-2">
-        <Card>
-            <CardHeader>
-                <CardTitle>Current Price List</CardTitle>
-                <CardDescription>A list of all active pricing rules.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Route</TableHead>
-                                <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
-                                <TableHead className="hidden sm:table-cell">Price</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {priceList.length === 0 ? (
-                                <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
-                            ) : (
-                                priceList.map((rule) => (
-                                    <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
-                                        <TableCell>
-                                            <div className="font-medium">{rule.pickup}</div>
-                                            <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                                            <div className="sm:hidden text-sm text-muted-foreground mt-1">{rule.vehicleType} - ₦{rule.price.toLocaleString()}</div>
-                                        </TableCell>
-                                        <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
-                                        <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
-      </div>
-    </div>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

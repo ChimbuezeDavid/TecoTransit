@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,10 +10,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
-import PaymentDialog from './payment-dialog';
+import type { BookingFormData } from '@/lib/types';
 import Link from 'next/link';
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -21,9 +20,13 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import BookingConfirmationDialog from './booking-confirmation-dialog';
+import { usePaystackPayment } from 'react-paystack';
+import type { PaystackProps, PaystackConsumerProps, PaystackProviderProps } from 'react-paystack';
+
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -60,18 +63,13 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading } = useBooking();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
 
-  const [totalFare, setTotalFare] = useState(0);
-  const [baseFare, setBaseFare] = useState(0);
-  const [availableVehicles, setAvailableVehicles] = useState<PriceRule[]>([]);
-  const [bookingData, setBookingData] = useState<BookingFormData | null>(null);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
-
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -83,45 +81,101 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue, trigger } = form;
+  const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
   const watchAllFields = watch();
 
-  useEffect(() => {
-    const { pickup, destination, vehicleType, luggageCount } = watchAllFields;
-
-    let newBaseFare = 0;
-
+  const availableVehicles = useMemo(() => {
+    const { pickup, destination } = watchAllFields;
     if (pickup && destination && prices) {
-      const vehiclesForRoute = prices.filter(
+      return prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
-      setAvailableVehicles(vehiclesForRoute);
+    }
+    return [];
+  }, [watchAllFields.pickup, watchAllFields.destination, prices]);
 
-      const vehicleRule = vehiclesForRoute.find(v => v.vehicleType === vehicleType);
-      if (vehicleRule) {
-        newBaseFare = vehicleRule.price;
-      }
-      
-      const currentVehicleStillAvailable = vehiclesForRoute.some(v => v.vehicleType === vehicleType);
-      if (!currentVehicleStillAvailable) {
-        setValue('vehicleType', '');
-      }
-    } else {
-      setAvailableVehicles([]);
+  const { totalFare, baseFare } = useMemo(() => {
+    const { vehicleType, luggageCount } = watchAllFields;
+    const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
+    const newBaseFare = vehicleRule ? vehicleRule.price : 0;
+    const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
+    return { totalFare: newTotalFare, baseFare: newBaseFare };
+  }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
+
+  
+  const paystackConfig: Omit<PaystackProps, 'onSuccess' | 'onClose'> = {
+    reference: new Date().getTime().toString(),
+    email: getValues('email'),
+    amount: totalFare * 100, // Amount in kobo
+    currency: 'NGN',
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
+  };
+
+  const handlePaymentSuccess = async (bookingData: BookingFormData, paymentReference: string) => {
+    setIsProcessing(true);
+    try {
+      await createBooking({...bookingData, paymentReference});
+      setIsConfirmationOpen(true);
+      form.reset();
+    } catch (error) {
+       console.error("Booking creation error after payment:", error);
+       toast({
+        variant: "destructive",
+        title: "Oh no! Something went wrong.",
+        description: `Your payment was successful, but we couldn't finalize your booking. Please contact support. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const initializePayment = usePaystackPayment(paystackConfig);
+
+  const onBookingSubmit = (formData: z.infer<typeof bookingSchema>) => {
+    if (baseFare <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Route Unavailable',
+        description: 'This route is currently not available for booking. Please select another.',
+      });
+      return;
     }
 
-    setBaseFare(newBaseFare);
-    setTotalFare(newBaseFare + (luggageCount * LUGGAGE_FARE));
+    const bookingDataWithFare = { ...formData, totalFare };
 
-  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.luggageCount, prices, setValue]);
+    initializePayment({
+        onSuccess: (transaction) => {
+            toast({
+              title: "Payment Successful!",
+              description: "Your payment has been received. Finalizing your booking...",
+            });
+            handlePaymentSuccess(bookingDataWithFare, transaction.reference);
+        },
+        onClose: () => {
+            toast({
+              variant: "default",
+              title: "Payment Cancelled",
+              description: "You have cancelled the payment process.",
+            });
+        },
+        config: {
+            ...paystackConfig,
+            email: formData.email, // Use validated form email
+            amount: totalFare * 100,
+        }
+    });
+  };
+
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
-       if (name === 'pickup') {
-          setValue('destination', '');
-          setValue('vehicleType', '');
-          trigger('destination');
-          trigger('vehicleType');
+       if (name === 'pickup' || name === 'destination') {
+            const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === values.vehicleType);
+            if (!currentVehicleStillAvailable) {
+                setValue('vehicleType', '');
+                trigger('vehicleType');
+            }
        }
        if (name === 'intendedDate' && values.intendedDate) {
             setValue('alternativeDate', undefined as any);
@@ -138,25 +192,9 @@ export default function BookingForm() {
        }
     });
     return () => subscription.unsubscribe();
-  }, [watch, getValues, setValue, trigger]);
+  }, [watch, getValues, setValue, trigger, availableVehicles]);
 
 
-  async function onSubmit(data: z.infer<typeof bookingSchema>) {
-    setIsProcessing(true);
-    if (baseFare === 0) {
-        toast({ variant: 'destructive', title: "Cannot Book", description: "This route is currently unavailable. Please select a different route or vehicle." });
-        setIsProcessing(false);
-        return;
-    }
-    
-    // Simulate a brief delay to show loading state
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    setBookingData({ ...data, totalFare });
-    setIsPaymentDialogOpen(true);
-    setIsProcessing(false);
-  }
-  
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
@@ -200,7 +238,7 @@ export default function BookingForm() {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+        <form onSubmit={formHandleSubmit(onBookingSubmit)}>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
@@ -376,36 +414,28 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare === 0}>
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Proceed to Payment
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare <= 0}>
+                {isProcessing ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                    <CreditCard className="mr-2 h-5 w-5" />
+                )}
+                Proceed to Payment
             </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
-    {bookingData && (
-        <PaymentDialog
-            isOpen={isPaymentDialogOpen}
-            onClose={() => setIsPaymentDialogOpen(false)}
-            bookingData={bookingData}
-            onBookingComplete={() => {
-                form.reset();
-                setBookingData(null);
-            }}
-        />
-    )}
+
+    <BookingConfirmationDialog
+      isOpen={isConfirmationOpen}
+      onClose={() => setIsConfirmationOpen(false)}
+    />
     </>
   );
 }
+
+
+
 
     

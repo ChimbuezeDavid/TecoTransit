@@ -21,7 +21,7 @@ export default function PrivacyPolicyPage() {
         </CardHeader>
         
         <CardContent className="space-y-8 text-base text-muted-foreground">
-            <p className="leading-relaxed">Welcome to TecoTransit. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy, or our practices with regards to your personal information, please contact us at tecotransit@gmail.com.</p>
+            <p className="leading-relaxed">Welcome to TecoTransit. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy, or our practices with regards to your personal information, please contact us at tecotransportservices@gmail.com.</p>
 
             <Separator />
 
@@ -85,7 +85,7 @@ export default function PrivacyPolicyPage() {
 
             <div className="space-y-4">
                 <h2 className="text-2xl font-playfair font-semibold text-foreground">7. How Can You Contact Us?</h2>
-                <p className="leading-relaxed">If you have questions or comments about this policy, you may email us at tecotransit@gmail.com or by post to:</p>
+                <p className="leading-relaxed">If you have questions or comments about this policy, you may email us at tecotransportservices@gmail.com or by post to:</p>
                 <p className="pt-2 leading-relaxed">
                     <strong>TecoTransit</strong><br />
                     KM. 8.5, Afe Babalola Way<br />

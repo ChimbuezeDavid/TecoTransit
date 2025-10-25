@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -16,7 +17,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData, receiptUrl: string) => Promise<Booking>;
+  createBooking: (data: BookingFormData & { paymentReference: string }) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -35,29 +36,28 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   const handleFirestoreError = (err: any, context: string) => {
     console.error(`Error ${context}:`, err);
     const message = err.code === 'permission-denied'
-      ? `Permission denied. Please ensure your Firestore security rules are deployed correctly. See helpme.txt.`
+      ? `Permission denied. Please ensure your Firestore security rules are deployed correctly.`
       : `Could not perform operation. ${err.message || ''}`;
     setError(message);
     toast({ variant: 'destructive', title: `Error ${context}`, description: message, duration: 10000 });
   };
 
-  const fetchPrices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const pricesCollection = collection(db, "prices");
-      const pricesSnapshot = await getDocs(pricesCollection);
-      const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
-      setPrices(pricesData);
-    } catch (err) {
-      handleFirestoreError(err, 'fetching prices');
-    } finally {
-        setLoading(false);
-    }
-  }, [toast]);
-  
   useEffect(() => {
+    const fetchPrices = async () => {
+        setLoading(true);
+        try {
+          const pricesCollection = collection(db, "prices");
+          const pricesSnapshot = await getDocs(pricesCollection);
+          const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
+          setPrices(pricesData);
+        } catch (err) {
+          handleFirestoreError(err, 'fetching prices');
+        } finally {
+            setLoading(false);
+        }
+    }
     fetchPrices();
-  }, [fetchPrices]);
+  }, [toast]);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
     setLoading(true);
@@ -98,23 +98,21 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData, paymentReceiptUrl: string) => {
+  const createBooking = useCallback(async (data: BookingFormData & { paymentReference: string }) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
 
-    const firestoreBooking = {
+    const firestoreBooking: Omit<Booking, 'firestoreDocId' | 'createdAt'> & {createdAt: Timestamp} = {
       ...restOfData,
       id: bookingUuid,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
       alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
-      paymentReceiptUrl,
     };
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
 
-    // Now include the firestore ID in the returned object
     return {
       ...firestoreBooking,
       firestoreDocId: docRef.id,
