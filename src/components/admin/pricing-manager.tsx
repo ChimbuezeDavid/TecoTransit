@@ -312,13 +312,13 @@ export default function PricingManager() {
         </CardContent>
       </Card>
       
-      <DialogContent className="sm:max-w-[480px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</DialogTitle>
           <DialogDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 pb-6 space-y-6">
             <FormField control={form.control} name="pickup" render={({ field }) => (
             <FormItem>
                 <FormLabel>Pickup Location</FormLabel>
@@ -376,3 +376,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
