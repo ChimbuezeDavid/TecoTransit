@@ -559,12 +559,12 @@ export default function AdminDashboard() {
                              <div className="space-y-3">
                                 <h3 className="font-semibold text-lg">Payment</h3>
                                 <div>
-                                    <p className="text-xs text-muted-foreground">Estimated Fare</p>
+                                    <p className="text-xs text-muted-foreground">Amount Paid</p>
                                     <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Ban className="h-4 w-4" />
-                                    <span>Payment not yet processed</span>
+                                <div className="flex items-center gap-2 text-sm text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span>Payment Confirmed</span>
                                 </div>
                             </div>
                             
@@ -645,3 +645,4 @@ export default function AdminDashboard() {
     </>
   );
 }
+
