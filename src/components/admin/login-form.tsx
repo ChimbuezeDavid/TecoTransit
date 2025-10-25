@@ -71,8 +71,14 @@ export function LoginForm() {
     }
 
     setLoading(true);
+
+    const actionCodeSettings = {
+      url: `${window.location.origin}/admin/login`,
+      handleCodeInApp: false, // Set to false for web
+    };
+
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
       toast({
         title: "Password Reset Email Sent",
         description: "Check your inbox for instructions to reset your password.",
