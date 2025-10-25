@@ -9,5 +9,6 @@ declare namespace NodeJS {
     NEXT_PUBLIC_FIREBASE_APP_ID: string;
     RESEND_API_KEY: string;
     NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: string;
+    PAYSTACK_SECRET_KEY: string;
   }
 }

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { BookingFormData, Booking } from '@/lib/types';
+import type { BookingFormData } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +25,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { usePaystackPayment } from 'react-paystack';
-import type { PaystackProps } from 'react-paystack/dist/types';
+import type { PaystackProps, PaystackConsumerProps, PaystackProviderProps } from 'react-paystack';
 
 
 const bookingSchema = z.object({
@@ -110,10 +111,10 @@ export default function BookingForm() {
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
   };
 
-  const handlePaymentSuccess = async (bookingData: BookingFormData) => {
+  const handlePaymentSuccess = async (bookingData: BookingFormData, paymentReference: string) => {
     setIsProcessing(true);
     try {
-      await createBooking(bookingData);
+      await createBooking({...bookingData, paymentReference});
       setIsConfirmationOpen(true);
       form.reset();
     } catch (error) {
@@ -143,12 +144,12 @@ export default function BookingForm() {
     const bookingDataWithFare = { ...formData, totalFare };
 
     initializePayment({
-        onSuccess: () => {
+        onSuccess: (transaction) => {
             toast({
               title: "Payment Successful!",
               description: "Your payment has been received. Finalizing your booking...",
             });
-            handlePaymentSuccess(bookingDataWithFare);
+            handlePaymentSuccess(bookingDataWithFare, transaction.reference);
         },
         onClose: () => {
             toast({
@@ -432,3 +433,4 @@ export default function BookingForm() {
     </>
   );
 }
+

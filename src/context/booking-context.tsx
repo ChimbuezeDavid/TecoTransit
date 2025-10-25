@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -16,7 +17,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData) => Promise<Booking>;
+  createBooking: (data: BookingFormData & { paymentReference: string }) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -97,7 +98,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData) => {
+  const createBooking = useCallback(async (data: BookingFormData & { paymentReference: string }) => {
     const { privacyPolicy, ...restOfData } = data;
     const bookingUuid = uuidv4();
 

@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
@@ -23,13 +23,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
+import { verifyPayment } from "@/app/actions/verify-payment";
+
 
 const ITEMS_PER_PAGE = 10;
 
@@ -87,6 +89,86 @@ function DashboardSkeleton() {
             </CardContent>
         </Card>
     );
+}
+
+type PaymentStatus = 'idle' | 'verifying' | 'verified' | 'failed' | 'error';
+
+function PaymentVerificationStatus({ booking }: { booking: Booking | null }) {
+    const [status, setStatus] = useState<PaymentStatus>('idle');
+    const [message, setMessage] = useState('');
+    const { toast } = useToast();
+
+    const handleVerifyPayment = useCallback(async () => {
+        if (!booking?.paymentReference) {
+            setStatus('error');
+            setMessage('No payment reference found for this booking.');
+            return;
+        }
+
+        setStatus('verifying');
+        try {
+            const result = await verifyPayment(booking.paymentReference);
+            if (result.status === 'success') {
+                setStatus('verified');
+            } else {
+                setStatus('failed');
+            }
+            setMessage(result.message);
+        } catch (error) {
+            setStatus('error');
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+            setMessage(errorMessage);
+            toast({
+                variant: 'destructive',
+                title: 'Verification Failed',
+                description: errorMessage,
+            });
+        }
+    }, [booking, toast]);
+    
+    if (!booking) return null;
+
+    return (
+        <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Payment</h3>
+            <div>
+                <p className="text-xs text-muted-foreground">Amount Paid</p>
+                <p className="font-bold text-3xl text-primary">₦{booking.totalFare.toLocaleString()}</p>
+            </div>
+            
+            {status === 'idle' && (
+                <Button onClick={handleVerifyPayment} variant="outline" size="sm">
+                    Verify Payment Status
+                </Button>
+            )}
+
+            {status === 'verifying' && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Verifying with Paystack...</span>
+                </div>
+            )}
+            {status === 'verified' && (
+                <div className="flex items-center gap-2 text-sm text-green-600 font-medium p-3 bg-green-500/10 rounded-lg">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Payment Verified</span>
+                </div>
+            )}
+            {status === 'failed' && (
+                <div className="flex items-center gap-2 text-sm text-amber-600 font-medium p-3 bg-amber-500/10 rounded-lg">
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Payment Not Completed</span>
+                </div>
+            )}
+            {status === 'error' && (
+                <div className="flex items-center gap-2 text-sm text-destructive font-medium p-3 bg-destructive/10 rounded-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Verification Error</span>
+                </div>
+            )}
+            {message && <p className="text-xs text-muted-foreground">{message}</p>}
+        </div>
+    )
 }
 
 
@@ -226,7 +308,7 @@ export default function AdminDashboard() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -241,6 +323,7 @@ export default function AdminDashboard() {
             `"${b.vehicleType.replace(/"/g, '""')}"`,
             b.luggageCount,
             b.totalFare,
+            b.paymentReference || "",
             b.status,
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
@@ -556,17 +639,7 @@ export default function AdminDashboard() {
                     <div className="md:col-span-1 bg-muted/30 flex flex-col">
                         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                             {/* Fare Details */}
-                             <div className="space-y-3">
-                                <h3 className="font-semibold text-lg">Payment</h3>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Amount Paid</p>
-                                    <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-green-600">
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span>Payment Confirmed</span>
-                                </div>
-                            </div>
+                             <PaymentVerificationStatus booking={selectedBooking} />
                             
                             <Separator/>
 
@@ -645,4 +718,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
