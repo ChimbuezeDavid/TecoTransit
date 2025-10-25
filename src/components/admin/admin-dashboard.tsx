@@ -457,259 +457,187 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
 
   return (
     <div className="space-y-8">
-      <Tabs defaultValue="analytics" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="requests">Booking Requests</TabsTrigger>
-        </TabsList>
-        <TabsContent value="analytics" className="space-y-8 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                    <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">From {totalBookings} confirmed bookings</p>
-                </CardContent>
-                </Card>
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Confirmed Bookings</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">{totalBookings}</div>
-                    <p className="text-xs text-muted-foreground">All-time confirmed trips</p>
-                </CardContent>
-                </Card>
-                <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Average Booking Value</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">₦{avgBookingValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
-                    <p className="text-xs text-muted-foreground">Average fare per confirmed trip</p>
-                </CardContent>
-                </Card>
-            </div>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recent Bookings (Last 7 Days)</CardTitle>
-                    <CardDescription>An overview of booking activity over the past week.</CardDescription>
-                </CardHeader>
-                <CardContent className="pl-2">
-                    <ChartContainer config={chartConfig} className="h-[350px] w-full">
-                        <BarChart accessibilityLayer data={chartData}>
-                            <XAxis
-                                dataKey="date"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                tickFormatter={(value) => value.slice(0, 6)}
-                            />
-                            <YAxis
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                allowDecimals={false}
-                            />
-                            <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent indicator="dot" />}
-                            />
-                            <Bar dataKey="bookings" fill="var(--color-bookings)" radius={4} />
-                        </BarChart>
-                    </ChartContainer>
-                </CardContent>
-            </Card>
-        </TabsContent>
-        <TabsContent value="requests" className="mt-6">
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                        <div>
-                            <CardTitle>Booking Requests</CardTitle>
-                            <CardDescription>A list of all trip requests from customers.</CardDescription>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
-                            <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
-                            
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
-                                </DialogTrigger>
-                                <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
-                                    <DialogHeader className="p-6 pb-4">
-                                        <DialogTitle>Bulk Delete Bookings</DialogTitle>
-                                        <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
-                                    </DialogHeader>
-                                    
-                                    <div className="px-6 space-y-6">
-                                        <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete all booking records. This is irreversible. Please confirm.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                                                        {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                        Yes, delete all
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+      <Card>
+          <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                  <div>
+                      <CardTitle>Booking Requests</CardTitle>
+                      <CardDescription>A list of all trip requests from customers.</CardDescription>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                      <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
+                      
+                      <Dialog>
+                          <DialogTrigger asChild>
+                              <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
+                          </DialogTrigger>
+                          <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
+                              <DialogHeader className="p-6 pb-4">
+                                  <DialogTitle>Bulk Delete Bookings</DialogTitle>
+                                  <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
+                              </DialogHeader>
+                              
+                              <div className="px-6 space-y-6">
+                                  <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                          <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                              <AlertDialogDescription>This will permanently delete all booking records. This is irreversible. Please confirm.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                                  {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                  Yes, delete all
+                                              </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
 
-                                        <Separator />
-                                        
-                                        <div className="space-y-4">
-                                            <h3 className="font-semibold">Delete by Date Range</h3>
-                                            <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
-                                            
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
-                                                <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
-                                                <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 29), to: new Date() })}>Last 30 Days</Button>
-                                                <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: new Date() })}>This Month</Button>
-                                                <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 60)), to: endOfDay(subDays(new Date(), 31)) })}>Last Month</Button>
-                                            </div>
-                                            
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                    "w-full justify-start text-left font-normal",
-                                                    !dateRange && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {dateRange?.from ? (
-                                                    dateRange.to ? (
-                                                        <>
-                                                        {format(dateRange.from, "LLL dd, y")} -{" "}
-                                                        {format(dateRange.to, "LLL dd, y")}
-                                                        </>
-                                                    ) : (
-                                                        format(dateRange.from, "LLL dd, y")
-                                                    )
-                                                    ) : (
-                                                    <span>Pick a date range</span>
-                                                    )}
-                                                </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar
-                                                        initialFocus
-                                                        mode="range"
-                                                        defaultMonth={dateRange?.from}
-                                                        selected={dateRange}
-                                                        onSelect={setDateRange}
-                                                        numberOfMonths={2}
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </div>
+                                  <Separator />
+                                  
+                                  <div className="space-y-4">
+                                      <h3 className="font-semibold">Delete by Date Range</h3>
+                                      <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
+                                      
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
+                                          <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
+                                          <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 29), to: new Date() })}>Last 30 Days</Button>
+                                          <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: new Date() })}>This Month</Button>
+                                          <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 60)), to: endOfDay(subDays(new Date(), 31)) })}>Last Month</Button>
+                                      </div>
+                                      
+                                      <Popover>
+                                          <PopoverTrigger asChild>
+                                          <Button
+                                              variant={"outline"}
+                                              className={cn(
+                                              "w-full justify-start text-left font-normal",
+                                              !dateRange && "text-muted-foreground"
+                                              )}
+                                          >
+                                              <CalendarIcon className="mr-2 h-4 w-4" />
+                                              {dateRange?.from ? (
+                                              dateRange.to ? (
+                                                  <>
+                                                  {format(dateRange.from, "LLL dd, y")} -{" "}
+                                                  {format(dateRange.to, "LLL dd, y")}
+                                                  </>
+                                              ) : (
+                                                  format(dateRange.from, "LLL dd, y")
+                                              )
+                                              ) : (
+                                              <span>Pick a date range</span>
+                                              )}
+                                          </Button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-auto p-0" align="start">
+                                              <Calendar
+                                                  initialFocus
+                                                  mode="range"
+                                                  defaultMonth={dateRange?.from}
+                                                  selected={dateRange}
+                                                  onSelect={setDateRange}
+                                                  numberOfMonths={2}
+                                              />
+                                          </PopoverContent>
+                                      </Popover>
+                                  </div>
+                              </div>
 
-                                    <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
-                                        <DialogClose asChild>
-                                            <Button variant="outline">Close</Button>
-                                        </DialogClose>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will permanently delete all bookings from <strong className="text-foreground">{dateRange?.from && format(dateRange.from, 'PPP')}</strong> to <strong className="text-foreground">{dateRange?.to && format(dateRange.to, 'PPP')}</strong>. Are you sure?
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                                                        {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                        Yes, delete range
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
+                              <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
+                                  <DialogClose asChild>
+                                      <Button variant="outline">Close</Button>
+                                  </DialogClose>
+                                  <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                          <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                  This will permanently delete all bookings from <strong className="text-foreground">{dateRange?.from && format(dateRange.from, 'PPP')}</strong> to <strong className="text-foreground">{dateRange?.to && format(dateRange.to, 'PPP')}</strong>. Are you sure?
+                                              </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                                  {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                  Yes, delete range
+                                              </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
+                              </DialogFooter>
+                          </DialogContent>
+                      </Dialog>
 
-                            <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
-                                {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                            </Button>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2 pt-4">
-                        <Filter className="h-4 w-4 text-muted-foreground" />
-                        <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="All">All</SelectItem>
-                                <SelectItem value="Pending">Pending</SelectItem>
-                                <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto">
-                        <Table>
-                        <TableHeader>
-                            <TableRow>
-                            <TableHead>Customer</TableHead>
-                            <TableHead className="hidden md:table-cell">Trip</TableHead>
-                            <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {renderTableContent()}
-                        </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-                <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
-                    <div className="text-sm text-muted-foreground">
-                    Showing page {currentPage} of {totalPages}
-                    </div>
-                    <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => prev - 1)}
-                        disabled={currentPage === 1}
-                    >
-                        Previous
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => prev + 1)}
-                        disabled={currentPage === totalPages}
-                    >
-                        Next
-                    </Button>
-                    </div>
-                </CardFooter>
-            </Card>
-        </TabsContent>
-      </Tabs>
+                      <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
+                          {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                  </div>
+              </div>
+              <div className="flex items-center gap-2 pt-4">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                          <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="All">All</SelectItem>
+                          <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Confirmed">Confirmed</SelectItem>
+                          <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+          </CardHeader>
+          <CardContent>
+              <div className="overflow-x-auto">
+                  <Table>
+                  <TableHeader>
+                      <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead className="hidden md:table-cell">Trip</TableHead>
+                      <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {renderTableContent()}
+                  </TableBody>
+                  </Table>
+              </div>
+          </CardContent>
+          <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
+              <div className="text-sm text-muted-foreground">
+              Showing page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  disabled={currentPage === 1}
+              >
+                  Previous
+              </Button>
+              <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  disabled={currentPage === totalPages}
+              >
+                  Next
+              </Button>
+              </div>
+          </CardFooter>
+      </Card>
       
       {selectedBooking && (
         <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
@@ -852,5 +780,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
+
+    
 
     
