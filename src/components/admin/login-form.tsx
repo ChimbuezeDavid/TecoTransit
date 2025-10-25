@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail, ActionCodeSettings } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -72,9 +72,9 @@ export function LoginForm() {
 
     setLoading(true);
 
-    const actionCodeSettings = {
+    const actionCodeSettings: ActionCodeSettings = {
       url: `https://tecotransit.org/admin/login`,
-      handleCodeInApp: false, // Set to false for web
+      handleCodeInApp: true,
     };
 
     try {
@@ -85,10 +85,16 @@ export function LoginForm() {
       });
     } catch (error) {
       console.error("Password reset error:", error);
+      
+      let description = "Could not send password reset email. Please try again.";
+      if (error instanceof Error && error.message.includes('auth/unauthorized-continue-uri')) {
+          description = "The domain 'tecotransit.org' is not authorized. Please add it to your Firebase project's allowlisted domains in the Authentication settings.";
+      }
+
        toast({
         variant: "destructive",
         title: "Error Sending Email",
-        description: "Could not send password reset email. Please try again.",
+        description: description,
       });
     } finally {
         setLoading(false);
