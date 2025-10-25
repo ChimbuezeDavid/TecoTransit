@@ -19,7 +19,7 @@ export const vehicleOptions = {
 
 export const customerService = {
   phone: '2348104050628', // Your WhatsApp number with country code, no '+' or spaces
-  email: 'tecotransit@gmail.com',
+  email: 'tecotransportservices@gmail.com',
 };
 
 // Replace with your actual account details
