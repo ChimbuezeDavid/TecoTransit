@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { format, parseISO, subMonths, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { format, parseISO, subDays, startOfDay, endOfDay } from "date-fns";
 import { useAuth } from "@/context/auth-context";
 import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck, TrendingUp, Users, Wallet } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -31,63 +31,81 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
 import { verifyPayment } from "@/app/actions/verify-payment";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 
 const ITEMS_PER_PAGE = 10;
 
 function DashboardSkeleton() {
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-                    <div>
-                        <Skeleton className="h-7 w-48" />
-                        <Skeleton className="h-4 w-72 mt-2" />
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
+            </div>
+             <Card>
+                <CardHeader>
+                    <Skeleton className="h-7 w-48" />
+                    <Skeleton className="h-4 w-72 mt-2" />
+                </CardHeader>
+                <CardContent className="pl-2">
+                    <Skeleton className="h-[350px] w-full" />
+                </CardContent>
+             </Card>
+            <Card>
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                        <div>
+                            <Skeleton className="h-7 w-48" />
+                            <Skeleton className="h-4 w-72 mt-2" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-9 w-24" />
+                            <Skeleton className="h-9 w-32" />
+                            <Skeleton className="h-9 w-9" />
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="h-9 w-24" />
-                        <Skeleton className="h-9 w-32" />
-                        <Skeleton className="h-9 w-9" />
-                    </div>
-                </div>
-                 <div className="flex items-center gap-2 pt-4">
-                    <Skeleton className="h-4 w-4" />
-                    <Skeleton className="h-10 w-44" />
-                 </div>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                            <TableHead className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableHead>
-                            <TableHead className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableHead>
-                            <TableHead><Skeleton className="h-5 w-20" /></TableHead>
-                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
-                            <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {[...Array(5)].map((_, i) => (
-                             <TableRow key={i}>
-                                <TableCell>
-                                    <Skeleton className="h-5 w-32" />
-                                    <Skeleton className="h-4 w-40 mt-2" />
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell">
-                                    <Skeleton className="h-5 w-24" />
-                                    <Skeleton className="h-4 w-32 mt-2" />
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
-                                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                                <TableCell><Skeleton className="h-8 w-16" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
+                     <div className="flex items-center gap-2 pt-4">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-10 w-44" />
+                     </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead className="hidden lg:table-cell"><Skeleton className="h-5 w-20" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                 <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                                <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {[...Array(5)].map((_, i) => (
+                                 <TableRow key={i}>
+                                    <TableCell>
+                                        <Skeleton className="h-5 w-32" />
+                                        <Skeleton className="h-4 w-40 mt-2" />
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                        <Skeleton className="h-5 w-24" />
+                                        <Skeleton className="h-4 w-32 mt-2" />
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 
@@ -125,6 +143,11 @@ function PaymentVerificationStatus({ booking }: { booking: Booking | null }) {
             });
         }
     }, [booking, toast]);
+
+    // Automatically trigger verification when dialog opens
+    useEffect(() => {
+        handleVerifyPayment();
+    }, [handleVerifyPayment]);
     
     if (!booking) return null;
 
@@ -172,9 +195,9 @@ function PaymentVerificationStatus({ booking }: { booking: Booking | null }) {
 }
 
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ allBookings, loading: allBookingsLoading }: { allBookings: Booking[], loading: boolean }) {
   const { user } = useAuth();
-  const { bookings, loading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings, deleteBookingsInRange } = useBooking();
+  const { bookings, loading: filteredBookingsLoading, error, fetchBookings, updateBookingStatus, deleteBooking, clearBookings, deleteBookingsInRange } = useBooking();
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
@@ -186,6 +209,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  const loading = allBookingsLoading || filteredBookingsLoading;
 
   // Refetch bookings when the component mounts or the filter changes.
   useEffect(() => {
@@ -207,6 +232,42 @@ export default function AdminDashboard() {
   useEffect(() => {
     setCurrentPage(1);
   }, [statusFilter]);
+
+   const { totalRevenue, totalBookings, avgBookingValue, chartData } = useMemo(() => {
+    const confirmedBookings = allBookings.filter(b => b.status === 'Confirmed');
+    const revenue = confirmedBookings.reduce((sum, b) => sum + b.totalFare, 0);
+    const bookingsCount = confirmedBookings.length;
+    const avgValue = bookingsCount > 0 ? revenue / bookingsCount : 0;
+
+    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
+    const dailyBookings = last7Days.map(day => {
+        const dayStart = startOfDay(day);
+        const dayEnd = endOfDay(day);
+        const count = allBookings.filter(b => {
+            const bookingDate = new Date(b.createdAt);
+            return bookingDate >= dayStart && bookingDate <= dayEnd;
+        }).length;
+
+        return {
+            date: format(day, 'MMM d'),
+            bookings: count,
+        };
+    });
+
+    return { 
+        totalRevenue: revenue, 
+        totalBookings: bookingsCount, 
+        avgBookingValue: avgValue,
+        chartData: dailyBookings
+    };
+  }, [allBookings]);
+
+  const chartConfig = {
+    bookings: {
+      label: "Bookings",
+      color: "hsl(var(--primary))",
+    },
+  };
   
   const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
@@ -389,192 +450,256 @@ export default function AdminDashboard() {
     ));
   };
   
-  if (loading && bookings.length === 0) {
+  if (loading && allBookings.length === 0) {
     return <DashboardSkeleton />;
   }
 
   return (
-    <>
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-            <div>
-                <CardTitle>Booking Requests</CardTitle>
-                <CardDescription>A list of all trip requests from customers.</CardDescription>
-            </div>
-             <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
-                <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
-                
-                <Dialog>
-                    <DialogTrigger asChild>
-                         <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
-                    </DialogTrigger>
-                    <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
-                        <DialogHeader className="p-6 pb-4">
-                            <DialogTitle>Bulk Delete Bookings</DialogTitle>
-                            <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="px-6 space-y-6">
-                            <AlertDialog>
-                               <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                        <AlertDialogDescription>This will permanently delete all booking records. This is irreversible. Please confirm.</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                                            {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Yes, delete all
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From {totalBookings} confirmed bookings</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Confirmed Bookings</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBookings}</div>
+            <p className="text-xs text-muted-foreground">All-time confirmed trips</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Booking Value</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₦{avgBookingValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</div>
+            <p className="text-xs text-muted-foreground">Average fare per confirmed trip</p>
+          </CardContent>
+        </Card>
+      </div>
 
-                            <Separator />
+       <Card>
+        <CardHeader>
+            <CardTitle>Recent Bookings (Last 7 Days)</CardTitle>
+            <CardDescription>An overview of booking activity over the past week.</CardDescription>
+        </CardHeader>
+        <CardContent className="pl-2">
+             <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                 <BarChart accessibilityLayer data={chartData}>
+                    <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => value.slice(0, 6)}
+                    />
+                    <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        allowDecimals={false}
+                     />
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent indicator="dot" />}
+                    />
+                    <Bar dataKey="bookings" fill="var(--color-bookings)" radius={4} />
+                 </BarChart>
+            </ChartContainer>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div>
+                    <CardTitle>Booking Requests</CardTitle>
+                    <CardDescription>A list of all trip requests from customers.</CardDescription>
+                </div>
+                 <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                    <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Download CSV</Button>
+                    
+                    <Dialog>
+                        <DialogTrigger asChild>
+                             <Button variant="destructive" size="sm"><ListX className="mr-2 h-4 w-4" />Bulk Actions</Button>
+                        </DialogTrigger>
+                        <DialogContent className="p-0 max-h-[65vh] sm:max-h-full">
+                            <DialogHeader className="p-6 pb-4">
+                                <DialogTitle>Bulk Delete Bookings</DialogTitle>
+                                <DialogDescription>Permanently delete multiple booking records at once. This action cannot be undone.</DialogDescription>
+                            </DialogHeader>
                             
-                            <div className="space-y-4">
-                                <h3 className="font-semibold">Delete by Date Range</h3>
-                                <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
+                            <div className="px-6 space-y-6">
+                                <AlertDialog>
+                                   <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" className="w-full justify-center">Delete all Bookings</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete all booking records. This is irreversible. Please confirm.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                                {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Yes, delete all
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+
+                                <Separator />
                                 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
-                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
-                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 29), to: new Date() })}>Last 30 Days</Button>
-                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) })}>This Month</Button>
-                                    <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfMonth(subMonths(new Date(), 1)), to: endOfMonth(subMonths(new Date(), 1)) })}>Last Month</Button>
+                                <div className="space-y-4">
+                                    <h3 className="font-semibold">Delete by Date Range</h3>
+                                    <p className="text-sm text-muted-foreground">Select a date range to delete bookings created within that period.</p>
+                                    
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2">
+                                        <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 6), to: new Date() })}>Last 7 Days</Button>
+                                        <Button size="sm" variant="outline" onClick={() => setDateRange({ from: subDays(new Date(), 29), to: new Date() })}>Last 30 Days</Button>
+                                        <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 30)), to: new Date() })}>This Month</Button>
+                                        <Button size="sm" variant="outline" onClick={() => setDateRange({ from: startOfDay(subDays(new Date(), 60)), to: endOfDay(subDays(new Date(), 31)) })}>Last Month</Button>
+                                    </div>
+                                    
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !dateRange && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {dateRange?.from ? (
+                                            dateRange.to ? (
+                                                <>
+                                                {format(dateRange.from, "LLL dd, y")} -{" "}
+                                                {format(dateRange.to, "LLL dd, y")}
+                                                </>
+                                            ) : (
+                                                format(dateRange.from, "LLL dd, y")
+                                            )
+                                            ) : (
+                                            <span>Pick a date range</span>
+                                            )}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                initialFocus
+                                                mode="range"
+                                                defaultMonth={dateRange?.from}
+                                                selected={dateRange}
+                                                onSelect={setDateRange}
+                                                numberOfMonths={2}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
-                                
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                        "w-full justify-start text-left font-normal",
-                                        !dateRange && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {dateRange?.from ? (
-                                        dateRange.to ? (
-                                            <>
-                                            {format(dateRange.from, "LLL dd, y")} -{" "}
-                                            {format(dateRange.to, "LLL dd, y")}
-                                            </>
-                                        ) : (
-                                            format(dateRange.from, "LLL dd, y")
-                                        )
-                                        ) : (
-                                        <span>Pick a date range</span>
-                                        )}
-                                    </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0" align="start">
-                                        <Calendar
-                                            initialFocus
-                                            mode="range"
-                                            defaultMonth={dateRange?.from}
-                                            selected={dateRange}
-                                            onSelect={setDateRange}
-                                            numberOfMonths={2}
-                                        />
-                                    </PopoverContent>
-                                </Popover>
                             </div>
-                        </div>
 
-                        <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
-                             <DialogClose asChild>
-                                <Button variant="outline">Close</Button>
-                             </DialogClose>
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            This will permanently delete all bookings from <strong className="text-foreground">{dateRange?.from && format(dateRange.from, 'PPP')}</strong> to <strong className="text-foreground">{dateRange?.to && format(dateRange.to, 'PPP')}</strong>. Are you sure?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                                             {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Yes, delete range
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                            <DialogFooter className="bg-muted/30 p-6 mt-6 flex-row justify-between w-full">
+                                 <DialogClose asChild>
+                                    <Button variant="outline">Close</Button>
+                                 </DialogClose>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" disabled={!dateRange?.from || !dateRange?.to}>Delete Selected Range</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete all bookings from <strong className="text-foreground">{dateRange?.from && format(dateRange.from, 'PPP')}</strong> to <strong className="text-foreground">{dateRange?.to && format(dateRange.to, 'PPP')}</strong>. Are you sure?
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleBulkDelete('range')} disabled={isBulkDeleting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                                 {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Yes, delete range
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
 
-                <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-                </Button>
+                    <Button variant="outline" size="icon" onClick={() => fetchBookings(statusFilter)} disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                    </Button>
+                </div>
             </div>
-        </div>
-        <div className="flex items-center gap-2 pt-4">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-             <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
-                <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="All">All</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Confirmed">Confirmed</SelectItem>
-                    <SelectItem value="Cancelled">Cancelled</SelectItem>
-                </SelectContent>
-            </Select>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead className="hidden md:table-cell">Trip</TableHead>
-                <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {renderTableContent()}
-            </TableBody>
-            </Table>
-        </div>
-      </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
-        <div className="text-sm text-muted-foreground">
-          Showing page {currentPage} of {totalPages}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => prev - 1)}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => prev + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-          </Button>
-        </div>
-      </CardFooter>
+            <div className="flex items-center gap-2 pt-4">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                 <Select onValueChange={(value) => setStatusFilter(value as any)} defaultValue="All">
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <div className="overflow-x-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead className="hidden md:table-cell">Trip</TableHead>
+                    <TableHead className="hidden lg:table-cell">Vehicle</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {renderTableContent()}
+                </TableBody>
+                </Table>
+            </div>
+        </CardContent>
+        <CardFooter className="flex flex-col sm:flex-row items-center justify-between border-t pt-4 gap-4">
+            <div className="text-sm text-muted-foreground">
+              Showing page {currentPage} of {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+        </CardFooter>
       </Card>
       
       {selectedBooking && (
@@ -715,6 +840,6 @@ export default function AdminDashboard() {
             </DialogContent>
         </Dialog>
       )}
-    </>
+    </div>
   );
 }
