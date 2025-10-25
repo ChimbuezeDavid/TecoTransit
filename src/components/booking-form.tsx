@@ -19,10 +19,11 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
+import PaymentDialog from './payment-dialog';
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -65,6 +66,9 @@ export default function BookingForm() {
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [currentBookingData, setCurrentBookingData] = useState<BookingFormData | null>(null);
+
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -138,23 +142,33 @@ export default function BookingForm() {
       return;
     }
     
+    const bookingDataWithFare = { ...formData, totalFare };
+    setCurrentBookingData(bookingDataWithFare);
+    setIsPaymentDialogOpen(true);
+    setIsProcessing(false);
+  };
+  
+  const handlePaymentSuccess = async () => {
+    if (!currentBookingData) return;
+    setIsProcessing(true);
     try {
-      const bookingData: BookingFormData = { ...formData, totalFare };
-      await createBooking(bookingData);
+      await createBooking(currentBookingData);
+      setIsPaymentDialogOpen(false);
       setIsConfirmationOpen(true);
       form.reset();
+      setCurrentBookingData(null);
     } catch (error) {
-      console.error("Booking submission error:", error);
-      toast({
+       console.error("Booking creation error after payment:", error);
+       toast({
         variant: "destructive",
         title: "Oh no! Something went wrong.",
-        description: `There was a problem submitting your booking. Please try again. ${error instanceof Error ? error.message : ''}`,
+        description: `Your payment was successful, but we couldn't finalize your booking. Please contact support. ${error instanceof Error ? error.message : ''}`,
       });
     } finally {
       setIsProcessing(false);
     }
   };
-  
+
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
@@ -374,24 +388,28 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || baseFare <= 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare <= 0}>
                 {isProcessing ? (
-                    <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Submitting...
-                    </>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 ) : (
-                    <>
-                        Submit Booking
-                        <ArrowRight className="ml-2 h-5 w-5" />
-                    </>
+                    <CreditCard className="mr-2 h-5 w-5" />
                 )}
+                Proceed to Payment
             </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
     
+    {isPaymentDialogOpen && currentBookingData && (
+      <PaymentDialog
+        isOpen={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        bookingData={currentBookingData}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+    )}
+
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
       onClose={() => setIsConfirmationOpen(false)}
