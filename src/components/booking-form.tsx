@@ -109,6 +109,7 @@ export default function BookingForm() {
     amount: totalFare * 100, // Amount in kobo
     currency: 'NGN',
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money'],
   };
 
   const handlePaymentSuccess = async (bookingData: BookingFormData, paymentReference: string) => {
@@ -433,4 +434,5 @@ export default function BookingForm() {
     </>
   );
 }
+
 
