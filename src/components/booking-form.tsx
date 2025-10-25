@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { BookingFormData } from '@/lib/types';
+import type { BookingFormData, Booking } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,9 @@ import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, He
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
-import PaymentDialog from './payment-dialog';
+import { usePaystackPayment } from 'react-paystack';
+import type { PaystackProps } from 'react-paystack/dist/types';
+
 
 const bookingSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -66,10 +68,7 @@ export default function BookingForm() {
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [currentBookingData, setCurrentBookingData] = useState<BookingFormData | null>(null);
-
-
+  
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -81,7 +80,7 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue, trigger } = form;
+  const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
   const watchAllFields = watch();
 
   const availableVehicles = useMemo(() => {
@@ -101,6 +100,70 @@ export default function BookingForm() {
     const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
     return { totalFare: newTotalFare, baseFare: newBaseFare };
   }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
+
+  
+  const paystackConfig: Omit<PaystackProps, 'onSuccess' | 'onClose'> = {
+    reference: new Date().getTime().toString(),
+    email: getValues('email'),
+    amount: totalFare * 100, // Amount in kobo
+    currency: 'NGN',
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
+  };
+
+  const handlePaymentSuccess = async (bookingData: BookingFormData) => {
+    setIsProcessing(true);
+    try {
+      await createBooking(bookingData);
+      setIsConfirmationOpen(true);
+      form.reset();
+    } catch (error) {
+       console.error("Booking creation error after payment:", error);
+       toast({
+        variant: "destructive",
+        title: "Oh no! Something went wrong.",
+        description: `Your payment was successful, but we couldn't finalize your booking. Please contact support. ${error instanceof Error ? error.message : ''}`,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const initializePayment = usePaystackPayment(paystackConfig);
+
+  const onBookingSubmit = (formData: z.infer<typeof bookingSchema>) => {
+    if (baseFare <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Route Unavailable',
+        description: 'This route is currently not available for booking. Please select another.',
+      });
+      return;
+    }
+
+    const bookingDataWithFare = { ...formData, totalFare };
+
+    initializePayment({
+        onSuccess: () => {
+            toast({
+              title: "Payment Successful!",
+              description: "Your payment has been received. Finalizing your booking...",
+            });
+            handlePaymentSuccess(bookingDataWithFare);
+        },
+        onClose: () => {
+            toast({
+              variant: "default",
+              title: "Payment Cancelled",
+              description: "You have cancelled the payment process.",
+            });
+        },
+        config: {
+            ...paystackConfig,
+            email: formData.email, // Use validated form email
+            amount: totalFare * 100,
+        }
+    });
+  };
 
 
   useEffect(() => {
@@ -129,45 +192,6 @@ export default function BookingForm() {
     return () => subscription.unsubscribe();
   }, [watch, getValues, setValue, trigger, availableVehicles]);
 
-
-  const handleSubmit = async (formData: z.infer<typeof bookingSchema>) => {
-    setIsProcessing(true);
-     if (baseFare <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Route Unavailable',
-        description: 'This route is currently not available for booking. Please select another.',
-      });
-      setIsProcessing(false);
-      return;
-    }
-    
-    const bookingDataWithFare = { ...formData, totalFare };
-    setCurrentBookingData(bookingDataWithFare);
-    setIsPaymentDialogOpen(true);
-    setIsProcessing(false);
-  };
-  
-  const handlePaymentSuccess = async () => {
-    if (!currentBookingData) return;
-    setIsProcessing(true);
-    try {
-      await createBooking(currentBookingData);
-      setIsPaymentDialogOpen(false);
-      setIsConfirmationOpen(true);
-      form.reset();
-      setCurrentBookingData(null);
-    } catch (error) {
-       console.error("Booking creation error after payment:", error);
-       toast({
-        variant: "destructive",
-        title: "Oh no! Something went wrong.",
-        description: `Your payment was successful, but we couldn't finalize your booking. Please contact support. ${error instanceof Error ? error.message : ''}`,
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
@@ -212,7 +236,7 @@ export default function BookingForm() {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <form onSubmit={formHandleSubmit(onBookingSubmit)}>
           <CardContent className="space-y-8 pt-6">
             <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
                 <FormField control={form.control} name="name" render={({ field }) => (
@@ -400,15 +424,6 @@ export default function BookingForm() {
         </form>
       </Form>
     </Card>
-    
-    {isPaymentDialogOpen && currentBookingData && (
-      <PaymentDialog
-        isOpen={isPaymentDialogOpen}
-        onClose={() => setIsPaymentDialogOpen(false)}
-        bookingData={currentBookingData}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
-    )}
 
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
