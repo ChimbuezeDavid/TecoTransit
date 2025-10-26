@@ -6,15 +6,16 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { signInWithEmailAndPassword, sendPasswordResetEmail, ActionCodeSettings } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { sendPasswordReset } from "@/app/actions/send-password-reset";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Route, Eye, EyeOff } from "lucide-react";
+import { Route, Eye, EyeOff, Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -25,6 +26,7 @@ export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -62,7 +64,6 @@ export function LoginForm() {
       form.setError("email", { type: "manual", message: "Please enter your email to reset the password." });
       return;
     }
-     // Zod validation for email format
     const emailSchema = z.string().email();
     const validation = emailSchema.safeParse(email);
     if (!validation.success) {
@@ -70,34 +71,38 @@ export function LoginForm() {
       return;
     }
 
-    setLoading(true);
-
-    const actionCodeSettings: ActionCodeSettings = {
-      url: `https://tecotransit.org/admin/login`,
-      handleCodeInApp: true,
-    };
-
+    setResetLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email, actionCodeSettings);
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Check your inbox for instructions to reset your password.",
-      });
+      const result = await sendPasswordReset(email);
+      if (result.success) {
+        toast({
+          title: "Password Reset Email Sent",
+          description: "Check your inbox for instructions to reset your password.",
+        });
+      } else {
+        // Provide more specific feedback based on the error
+        let description = result.error || "Could not send password reset email. Please try again.";
+        if (description.includes('EMAIL_NOT_FOUND')) {
+          description = 'No account found with that email address.';
+        } else if (description.includes('auth/unauthorized-continue-uri')) {
+            description = "The app's domain is not authorized. Please configure it in the Firebase console.";
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Error Sending Email",
+          description: description,
+        });
+      }
     } catch (error) {
       console.error("Password reset error:", error);
-      
-      let description = "Could not send password reset email. Please try again.";
-      if (error instanceof Error && error.message.includes('auth/unauthorized-continue-uri')) {
-          description = "The domain 'tecotransit.org' is not authorized. Please add it to your Firebase project's allowlisted domains in the Authentication settings.";
-      }
-
-       toast({
+      toast({
         variant: "destructive",
         title: "Error Sending Email",
-        description: description,
+        description: error instanceof Error ? error.message : "Could not send password reset email. Please try again.",
       });
     } finally {
-        setLoading(false);
+      setResetLoading(false);
     }
   };
 
@@ -131,7 +136,8 @@ export function LoginForm() {
                 <FormItem>
                     <div className="flex items-center justify-between">
                         <FormLabel>Password</FormLabel>
-                        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handlePasswordReset} disabled={loading}>
+                        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={handlePasswordReset} disabled={resetLoading}>
+                            {resetLoading ? <Loader2 className="mr-2 h-3 w-3 animate-spin"/> : null}
                             Forgot password?
                         </Button>
                     </div>

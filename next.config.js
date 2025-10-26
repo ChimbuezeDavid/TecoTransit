@@ -31,6 +31,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: '/auth/:path*',
+      },
+    ]
+  },
 };
 
 module.exports = nextConfig;
