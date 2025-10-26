@@ -80,7 +80,19 @@ export function LoginForm() {
           description: "Check your inbox for instructions to reset your password.",
         });
       } else {
-        throw new Error(result.error || "An unknown error occurred.");
+        // Provide more specific feedback based on the error
+        let description = result.error || "Could not send password reset email. Please try again.";
+        if (description.includes('EMAIL_NOT_FOUND')) {
+          description = 'No account found with that email address.';
+        } else if (description.includes('auth/unauthorized-continue-uri')) {
+            description = "The app's domain is not authorized. Please configure it in the Firebase console.";
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Error Sending Email",
+          description: description,
+        });
       }
     } catch (error) {
       console.error("Password reset error:", error);
