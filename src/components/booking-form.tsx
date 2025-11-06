@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -20,12 +19,12 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, ArrowRight, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
-import { usePaystackPayment } from 'react-paystack';
-import type { PaystackProps, PaystackConsumerProps, PaystackProviderProps } from 'react-paystack';
+import { initializeTransaction } from '@/app/actions/paystack';
+import { useRouter } from 'next/navigation';
 
 
 const bookingSchema = z.object({
@@ -63,7 +62,8 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { prices, loading: pricesLoading } = useBooking();
+  const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
@@ -103,36 +103,7 @@ export default function BookingForm() {
   }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
 
   
-  const paystackConfig: Omit<PaystackProps, 'onSuccess' | 'onClose'> = {
-    reference: new Date().getTime().toString(),
-    email: getValues('email'),
-    amount: totalFare * 100, // Amount in kobo
-    currency: 'NGN',
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '',
-    channels: ['card', 'bank', 'ussd', 'qr', 'mobile_money', 'bank_transfer'],
-  };
-
-  const handlePaymentSuccess = async (bookingData: BookingFormData, paymentReference: string) => {
-    setIsProcessing(true);
-    try {
-      await createBooking({...bookingData, paymentReference});
-      setIsConfirmationOpen(true);
-      form.reset();
-    } catch (error) {
-       console.error("Booking creation error after payment:", error);
-       toast({
-        variant: "destructive",
-        title: "Oh no! Something went wrong.",
-        description: `Your payment was successful, but we couldn't finalize your booking. Please contact support. ${error instanceof Error ? error.message : ''}`,
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const initializePayment = usePaystackPayment(paystackConfig);
-
-  const onBookingSubmit = (formData: z.infer<typeof bookingSchema>) => {
+  const onBookingSubmit = async (formData: z.infer<typeof bookingSchema>) => {
     if (baseFare <= 0) {
       toast({
         variant: 'destructive',
@@ -141,30 +112,60 @@ export default function BookingForm() {
       });
       return;
     }
+    
+    setIsProcessing(true);
 
-    const bookingDataWithFare = { ...formData, totalFare };
+    try {
+        const bookingDataWithFare = { ...formData, totalFare };
 
-    initializePayment({
-        onSuccess: (transaction) => {
-            toast({
-              title: "Payment Successful!",
-              description: "Your payment has been received. Finalizing your booking...",
-            });
-            handlePaymentSuccess(bookingDataWithFare, transaction.reference);
-        },
-        onClose: () => {
-            toast({
-              variant: "default",
-              title: "Payment Cancelled",
-              description: "You have cancelled the payment process.",
-            });
-        },
-        config: {
-            ...paystackConfig,
-            email: formData.email, // Use validated form email
-            amount: totalFare * 100,
+        const cleanBookingData = {
+          name: bookingDataWithFare.name,
+          email: bookingDataWithFare.email,
+          phone: bookingDataWithFare.phone,
+          pickup: bookingDataWithFare.pickup,
+          destination: bookingDataWithFare.destination,
+          intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
+          alternativeDate: format(bookingDataWithFare.alternativeDate, 'yyyy-MM-dd'),
+          vehicleType: bookingDataWithFare.vehicleType,
+          luggageCount: bookingDataWithFare.luggageCount,
+          totalFare: bookingDataWithFare.totalFare,
+        };
+
+        const result = await initializeTransaction({
+            email: cleanBookingData.email,
+            amount: cleanBookingData.totalFare * 100, // Amount in kobo
+            metadata: {
+                booking_details: JSON.stringify(cleanBookingData),
+                custom_fields: [
+                    {
+                        display_name: "Customer Name",
+                        variable_name: "customer_name",
+                        value: cleanBookingData.name
+                    },
+                    {
+                        display_name: "Route",
+                        variable_name: "route",
+                        value: `${cleanBookingData.pickup} to ${cleanBookingData.destination}`
+                    }
+                ]
+            }
+        });
+        
+        if (result.status && result.data?.authorization_url) {
+            router.push(result.data.authorization_url);
+        } else {
+            throw new Error(result.message || 'Failed to initialize transaction.');
         }
-    });
+
+    } catch (error) {
+        console.error("Payment initialization error:", error);
+        toast({
+            variant: "destructive",
+            title: "Oh no! Something went wrong.",
+            description: `We couldn't start the payment process. Please try again. ${error instanceof Error ? error.message : ''}`,
+        });
+        setIsProcessing(false);
+    }
   };
 
 
@@ -434,8 +435,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-
-
-
-    
