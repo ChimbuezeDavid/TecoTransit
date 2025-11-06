@@ -7,8 +7,15 @@ declare namespace NodeJS {
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: string;
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: string;
     NEXT_PUBLIC_FIREBASE_APP_ID: string;
+    
+    FIREBASE_CLIENT_EMAIL: string;
+    FIREBASE_PRIVATE_KEY: string;
+    
     RESEND_API_KEY: string;
+    
     NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: string;
     PAYSTACK_SECRET_KEY: string;
+    
+    NEXT_PUBLIC_BASE_URL: string;
   }
 }
