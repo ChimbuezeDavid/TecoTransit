@@ -36,6 +36,7 @@ export type PriceRule = {
 
 export type Feedback = {
   id: string;
+  name?: string;
   rating: number;
   message: string;
   createdAt: Date;

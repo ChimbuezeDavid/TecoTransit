@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Trash2, Star, Loader2, MessageSquare, AlertCircle } from "lucide-react";
+import { Trash2, Star, Loader2, MessageSquare, AlertCircle, User } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,7 @@ function FeedbackSkeleton() {
                     <TableHeader>
                         <TableRow>
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                            <TableHead><Skeleton className="h-5 w-32" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-full" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
@@ -37,6 +38,7 @@ function FeedbackSkeleton() {
                         {[...Array(5)].map((_, i) => (
                             <TableRow key={i}>
                                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
@@ -156,6 +158,7 @@ export default function AdminFeedbackPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-[120px]">Rating</TableHead>
+                                    <TableHead className="w-[180px]">Submitted By</TableHead>
                                     <TableHead>Message</TableHead>
                                     <TableHead className="w-[150px]">Submitted</TableHead>
                                     <TableHead className="w-[80px] text-right">Actions</TableHead>
@@ -167,7 +170,13 @@ export default function AdminFeedbackPage() {
                                         <TableCell>
                                             <StarRating rating={item.rating} />
                                         </TableCell>
-                                        <TableCell className="max-w-[500px] whitespace-pre-wrap">{item.message}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                <span>{item.name || 'Anonymous'}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="max-w-[400px] whitespace-pre-wrap">{item.message}</TableCell>
                                         <TableCell>{formatDistanceToNow(item.createdAt, { addSuffix: true })}</TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
