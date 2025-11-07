@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Trash2, Star, Loader2, MessageSquare, AlertCircle } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -76,10 +76,12 @@ export default function AdminFeedbackPage() {
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const feedbackData = querySnapshot.docs.map(doc => {
                 const data = doc.data();
+                // Firestore timestamps need to be converted to Date objects
+                const createdAt = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
                 return {
                     id: doc.id,
                     ...data,
-                    createdAt: data.createdAt.toDate(),
+                    createdAt: createdAt,
                 } as Feedback;
             });
             setFeedback(feedbackData);
