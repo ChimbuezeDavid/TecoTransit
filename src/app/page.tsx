@@ -1,6 +1,5 @@
 
 import BookingForm from '@/components/booking-form';
-import CustomerPriceAlert from '@/components/customer-price-alert';
 
 export default function Home() {
   return (
@@ -14,7 +13,6 @@ export default function Home() {
         </p>
       </div>
       <div className="max-w-3xl mx-auto">
-        <CustomerPriceAlert />
         <BookingForm />
       </div>
     </div>

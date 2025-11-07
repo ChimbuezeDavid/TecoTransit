@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -17,8 +16,8 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData & { paymentReference: string }) => Promise<Booking>;
-  updateBookingStatus: (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => Promise<void>;
+  createBooking: (data: BookingFormData) => Promise<Booking>;
+  updateBookingStatus: (bookingId: string, status: 'Cancelled') => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
   clearBookings: () => void;
@@ -73,7 +72,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     
     const bookingsQuery = query(bookingsCollection, ...queryConstraints);
 
-
     const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
       const bookingsData = querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -82,9 +80,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
             : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
 
         return {
-          id: doc.id, // Use firestore doc id as primary id
+          id: doc.id,
           ...data,
-          firestoreDocId: doc.id,
           createdAt: createdAtMillis,
         } as Booking;
       });
@@ -98,13 +95,12 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData & { paymentReference: string }) => {
+  const createBooking = useCallback(async (data: BookingFormData) => {
     const { privacyPolicy, ...restOfData } = data;
-    const bookingUuid = uuidv4();
-
-    const firestoreBooking: Omit<Booking, 'firestoreDocId' | 'createdAt'> & {createdAt: Timestamp} = {
+    
+    const firestoreBooking = {
       ...restOfData,
-      id: bookingUuid,
+      id: uuidv4(),
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
@@ -115,25 +111,22 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
     return {
       ...firestoreBooking,
-      firestoreDocId: docRef.id,
+      id: docRef.id,
       createdAt: firestoreBooking.createdAt.toMillis(),
     } as Booking;
     
   }, []);
 
-  const updateBookingStatus = useCallback(async (bookingId: string, status: 'Confirmed' | 'Cancelled', confirmedDate?: string) => {
+  const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
       const bookingToUpdate = bookings.find(b => b.id === bookingId);
       
-      if (!bookingToUpdate || !bookingToUpdate.firestoreDocId) {
-        throw new Error("Booking not found or is missing Firestore document ID");
+      if (!bookingToUpdate) {
+        throw new Error("Booking not found");
       }
 
-      const bookingDocRef = doc(db, 'bookings', bookingToUpdate.firestoreDocId);
+      const bookingDocRef = doc(db, 'bookings', bookingToUpdate.id);
       
       const updateData: any = { status };
-      if (status === 'Confirmed' && confirmedDate) {
-        updateData.confirmedDate = confirmedDate;
-      }
       
       await updateDoc(bookingDocRef, updateData);
 
@@ -147,7 +140,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           destination: bookingToUpdate.destination,
           vehicleType: bookingToUpdate.vehicleType,
           totalFare: bookingToUpdate.totalFare,
-          confirmedDate: confirmedDate,
       }).catch(emailError => {
         // If email fails, show a non-blocking toast
         console.error("Failed to send status update email:", emailError);
@@ -163,16 +155,15 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingToDelete = bookings.find(b => b.id === id);
-      if (!bookingToDelete || !bookingToDelete.firestoreDocId) {
-        throw new Error("Booking not found or is missing Firestore document ID");
+      if (!bookingToDelete) {
+        throw new Error("Booking not found");
       }
-      const bookingDocRef = doc(db, 'bookings', bookingToDelete.firestoreDocId);
+      const bookingDocRef = doc(db, 'bookings', bookingToDelete.id);
       await deleteDoc(bookingDocRef);
   }, [bookings]);
 
   const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
     const startTimestamp = Timestamp.fromDate(startDate);
-    // Add 1 day to the end date to make the range inclusive
     const endOfDay = new Date(endDate);
     endOfDay.setHours(23, 59, 59, 999);
     const endTimestamp = Timestamp.fromDate(endOfDay);

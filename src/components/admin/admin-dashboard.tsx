@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -11,19 +10,16 @@ import { DateRange } from "react-day-picker";
 import Link from 'next/link';
 import Image from 'next/image';
 
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck, TrendingUp, Users, Wallet } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck, TrendingUp, Users, Wallet, Check, CircleDot } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
@@ -206,7 +202,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [confirmedDate, setConfirmedDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -279,26 +274,16 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
-    setConfirmedDate(booking.confirmedDate || '');
     setIsManageDialogOpen(true);
   }
 
-  const handleUpdateBooking = async (status: 'Confirmed' | 'Cancelled') => {
+  const handleUpdateBooking = async (status: 'Cancelled') => {
     if (!selectedBooking) return;
-
-    if (status === 'Confirmed' && !confirmedDate) {
-        toast({
-            variant: "destructive",
-            title: "Selection Required",
-            description: "Please select one of the departure dates to confirm.",
-        });
-        return;
-    }
 
     setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     
     try {
-        await updateBookingStatus(selectedBooking.id, status, status === 'Confirmed' ? confirmedDate : undefined);
+        await updateBookingStatus(selectedBooking.id, status);
         toast({
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
@@ -406,8 +391,19 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     switch (status) {
       case 'Confirmed': return 'default';
       case 'Cancelled': return 'destructive';
-      case 'Pending': return 'secondary';
+      case 'Paid': return 'secondary';
+      case 'Pending': return 'outline';
       default: return 'outline';
+    }
+  };
+  
+  const getStatusIcon = (status: Booking['status']) => {
+    switch (status) {
+        case 'Confirmed': return <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />;
+        case 'Cancelled': return <Ban className="h-5 w-5 text-destructive flex-shrink-0" />;
+        case 'Paid': return <HandCoins className="h-5 w-5 text-blue-500 flex-shrink-0" />;
+        case 'Pending': return <CircleDot className="h-5 w-5 text-amber-500 flex-shrink-0" />;
+        default: return <Check className="h-5 w-5" />;
     }
   };
   
@@ -588,8 +584,9 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                           <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
-                          <SelectItem value="All">All</SelectItem>
+                          <SelectItem value="All">All Statuses</SelectItem>
                           <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Paid">Paid</SelectItem>
                           <SelectItem value="Confirmed">Confirmed</SelectItem>
                           <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
@@ -645,7 +642,10 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                         <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
+                         <div className="flex items-center gap-2">
+                            {getStatusIcon(selectedBooking.status)}
+                            <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
+                         </div>
                     </div>
                      <DialogDescription>
                         Created on {format(selectedBooking.createdAt, 'PPP p')}
@@ -705,28 +705,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                             
                             <Separator/>
 
-                                {selectedBooking.status === 'Pending' && (
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-lg">Confirm Departure</h3>
-                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
-                                            <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Intended</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                            <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Alternative</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                        </RadioGroup>
-                                    </div>
-                                )}
-
                             {selectedBooking.status === 'Confirmed' && (
                                 <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
                                     <CheckCircle className="h-5 w-5 flex-shrink-0" />
@@ -758,15 +736,11 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                         </AlertDialog>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
-                        {selectedBooking.status === 'Pending' ? (
+                        {selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Confirmed' ? (
                             <>
                                 <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                                     Cancel Booking
-                                </Button>
-                                <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Confirm Booking
                                 </Button>
                             </>
                         ) : (
@@ -780,7 +754,3 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
-
-    
-
-    

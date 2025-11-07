@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,30 +9,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Anyone can read prices and alerts
+    // Anyone can read prices
     match /prices/{priceId} {
       allow read: if true;
       allow write: if isAdmin();
     }
     
-    match /alerts/{alertId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
     // Bookings can be created by anyone, but only managed by admins.
-    // A 'create' request must include a `createdAt` timestamp to prevent spam.
     match /bookings/{bookingId} {
       allow read, update, delete: if isAdmin();
       allow create: if request.resource.data.createdAt == request.time;
     }
 
-    // Booking summaries are managed entirely by the backend/admins.
-    match /booking_summaries/{bookingId} {
-        allow read: if true;
-        allow create, update, delete: if isAdmin();
-    }
-    
     // User and token data is admin-only.
     match /users/{userId} {
       allow read, write: if isAdmin();
