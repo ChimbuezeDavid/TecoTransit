@@ -194,7 +194,7 @@ export default function BookingForm() {
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
-       if (['pickup', 'destination', 'vehicleType', 'intendedDate'].includes(name as string)) {
+       if (name && ['pickup', 'destination', 'vehicleType', 'intendedDate'].includes(name)) {
           setAvailableSeats(null);
        }
        if (name === 'pickup' || name === 'destination') {
@@ -516,5 +516,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    

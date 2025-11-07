@@ -54,9 +54,6 @@ export async function getAvailableSeats({
             console.error(`Invalid vehicle type found: ${vehicleType}`);
             return 0;
         }
-
-        const vehicleDetails = vehicleOptions[vehicleKey];
-        if (!vehicleDetails) return 0;
         
         // Determine capacity from our constants map
         const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
@@ -68,7 +65,8 @@ export async function getAvailableSeats({
         // Count the number of seats already booked
         const bookedSeats = bookingsSnapshot.size;
 
-        return totalSeats - bookedSeats;
+        const available = totalSeats - bookedSeats;
+        return available > 0 ? available : 0;
 
     } catch (error) {
         console.error("Error fetching available seats:", error);
