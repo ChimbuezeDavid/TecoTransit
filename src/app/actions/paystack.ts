@@ -6,6 +6,7 @@ import type { BookingFormData } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
+import { sendBookingStatusEmail } from './send-email';
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -60,7 +61,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             status: 'Paid' as const, // Set status to 'Paid' instead of 'Confirmed'
             paymentReference: reference,
             totalFare: bookingDetails.totalFare,
-            confirmedDate: bookingDetails.intendedDate // Default to intended, can be changed later
+            // confirmedDate is NOT set here, it's set when the trip is confirmed
         };
 
         await newBookingRef.set(newBookingData);
@@ -72,7 +73,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             bookingDetails.pickup,
             bookingDetails.destination,
             bookingDetails.vehicleType,
-            bookingDetails.intendedDate
+            bookingDetails.intendedDate // Use the intended date for the check
         );
 
         return { success: true, bookingId: bookingId };
@@ -89,13 +90,13 @@ async function checkAndConfirmTrip(
     pickup: string,
     destination: string,
     vehicleType: string,
-    date: string
+    date: string // This is the intendedDate
 ) {
     const bookingsQuery = db.collection('bookings')
         .where('pickup', '==', pickup)
         .where('destination', '==', destination)
         .where('vehicleType', '==', vehicleType)
-        .where('confirmedDate', '==', date)
+        .where('intendedDate', '==', date) // CORRECTED: Query by intendedDate
         .where('status', '==', 'Paid');
 
     const pricingQuery = db.collection('prices')
@@ -121,8 +122,8 @@ async function checkAndConfirmTrip(
         return;
     }
     
-    // Find the vehicle capacity from constants, not from the price rule directly
-    const vehicleCapacity = (vehicleKey === '4-seater') ? 4 : (vehicleKey === '5-seater') ? 5 : (vehicleKey === '7-seater') ? 7 : 0;
+    const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
+    const vehicleCapacity = vehicleCapacityMap[vehicleKey] || 0;
     const totalSeatsForTrip = vehicleCapacity * (priceRule.vehicleCount || 1);
     
     const paidBookings = bookingsSnapshot.docs;
@@ -131,25 +132,30 @@ async function checkAndConfirmTrip(
         // The trip is full, confirm all 'Paid' bookings for this list
         const batch = db.batch();
         paidBookings.forEach(doc => {
-            batch.update(doc.ref, { status: 'Confirmed' });
+            // Set status to 'Confirmed' and set the confirmedDate to the intendedDate
+            batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
         });
         
         await batch.commit();
 
-        // After committing, send emails
-        paidBookings.forEach(doc => {
+        // After committing, send confirmation emails
+        for (const doc of paidBookings) {
             const bookingData = doc.data();
-            sendBookingStatusEmail({
-                name: bookingData.name,
-                email: bookingData.email,
-                status: 'Confirmed',
-                bookingId: doc.id,
-                pickup: bookingData.pickup,
-                destination: bookingData.destination,
-                vehicleType: bookingData.vehicleType,
-                totalFare: bookingData.totalFare,
-                confirmedDate: bookingData.confirmedDate,
-            }).catch(e => console.error(`Failed to send confirmation email for booking ${doc.id}:`, e));
-        });
+            try {
+                await sendBookingStatusEmail({
+                    name: bookingData.name,
+                    email: bookingData.email,
+                    status: 'Confirmed',
+                    bookingId: doc.id,
+                    pickup: bookingData.pickup,
+                    destination: bookingData.destination,
+                    vehicleType: bookingData.vehicleType,
+                    totalFare: bookingData.totalFare,
+                    confirmedDate: date, // Use the date we confirmed for
+                });
+            } catch (e) {
+                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+            }
+        }
     }
 }
