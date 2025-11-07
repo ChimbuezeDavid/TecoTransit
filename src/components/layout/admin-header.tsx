@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
@@ -25,6 +25,7 @@ export default function AdminHeader() {
   const navLinks = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
+    { href: "/admin/feedback", icon: MessageSquare, label: "Feedback" },
     { href: "/admin/settings", icon: Settings, label: "Settings" },
   ];
 

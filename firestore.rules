@@ -27,6 +27,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Feedback can be created by anyone, but only managed by admins.
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     // User and token data is admin-only.
     match /users/{userId} {
       allow read, write: if isAdmin();

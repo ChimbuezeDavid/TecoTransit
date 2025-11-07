@@ -33,3 +33,10 @@ export type PriceRule = {
     price: number;
     vehicleCount: number; // Number of vehicles for this route
 }
+
+export type Feedback = {
+  id: string;
+  rating: number;
+  message: string;
+  createdAt: Date;
+};
