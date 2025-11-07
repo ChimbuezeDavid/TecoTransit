@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -72,6 +72,9 @@ export default function BookingForm() {
   const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   
+  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
+  const [seatsLoading, setSeatsLoading] = useState(false);
+
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -118,20 +121,21 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
-        const seatsAvailable = await getAvailableSeats({
+        const seatsNowAvailable = await getAvailableSeats({
             pickup: formData.pickup,
             destination: formData.destination,
             vehicleType: formData.vehicleType,
             date: format(formData.intendedDate, 'yyyy-MM-dd')
         });
 
-        if (seatsAvailable <= 0) {
+        if (seatsNowAvailable <= 0) {
             toast({
                 variant: 'destructive',
                 title: 'No Seats Available',
-                description: 'Sorry, this trip is fully booked for the selected date. Please try the alternative date or another trip.',
+                description: 'Sorry, this trip is now fully booked. Please try the alternative date or another trip.',
             });
             setIsProcessing(false);
+            setAvailableSeats(0); // Update UI
             return;
         }
         
@@ -190,6 +194,9 @@ export default function BookingForm() {
 
   useEffect(() => {
     const subscription = watch((values, { name }) => {
+       if (['pickup', 'destination', 'vehicleType', 'intendedDate'].includes(name as string)) {
+          setAvailableSeats(null);
+       }
        if (name === 'pickup' || name === 'destination') {
             const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === values.vehicleType);
             if (!currentVehicleStillAvailable) {
@@ -214,11 +221,67 @@ export default function BookingForm() {
     return () => subscription.unsubscribe();
   }, [watch, getValues, setValue, trigger, availableVehicles]);
 
+  useEffect(() => {
+    const { pickup, destination, vehicleType, intendedDate } = watchAllFields;
+    
+    const checkSeats = async () => {
+        if (pickup && destination && vehicleType && intendedDate) {
+            setSeatsLoading(true);
+            try {
+                const seats = await getAvailableSeats({
+                    pickup,
+                    destination,
+                    vehicleType,
+                    date: format(intendedDate, 'yyyy-MM-dd'),
+                });
+                setAvailableSeats(seats);
+            } catch (err) {
+                console.error("Failed to get seat count", err);
+                setAvailableSeats(null); // Clear on error
+            } finally {
+                setSeatsLoading(false);
+            }
+        }
+    };
+    checkSeats();
+  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.intendedDate]);
+
 
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
+
+  const renderSeatStatus = () => {
+    if (seatsLoading) {
+        return (
+            <div className="flex items-center text-sm text-muted-foreground mt-2">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Checking availability...</span>
+            </div>
+        )
+    }
+
+    if (availableSeats !== null) {
+        if (availableSeats > 0) {
+            return (
+                <div className="flex items-center text-sm text-green-600 mt-2 font-medium">
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    <span>{availableSeats} Seat{availableSeats > 1 ? 's' : ''} Available</span>
+                </div>
+            )
+        } else {
+            return (
+                <div className="flex items-center text-sm text-destructive mt-2 font-medium">
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    <span>Fully Booked</span>
+                </div>
+            )
+        }
+    }
+
+    return null;
+  }
 
   return (
     <>
@@ -310,33 +373,6 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                 <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Vehicle Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder={
-                                    pricesLoading ? 'Loading vehicles...' : 
-                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
-                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
-                                    'Select a vehicle'
-                                } />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {availableVehicles.map((v) => (
-                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
                     <FormLabel>Intended Departure</FormLabel>
@@ -389,8 +425,36 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
+                 <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Vehicle Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={
+                                    pricesLoading ? 'Loading vehicles...' : 
+                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
+                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
+                                    'Select a vehicle'
+                                } />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {availableVehicles.map((v) => (
+                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        {renderSeatStatus()}
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                     <FormLabel>Number of Bags (Max {selectedVehicleDetails?.maxLuggages ?? 'N/A'})</FormLabel>
                     <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!watchAllFields.vehicleType}>
                         <FormControl>
@@ -434,7 +498,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || availableSeats === 0}>
                 {isProcessing || settingsLoading ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
                 {settingsLoading ? 'Loading...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
             </Button>
@@ -452,3 +516,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    

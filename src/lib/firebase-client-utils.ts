@@ -19,6 +19,7 @@ export async function getAvailableSeats({
     date,
 }: GetAvailableSeatsArgs): Promise<number> {
     try {
+        // Query for the specific pricing/fleet rule
         const pricingQuery = query(
             collection(db, 'prices'),
             where('pickup', '==', pickup),
@@ -26,12 +27,13 @@ export async function getAvailableSeats({
             where('vehicleType', '==', vehicleType)
         );
 
+        // Query for bookings that are already 'Paid' for that specific trip on that date
         const bookingsQuery = query(
             collection(db, 'bookings'),
             where('pickup', '==', pickup),
             where('destination', '==', destination),
             where('vehicleType', '==', vehicleType),
-            where('confirmedDate', '==', date),
+            where('intendedDate', '==', date), // Check against the intended date
             where('status', 'in', ['Paid', 'Confirmed'])
         );
 
@@ -42,7 +44,7 @@ export async function getAvailableSeats({
 
         if (pricingSnapshot.empty) {
             console.log(`No price/fleet rule found for trip.`);
-            return 0;
+            return 0; // No rule means no availability
         }
         
         const priceRule = pricingSnapshot.docs[0].data();
@@ -53,12 +55,17 @@ export async function getAvailableSeats({
             return 0;
         }
 
-        const vehicleDetails = vehicleKey ? vehicleOptions[vehicleKey] : null;
+        const vehicleDetails = vehicleOptions[vehicleKey];
         if (!vehicleDetails) return 0;
         
-        const vehicleCapacity = (vehicleKey === '4-seater') ? 4 : (vehicleKey === '5-seater') ? 5 : (vehicleKey === '7-seater') ? 7 : 0;
+        // Determine capacity from our constants map
+        const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
+        const vehicleCapacity = vehicleCapacityMap[vehicleKey] || 0;
+        
+        // Calculate total available seats for this trip based on admin settings
         const totalSeats = (priceRule.vehicleCount || 1) * vehicleCapacity;
         
+        // Count the number of seats already booked
         const bookedSeats = bookingsSnapshot.size;
 
         return totalSeats - bookedSeats;
@@ -68,3 +75,5 @@ export async function getAvailableSeats({
         return 0; // Return 0 if there's an error, assuming unavailability.
     }
 }
+
+    
