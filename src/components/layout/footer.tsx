@@ -2,7 +2,6 @@
 
 import { Route } from "lucide-react";
 import Link from "next/link";
-import FeedbackForm from "../feedback-form";
 
 export default function Footer() {
     return (
@@ -20,7 +19,7 @@ export default function Footer() {
                         <span className="hidden sm:inline">|</span>
                         <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
                         <span className="hidden sm:inline">|</span>
-                        <FeedbackForm />
+                        <Link href="/feedback" className="hover:text-primary transition-colors">Leave Feedback</Link>
                      </div>
                 </div>
             </div>

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route, Menu, Shield } from "lucide-react";
+import { Route, Menu, Shield, MessageSquare, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,8 @@ export default function Header() {
 
   const navLinks: { href: string; label: string; icon?: React.ElementType }[] = [
       { href: "/", label: "Book a Trip" },
-      { href: "/faqs", label: "FAQs" },
+      { href: "/faqs", label: "FAQs", icon: HelpCircle },
+      { href: "/feedback", label: "Feedback", icon: MessageSquare },
   ];
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (

@@ -8,13 +8,14 @@ import * as z from 'zod';
 import { cn } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Star, MessageSquare, Loader2, Send } from 'lucide-react';
+import { Star, Loader2, Send } from 'lucide-react';
 
 const formSchema = z.object({
   rating: z.number().min(1, { message: 'Please select a rating.' }),
@@ -23,7 +24,7 @@ const formSchema = z.object({
 
 export default function FeedbackForm() {
     const { toast } = useToast();
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const router = useRouter();
     const [hoverRating, setHoverRating] = useState(0);
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -45,10 +46,10 @@ export default function FeedbackForm() {
             });
             toast({
                 title: "Feedback Submitted",
-                description: "Thank you for your valuable feedback!",
+                description: "Thank you! We've received your feedback.",
             });
             form.reset();
-            setIsDialogOpen(false);
+            router.push('/');
         } catch (error) {
             console.error("Error submitting feedback:", error);
             toast({
@@ -60,21 +61,10 @@ export default function FeedbackForm() {
     }
 
     return (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-                <Button variant="link" className="text-muted-foreground hover:text-primary p-0 h-auto">
-                    Leave Feedback
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Share Your Feedback</DialogTitle>
-                    <DialogDescription>
-                        We'd love to hear your thoughts on your experience.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Card>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <CardContent className="pt-6 space-y-6">
                         <FormField
                             control={form.control}
                             name="rating"
@@ -119,7 +109,7 @@ export default function FeedbackForm() {
                                     <FormLabel>Your Message</FormLabel>
                                     <FormControl>
                                         <Textarea
-                                            placeholder="Tell us more about your experience..."
+                                            placeholder="Tell us more about your experience, what we did well, or what we could improve..."
                                             {...field}
                                             rows={5}
                                         />
@@ -128,19 +118,19 @@ export default function FeedbackForm() {
                                 </FormItem>
                             )}
                         />
-                        <DialogFooter>
-                            <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Send className="mr-2 h-4 w-4" />
-                                )}
-                                {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                    </CardContent>
+                    <CardFooter>
+                        <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Send className="mr-2 h-4 w-4" />
+                            )}
+                            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+                        </Button>
+                    </CardFooter>
+                </form>
+            </Form>
+        </Card>
     );
 }
