@@ -25,6 +25,7 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
+import { getAvailableSeats } from '@/lib/firebase-client-utils';
 
 
 const bookingSchema = z.object({
@@ -116,6 +117,24 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
+        const seatsAvailable = await getAvailableSeats({
+            pickup: formData.pickup,
+            destination: formData.destination,
+            vehicleType: formData.vehicleType,
+            date: format(formData.intendedDate, 'yyyy-MM-dd')
+        });
+
+        if (seatsAvailable <= 0) {
+            toast({
+                variant: 'destructive',
+                title: 'No Seats Available',
+                description: 'Sorry, this trip is fully booked for the selected date. Please try the alternative date or another trip.',
+            });
+            setIsProcessing(false);
+            return;
+        }
+
+
         const bookingDataWithFare = { ...formData, totalFare };
 
         const cleanBookingData = {
