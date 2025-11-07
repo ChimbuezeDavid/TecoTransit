@@ -4,7 +4,7 @@
 import Paystack from 'paystack';
 import type { BookingFormData } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
 
@@ -124,12 +124,14 @@ async function checkAndConfirmTrip(
     
     const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
     const vehicleCapacity = vehicleCapacityMap[vehicleKey] || 0;
-    const totalSeatsForTrip = vehicleCapacity * (priceRule.vehicleCount || 1);
     
+    // Total capacity for just one vehicle of this type.
+    const seatsPerVehicle = vehicleCapacity;
     const paidBookings = bookingsSnapshot.docs;
-
-    if (paidBookings.length >= totalSeatsForTrip) {
-        // The trip is full, confirm all 'Paid' bookings for this list
+    
+    // Check if the number of paid bookings fills one or more vehicles exactly.
+    if (paidBookings.length > 0 && paidBookings.length % seatsPerVehicle === 0) {
+        // This trip is full, confirm all 'Paid' bookings for this list
         const batch = db.batch();
         paidBookings.forEach(doc => {
             // Set status to 'Confirmed' and set the confirmedDate to the intendedDate

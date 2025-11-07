@@ -27,7 +27,7 @@ export async function getAvailableSeats({
             where('vehicleType', '==', vehicleType)
         );
 
-        // Query for bookings that are already 'Paid' for that specific trip on that date
+        // Query for bookings that are already 'Paid' or 'Confirmed' for that specific trip on that date
         const bookingsQuery = query(
             collection(db, 'bookings'),
             where('pickup', '==', pickup),
@@ -75,5 +75,3 @@ export async function getAvailableSeats({
         return 0; // Return 0 if there's an error, assuming unavailability.
     }
 }
-
-    
