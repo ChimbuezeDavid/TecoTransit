@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,7 +9,8 @@ import { db } from "@/lib/firebase";
 import { collection, doc, setDoc, onSnapshot, deleteDoc, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
-import type { PriceRule } from "@/lib/types";
+import type { PriceRule, Booking } from "@/lib/types";
+import { useBooking } from "@/context/booking-context";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle } from "lucide-react";
+import { Trash2, Edit, PlusCircle, Users } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 
 const formSchema = z.object({
@@ -48,6 +49,7 @@ function PricingManagerSkeleton() {
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                              <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -61,6 +63,7 @@ function PricingManagerSkeleton() {
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                 <TableCell className="text-right flex justify-end gap-2">
                                     <Skeleton className="h-8 w-8" />
                                     <Skeleton className="h-8 w-8" />
@@ -76,6 +79,7 @@ function PricingManagerSkeleton() {
 
 export default function PricingManager() {
   const { toast } = useToast();
+  const { bookings: allBookings, loading: bookingsLoading } = useBooking();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -243,7 +247,24 @@ export default function PricingManager() {
     }
   }
 
-  if (loading) {
+  const getSeatInfo = (rule: PriceRule) => {
+    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType);
+    if (!vehicleKey) return { booked: 0, total: 0 };
+    
+    const capacity = (vehicleKey === '4-seater') ? 4 : (vehicleKey === '5-seater') ? 5 : (vehicleKey === '7-seater') ? 7 : 0;
+    const totalSeats = (rule.vehicleCount || 1) * capacity;
+
+    const bookedSeats = allBookings.filter(b => 
+        b.pickup === rule.pickup &&
+        b.destination === rule.destination &&
+        b.vehicleType === rule.vehicleType &&
+        b.status !== 'Cancelled'
+    ).length;
+
+    return { booked: bookedSeats, total: totalSeats };
+  };
+
+  if (loading || bookingsLoading) {
     return <PricingManagerSkeleton />;
   }
 
@@ -271,49 +292,61 @@ export default function PricingManager() {
                   <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
                   <TableHead className="hidden sm:table-cell">Price</TableHead>
                   <TableHead className="hidden sm:table-cell">Vehicles</TableHead>
+                  <TableHead className="hidden sm:table-cell">Seats</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {priceList.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                 ) : (
-                  priceList.map((rule) => (
-                    <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
-                      <TableCell>
-                        <div className="font-medium">{rule.pickup}</div>
-                        <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                        <div className="sm:hidden text-sm text-muted-foreground mt-1">
-                            {rule.vehicleType} - ₦{rule.price.toLocaleString()} - {rule.vehicleCount || 1} vehicle(s)
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
-                      <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{rule.vehicleCount || 1}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  priceList.map((rule) => {
+                    const { booked, total } = getSeatInfo(rule);
+                    return (
+                        <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
+                        <TableCell>
+                            <div className="font-medium">{rule.pickup}</div>
+                            <div className="text-sm text-muted-foreground">to {rule.destination}</div>
+                            <div className="sm:hidden text-sm text-muted-foreground mt-1 space-y-1">
+                                <p>{rule.vehicleType} - ₦{rule.price.toLocaleString()}</p>
+                                <p>Vehicles: {rule.vehicleCount || 1}</p>
+                                <p>Seats: {booked}/{total}</p>
+                            </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
+                        <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
+                        <TableCell className="hidden sm:table-cell">{rule.vehicleCount || 1}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <div className="flex items-center gap-2">
+                             <Users className="h-4 w-4 text-muted-foreground" />
+                            <span>{booked}/{total}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <div className="flex justify-end">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            </div>
+                        </TableCell>
+                        </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -402,3 +435,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
