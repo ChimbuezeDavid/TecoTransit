@@ -27,6 +27,7 @@ const formSchema = z.object({
   destination: z.string({ required_error: 'Please select a destination.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   price: z.coerce.number().positive({ message: "Price must be a positive number." }),
+  vehicleCount: z.coerce.number().min(1, { message: "There must be at least one vehicle." }),
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
@@ -46,6 +47,7 @@ function PricingManagerSkeleton() {
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -58,6 +60,7 @@ function PricingManagerSkeleton() {
                                 </TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                                 <TableCell className="text-right flex justify-end gap-2">
                                     <Skeleton className="h-8 w-8" />
                                     <Skeleton className="h-8 w-8" />
@@ -85,6 +88,7 @@ export default function PricingManager() {
         destination: "",
         vehicleType: "",
         price: 0,
+        vehicleCount: 1,
     }
   });
 
@@ -114,7 +118,8 @@ export default function PricingManager() {
                 pickup: editMode.pickup,
                 destination: editMode.destination,
                 vehicleType: editMode.vehicleType,
-                price: editMode.price
+                price: editMode.price,
+                vehicleCount: editMode.vehicleCount || 1,
             });
         } else {
             form.reset({
@@ -122,6 +127,7 @@ export default function PricingManager() {
                 destination: "",
                 vehicleType: "",
                 price: 0,
+                vehicleCount: 1,
             });
         }
     }
@@ -139,7 +145,6 @@ export default function PricingManager() {
   
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    // Give time for dialog to close before resetting state
     setTimeout(() => {
       setEditMode(null);
     }, 300);
@@ -248,8 +253,8 @@ export default function PricingManager() {
         <CardHeader>
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div>
-                    <CardTitle>Current Price List</CardTitle>
-                    <CardDescription>A list of all active pricing rules.</CardDescription>
+                    <CardTitle>Route & Pricing Management</CardTitle>
+                    <CardDescription>Manage fares and vehicle availability for all routes.</CardDescription>
                 </div>
                  <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2" />
@@ -265,22 +270,26 @@ export default function PricingManager() {
                   <TableHead>Route</TableHead>
                   <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
                   <TableHead className="hidden sm:table-cell">Price</TableHead>
+                  <TableHead className="hidden sm:table-cell">Vehicles</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {priceList.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                 ) : (
                   priceList.map((rule) => (
                     <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
                       <TableCell>
                         <div className="font-medium">{rule.pickup}</div>
                         <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                        <div className="sm:hidden text-sm text-muted-foreground mt-1">{rule.vehicleType} - ₦{rule.price.toLocaleString()}</div>
+                        <div className="sm:hidden text-sm text-muted-foreground mt-1">
+                            {rule.vehicleType} - ₦{rule.price.toLocaleString()} - {rule.vehicleCount || 1} vehicle(s)
+                        </div>
                       </TableCell>
                       <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
                       <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{rule.vehicleCount || 1}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end">
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
@@ -314,8 +323,8 @@ export default function PricingManager() {
       
       <DialogContent className="sm:max-w-md p-0">
         <DialogHeader className="p-6 pb-4">
-          <DialogTitle>{editMode ? 'Edit Price Rule' : 'Add New Price Rule'}</DialogTitle>
-          <DialogDescription>{editMode ? 'Update the fare for this specific route.' : 'Set a fare for a specific route and vehicle. A return price will be created automatically.'}</DialogDescription>
+          <DialogTitle>{editMode ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
+          <DialogDescription>Set the fare and vehicle count for a route. A return trip will be created automatically.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 pb-6 space-y-6">
@@ -349,25 +358,41 @@ export default function PricingManager() {
                 <FormMessage />
             </FormItem>
             )} />
-            <FormField control={form.control} name="price" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Price (NGN)</FormLabel>
-                    <FormControl>
-                        <Input 
-                            id="price"
-                            type="text"
-                            inputMode="decimal" 
-                            placeholder="50,000"
-                            value={field.value ? formatNumberWithCommas(field.value) : ''}
-                            onChange={(e) => handlePriceChange(e, field)}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-            )} />
+            <div className="grid grid-cols-2 gap-4">
+                <FormField control={form.control} name="price" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Price (NGN)</FormLabel>
+                        <FormControl>
+                            <Input 
+                                id="price"
+                                type="text"
+                                inputMode="decimal" 
+                                placeholder="50,000"
+                                value={field.value ? formatNumberWithCommas(field.value) : ''}
+                                onChange={(e) => handlePriceChange(e, field)}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+                <FormField control={form.control} name="vehicleCount" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>No. of Vehicles</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="number"
+                                inputMode="numeric" 
+                                placeholder="1"
+                                {...field}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
+            </div>
             <DialogFooter className="pt-4">
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Price" : "Save Price")}
+                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
                 </Button>
             </DialogFooter>
           </form>
@@ -376,5 +401,3 @@ export default function PricingManager() {
     </Dialog>
   );
 }
-
-    
