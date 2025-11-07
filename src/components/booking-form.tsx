@@ -64,7 +64,7 @@ const contactOptions = [
 export default function BookingForm() {
   const { toast } = useToast();
   const { prices, loading: pricesLoading, createBooking } = useBooking();
-  const { isPaystackEnabled } = useSettings();
+  const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -172,6 +172,7 @@ export default function BookingForm() {
             // Test Mode: Bypass Paystack and create a pending booking
             await createBooking({ ...formData, totalFare });
             setIsConfirmationOpen(true);
+            form.reset();
         }
 
     } catch (error) {
@@ -433,9 +434,9 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare <= 0}>
-                {isProcessing ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
-                {isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
+                {isProcessing || settingsLoading ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
+                {settingsLoading ? 'Loading...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
             </Button>
           </CardFooter>
         </form>
@@ -446,11 +447,8 @@ export default function BookingForm() {
       isOpen={isConfirmationOpen}
       onClose={() => {
         setIsConfirmationOpen(false);
-        form.reset();
       }}
     />
     </>
   );
 }
-
-    

@@ -2,39 +2,38 @@
 "use client";
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { db } from '@/lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface SettingsContextType {
   isPaystackEnabled: boolean;
-  setIsPaystackEnabled: (enabled: boolean) => void;
+  loading: boolean;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
   const [isPaystackEnabled, setIsPaystackEnabled] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ensure this runs only on the client
-    if (typeof window !== 'undefined') {
-      const storedValue = localStorage.getItem('isPaystackEnabled');
-      if (storedValue !== null) {
-        setIsPaystackEnabled(JSON.parse(storedValue));
+    const settingsDocRef = doc(db, "settings", "payment");
+    const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setIsPaystackEnabled(docSnap.data().isPaystackEnabled);
       }
-      setIsInitialized(true);
-    }
-  }, []);
+      setLoading(false);
+    }, (error) => {
+      console.error("Failed to subscribe to settings:", error);
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    // Persist changes to localStorage, but only after initialization
-    if (isInitialized && typeof window !== 'undefined') {
-      localStorage.setItem('isPaystackEnabled', JSON.stringify(isPaystackEnabled));
-    }
-  }, [isPaystackEnabled, isInitialized]);
+    return () => unsubscribe();
+  }, []);
 
   const value = {
     isPaystackEnabled,
-    setIsPaystackEnabled,
+    loading,
   };
 
   return (

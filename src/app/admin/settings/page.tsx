@@ -1,23 +1,59 @@
 
 "use client";
 
-import { useSettings } from "@/context/settings-context";
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, TestTube2 } from "lucide-react";
+import { CreditCard, TestTube2, Loader2 } from "lucide-react";
+
+const settingsDocRef = doc(db, "settings", "payment");
 
 export default function AdminSettingsPage() {
-  const { isPaystackEnabled, setIsPaystackEnabled } = useSettings();
+  const [isPaystackEnabled, setIsPaystackEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleToggle = (enabled: boolean) => {
-    setIsPaystackEnabled(enabled);
-    toast({
-      title: "Settings Updated",
-      description: `Paystack integration is now ${enabled ? "enabled" : "disabled"}.`,
+  useEffect(() => {
+    const unsubscribe = onSnapshot(settingsDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setIsPaystackEnabled(docSnap.data().isPaystackEnabled);
+      } else {
+        // If the document doesn't exist, create it with a default value
+        setDoc(settingsDocRef, { isPaystackEnabled: true });
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching settings:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not fetch payment settings.",
+      });
+      setLoading(false);
     });
+
+    return () => unsubscribe();
+  }, [toast]);
+
+  const handleToggle = async (enabled: boolean) => {
+    try {
+      await setDoc(settingsDocRef, { isPaystackEnabled: enabled });
+      toast({
+        title: "Settings Updated",
+        description: `Paystack integration is now ${enabled ? "enabled" : "disabled"}.`,
+      });
+    } catch (error) {
+      console.error("Error updating settings:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Could not update payment settings.",
+      });
+    }
   };
 
   return (
@@ -44,18 +80,22 @@ export default function AdminSettingsPage() {
                 When disabled, the booking form will bypass Paystack and create a 'Pending' booking for testing.
               </p>
             </div>
-            <div className="flex items-center space-x-2">
-              {isPaystackEnabled ? (
-                <CreditCard className="h-5 w-5 text-primary" />
-              ) : (
-                <TestTube2 className="h-5 w-5 text-amber-500" />
-              )}
-              <Switch
-                id="paystack-toggle"
-                checked={isPaystackEnabled}
-                onCheckedChange={handleToggle}
-              />
-            </div>
+            {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+                <div className="flex items-center space-x-2">
+                {isPaystackEnabled ? (
+                    <CreditCard className="h-5 w-5 text-primary" />
+                ) : (
+                    <TestTube2 className="h-5 w-5 text-amber-500" />
+                )}
+                <Switch
+                    id="paystack-toggle"
+                    checked={isPaystackEnabled}
+                    onCheckedChange={handleToggle}
+                />
+                </div>
+            )}
           </div>
         </CardContent>
       </Card>

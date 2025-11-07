@@ -21,6 +21,12 @@ service cloud.firestore {
       allow create: if request.resource.data.createdAt == request.time;
     }
 
+    // Settings can be read by anyone but only written by admins.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // User and token data is admin-only.
     match /users/{userId} {
       allow read, write: if isAdmin();
