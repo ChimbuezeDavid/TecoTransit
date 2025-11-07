@@ -382,6 +382,7 @@ export default function PricingManager() {
                             <Input 
                                 type="number"
                                 inputMode="numeric" 
+                                min="1"
                                 placeholder="1"
                                 {...field}
                             />
