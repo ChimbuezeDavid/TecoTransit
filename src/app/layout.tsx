@@ -1,3 +1,4 @@
+
 // THIS FILE IS MANAGED BY AN AI ASSISTANT. DO NOT EDIT DIRECTLY.
 
 'use client';
@@ -6,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import { BookingProvider } from '@/context/booking-context';
+import { SettingsProvider } from '@/context/settings-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
@@ -106,18 +108,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <BookingProvider>
-              {isAdminPage ? (
-                <>{children}</>
-              ) : (
-                <div className="flex flex-col min-h-screen">
-                  <Header />
-                  <main className="flex-grow">{children}</main>
-                  <Footer />
-                </div>
-              )}
-              <Toaster />
-            </BookingProvider>
+            <SettingsProvider>
+              <BookingProvider>
+                {isAdminPage ? (
+                  <>{children}</>
+                ) : (
+                  <div className="flex flex-col min-h-screen">
+                    <Header />
+                    <main className="flex-grow">{children}</main>
+                    <Footer />
+                  </div>
+                )}
+                <Toaster />
+              </BookingProvider>
+            </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>
         <Analytics />

@@ -6,7 +6,6 @@ import { db } from '@/lib/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
 
@@ -16,7 +15,7 @@ interface BookingContextType {
   loading: boolean;
   error: string | null;
   fetchBookings: (status: Booking['status'] | 'All') => (() => void) | undefined;
-  createBooking: (data: BookingFormData) => Promise<Booking>;
+  createBooking: (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Cancelled') => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
@@ -42,20 +41,41 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   };
 
   useEffect(() => {
-    const fetchPrices = async () => {
-        setLoading(true);
-        try {
-          const pricesCollection = collection(db, "prices");
-          const pricesSnapshot = await getDocs(pricesCollection);
-          const pricesData = pricesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
-          setPrices(pricesData);
-        } catch (err) {
-          handleFirestoreError(err, 'fetching prices');
-        } finally {
-            setLoading(false);
-        }
-    }
-    fetchPrices();
+    const pricesQuery = query(collection(db, "prices"));
+    const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
+      const pricesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
+      setPrices(pricesData);
+      setLoading(false);
+    }, (err) => {
+      handleFirestoreError(err, 'fetching prices');
+      setLoading(false);
+    });
+
+    // Also fetch all bookings for seat calculations
+    const bookingsQuery = query(collection(db, "bookings"));
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
+         const bookingsData = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAtMillis = data.createdAt instanceof Timestamp 
+                ? data.createdAt.toMillis()
+                : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
+
+            return {
+              id: doc.id,
+              ...data,
+              createdAt: createdAtMillis,
+            } as Booking;
+      });
+      setBookings(bookingsData);
+    }, (err) => {
+        handleFirestoreError(err, 'fetching all bookings');
+    });
+
+
+    return () => {
+        unsubscribePrices();
+        unsubscribeBookings();
+    };
   }, [toast]);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
@@ -85,6 +105,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           createdAt: createdAtMillis,
         } as Booking;
       });
+      // This will only set the filtered bookings for the admin dashboard view
+      // The full list is already held in state from the initial useEffect
       setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
@@ -95,12 +117,9 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, [toast]);
 
-  const createBooking = useCallback(async (data: BookingFormData) => {
-    const { privacyPolicy, ...restOfData } = data;
-    
+  const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
     const firestoreBooking = {
-      ...restOfData,
-      id: uuidv4(),
+      ...data,
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
@@ -130,7 +149,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       
       await updateDoc(bookingDocRef, updateData);
 
-      // Send email in the background, don't await it here
       sendBookingStatusEmail({
           name: bookingToUpdate.name,
           email: bookingToUpdate.email,
@@ -141,7 +159,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           vehicleType: bookingToUpdate.vehicleType,
           totalFare: bookingToUpdate.totalFare,
       }).catch(emailError => {
-        // If email fails, show a non-blocking toast
         console.error("Failed to send status update email:", emailError);
         toast({
           variant: "destructive",

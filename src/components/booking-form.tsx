@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
 import { useBooking } from '@/context/booking-context';
-import type { BookingFormData } from '@/lib/types';
+import { useSettings } from '@/context/settings-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -63,7 +63,8 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading } = useBooking();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { isPaystackEnabled } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -133,56 +134,54 @@ export default function BookingForm() {
             setIsProcessing(false);
             return;
         }
-
-
-        const bookingDataWithFare = { ...formData, totalFare };
-
-        const cleanBookingData = {
-          name: bookingDataWithFare.name,
-          email: bookingDataWithFare.email,
-          phone: bookingDataWithFare.phone,
-          pickup: bookingDataWithFare.pickup,
-          destination: bookingDataWithFare.destination,
-          intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
-          alternativeDate: format(bookingDataWithFare.alternativeDate, 'yyyy-MM-dd'),
-          vehicleType: bookingDataWithFare.vehicleType,
-          luggageCount: bookingDataWithFare.luggageCount,
-          totalFare: bookingDataWithFare.totalFare,
-        };
-
-        const result = await initializeTransaction({
-            email: cleanBookingData.email,
-            amount: cleanBookingData.totalFare * 100, // Amount in kobo
-            metadata: {
-                booking_details: JSON.stringify(cleanBookingData),
-                custom_fields: [
-                    {
-                        display_name: "Customer Name",
-                        variable_name: "customer_name",
-                        value: cleanBookingData.name
-                    },
-                    {
-                        display_name: "Route",
-                        variable_name: "route",
-                        value: `${cleanBookingData.pickup} to ${cleanBookingData.destination}`
-                    }
-                ]
-            }
-        });
         
-        if (result.status && result.data?.authorization_url) {
-            router.push(result.data.authorization_url);
+        if (isPaystackEnabled) {
+            // Live Mode: Proceed to Paystack
+            const bookingDataWithFare = { ...formData, totalFare };
+            const cleanBookingData = {
+              name: bookingDataWithFare.name,
+              email: bookingDataWithFare.email,
+              phone: bookingDataWithFare.phone,
+              pickup: bookingDataWithFare.pickup,
+              destination: bookingDataWithFare.destination,
+              intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
+              alternativeDate: format(bookingDataWithFare.alternativeDate, 'yyyy-MM-dd'),
+              vehicleType: bookingDataWithFare.vehicleType,
+              luggageCount: bookingDataWithFare.luggageCount,
+              totalFare: bookingDataWithFare.totalFare,
+            };
+
+            const result = await initializeTransaction({
+                email: cleanBookingData.email,
+                amount: cleanBookingData.totalFare * 100, // Amount in kobo
+                metadata: {
+                    booking_details: JSON.stringify(cleanBookingData),
+                    custom_fields: [
+                        { display_name: "Customer Name", variable_name: "customer_name", value: cleanBookingData.name },
+                        { display_name: "Route", variable_name: "route", value: `${cleanBookingData.pickup} to ${cleanBookingData.destination}` }
+                    ]
+                }
+            });
+            
+            if (result.status && result.data?.authorization_url) {
+                router.push(result.data.authorization_url);
+            } else {
+                throw new Error(result.message || 'Failed to initialize transaction.');
+            }
         } else {
-            throw new Error(result.message || 'Failed to initialize transaction.');
+            // Test Mode: Bypass Paystack and create a pending booking
+            await createBooking({ ...formData, totalFare });
+            setIsConfirmationOpen(true);
         }
 
     } catch (error) {
-        console.error("Payment initialization error:", error);
+        console.error("Booking/Payment error:", error);
         toast({
             variant: "destructive",
             title: "Oh no! Something went wrong.",
-            description: `We couldn't start the payment process. Please try again. ${error instanceof Error ? error.message : ''}`,
+            description: `We couldn't process your request. Please try again. ${error instanceof Error ? error.message : ''}`,
         });
+    } finally {
         setIsProcessing(false);
     }
   };
@@ -435,12 +434,8 @@ export default function BookingForm() {
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
             <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare <= 0}>
-                {isProcessing ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                    <CreditCard className="mr-2 h-5 w-5" />
-                )}
-                Proceed to Payment
+                {isProcessing ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
+                {isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
             </Button>
           </CardFooter>
         </form>
@@ -449,7 +444,10 @@ export default function BookingForm() {
 
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
-      onClose={() => setIsConfirmationOpen(false)}
+      onClose={() => {
+        setIsConfirmationOpen(false);
+        form.reset();
+      }}
     />
     </>
   );
