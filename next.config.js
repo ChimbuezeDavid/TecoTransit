@@ -34,8 +34,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/__/auth/:path*',
-        destination: '/auth/:path*',
+        source: '/__/auth/action',
+        destination: '/auth/action',
       },
     ]
   },
