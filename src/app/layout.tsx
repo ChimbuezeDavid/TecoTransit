@@ -70,30 +70,6 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                  if (registrations.length > 0) {
-                    console.log('Found active service workers. Unregistering...');
-                    const unregisterPromises = registrations.map(reg => reg.unregister());
-                    Promise.all(unregisterPromises).then(() => {
-                        console.log('All service workers unregistered. Reloading page...');
-                        window.location.reload(true);
-                    });
-                  }
-                });
-                
-                // Add a listener to prevent new service workers from being installed.
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                  console.log('New service worker detected, reloading page to take control.');
-                  window.location.reload(true);
-                });
-              }
-            `,
-          }}
-        />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
         <meta name="theme-color" content="#D4AF37" />
