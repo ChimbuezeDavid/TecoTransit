@@ -31,7 +31,7 @@ const nextConfig = {
       },
     ],
   },
-  async rewrites() {
+  rewrites() {
     return [
       {
         source: '/__/auth/action',
