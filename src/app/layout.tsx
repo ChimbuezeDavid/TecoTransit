@@ -1,5 +1,3 @@
-// THIS FILE IS MANAGED BY AN AI ASSISTANT. DO NOT EDIT DIRECTLY.
-
 'use client';
 
 import { usePathname } from 'next/navigation';

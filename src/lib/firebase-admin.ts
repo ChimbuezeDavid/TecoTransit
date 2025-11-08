@@ -1,49 +1,42 @@
 
 import * as admin from 'firebase-admin';
 
-const getServiceAccount = () => {
-  if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-    console.warn(
-      'Firebase Admin SDK credentials are not set in environment variables. Server-side Firebase features will not be available.'
-    );
-    return undefined;
+// Check if there's already an initialized app
+const getAdminApp = () => {
+  if (admin.apps.length > 0) {
+    return admin.app();
   }
 
-  return {
+  const serviceAccount = {
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  } as admin.ServiceAccount;
-};
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  };
 
-let adminInstance: typeof admin | undefined;
-
-export const getFirebaseAdmin = (): typeof admin | undefined => {
-  if (adminInstance) {
-    return adminInstance;
+  // Check that all required environment variables are present before initializing
+  if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+    console.warn(
+      'Firebase Admin SDK credentials are not fully set in environment variables. Server-side Firebase features will be unavailable.'
+    );
+    return null; // Return null if configuration is incomplete
   }
 
-  if (admin.apps.length > 0) {
-    adminInstance = admin;
-    return adminInstance;
-  }
-  
   try {
-    const serviceAccount = getServiceAccount();
-    if (serviceAccount) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log('Firebase Admin SDK initialized successfully.');
-      adminInstance = admin;
-      return adminInstance;
-    } else {
-      // If service account is not available, we don't initialize and dependent features will be disabled.
-      return undefined;
-    }
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
   } catch (error: any) {
     console.error('Firebase admin initialization error:', error.message);
-    // Do not throw, allow the app to run without admin features.
+    // Do not re-throw, allow the app to run without admin features if initialization fails.
+    return null;
+  }
+};
+
+
+export const getFirebaseAdmin = (): typeof admin | undefined => {
+  const app = getAdminApp();
+  if (!app) {
     return undefined;
   }
+  return admin;
 };
