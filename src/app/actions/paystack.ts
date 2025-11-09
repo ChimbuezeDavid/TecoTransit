@@ -22,11 +22,18 @@ interface InitializeTransactionArgs {
 
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
+    // Dynamically set the callback URL based on the environment
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_BASE_URL;
+      
+    const callbackUrl = `${baseUrl}/payment/callback`;
+
     const response = await paystack.transaction.initialize({
       email,
       amount: Math.round(amount),
       metadata,
-      callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment/callback`
+      callback_url: callbackUrl
     });
     return { status: true, data: response.data };
   } catch (error: any) {
@@ -50,7 +57,10 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'alternativeDate' | 'privacyPolicy'> & { intendedDate: string, alternativeDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
 
-        const db = getFirebaseAdmin().firestore();
+        const db = getFirebaseAdmin()?.firestore();
+        if (!db) {
+            throw new Error("Could not connect to the database.");
+        }
         const bookingsRef = db.collection('bookings');
         
         // Create the booking with a 'Paid' status
