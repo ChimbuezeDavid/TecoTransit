@@ -21,8 +21,6 @@ interface InitializeTransactionArgs {
   metadata: Record<string, any>;
 }
 
-// This is a new, server-side-only version of getAvailableSeats
-// It's separate from the client-side logic to ensure server-side checks are robust.
 const getAvailableSeatsOnServer = async (
     db: FirebaseFirestore.Firestore, 
     pickup: string, 
@@ -31,38 +29,27 @@ const getAvailableSeatsOnServer = async (
     date: string
 ): Promise<number> => {
     try {
+        const pricesCollection = collection(db as any, 'prices');
         const pricesQuery = query(
-            collection(db as any, 'prices'),
+            pricesCollection,
             where('pickup', '==', pickup),
             where('destination', '==', destination),
             where('vehicleType', '==', vehicleType)
         );
-
-        const bookingsQuery = query(
-            collection(db as any, 'bookings'),
-            where('pickup', '==', pickup),
-            where('destination', '==', destination),
-            where('vehicleType', '==', vehicleType),
-            where('intendedDate', '==', date),
-            where('status', 'in', ['Paid', 'Confirmed'])
-        );
         
-        const [pricingSnapshot, bookingsSnapshot] = await Promise.all([
-            getDocs(pricesQuery as any),
-            getDocs(bookingsQuery as any),
-        ]);
-
+        const pricingSnapshot = await getDocs(pricesQuery as any);
 
         if (pricingSnapshot.empty) {
-            console.error("No pricing rule found for this route on the server.");
-            return 0; // No rule, no seats.
+            console.error("Server Check: No pricing rule found for this route.");
+            return 0;
         }
 
         const priceRule = pricingSnapshot.docs[0].data();
+        
         const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
         
         if (!vehicleKey) {
-            console.error(`Invalid vehicle type found in price rule: ${priceRule.vehicleType}`);
+            console.error(`Server Check: Invalid vehicle type in price rule: ${priceRule.vehicleType}`);
             return 0;
         }
 
@@ -70,20 +57,34 @@ const getAvailableSeatsOnServer = async (
         const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
         const totalSeats = (priceRule.vehicleCount || 0) * seatsPerVehicle;
 
+        if (totalSeats <= 0) {
+            return 0;
+        }
+
+        const bookingsCollection = collection(db as any, 'bookings');
+        const bookingsQuery = query(
+            bookingsCollection,
+            where('pickup', '==', pickup),
+            where('destination', '==', destination),
+            where('vehicleType', '==', vehicleType),
+            where('intendedDate', '==', date),
+            where('status', 'in', ['Paid', 'Confirmed'])
+        );
+        
+        const bookingsSnapshot = await getDocs(bookingsQuery as any);
         const bookedSeats = bookingsSnapshot.size;
 
         return totalSeats - bookedSeats;
 
     } catch (error) {
         console.error("Error getting available seats on server:", error);
-        return 0; // Return 0 on any error to be safe.
+        return 0;
     }
 };
 
 
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
-    // Dynamically set the callback URL based on the environment
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NEXT_PUBLIC_BASE_URL;
@@ -123,7 +124,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error("Could not connect to the database.");
         }
 
-        // Authoritative final check for seat availability on the server
         const availableSeats = await getAvailableSeatsOnServer(
             db,
             bookingDetails.pickup,
@@ -133,43 +133,36 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         );
 
         if (availableSeats <= 0) {
-            // This is the critical race condition check.
-            // Ideally, you would trigger a refund here if possible, or at least notify admins.
             console.warn(`Overbooking prevented for trip ${bookingDetails.pickup} to ${bookingDetails.destination} on ${bookingDetails.intendedDate}. User: ${bookingDetails.email}`);
-            throw new Error('Sorry, the last seat was just taken. Your payment was successful but the booking could not be completed. Please contact support.');
+            throw new Error('Sorry, the last seat was just taken. Your payment was successful but the booking could not be completed. Please contact support for a refund.');
         }
 
         const bookingsRef = db.collection('bookings');
         
-        // Create the booking with a 'Paid' status
         const newBookingRef = bookingsRef.doc();
         const newBookingData = {
             ...bookingDetails,
             createdAt: FieldValue.serverTimestamp(),
-            status: 'Paid' as const, // Set status to 'Paid' instead of 'Confirmed'
+            status: 'Paid' as const,
             paymentReference: reference,
             totalFare: bookingDetails.totalFare,
-            // confirmedDate is NOT set here, it's set when the trip is confirmed
         };
 
         await newBookingRef.set(newBookingData);
         const bookingId = newBookingRef.id;
 
-        // After saving, check if the trip is now full
         await checkAndConfirmTrip(
             db,
             bookingDetails.pickup,
             bookingDetails.destination,
             bookingDetails.vehicleType,
-            bookingDetails.intendedDate // Use the intended date for the check
+            bookingDetails.intendedDate
         );
 
         return { success: true, bookingId: bookingId };
 
     } catch (error: any) {
         console.error('Verification and booking creation failed:', error);
-        // We should not create a booking if the server-side check fails.
-        // The user's payment was successful, so this situation requires manual intervention (e.g., refund).
         return { success: false, error: error.message };
     }
 };
@@ -180,9 +173,8 @@ async function checkAndConfirmTrip(
     pickup: string,
     destination: string,
     vehicleType: string,
-    date: string // This is the intendedDate
+    date: string
 ) {
-    // Fetch only the bookings that are 'Paid' and waiting for confirmation.
     const bookingsQuery = db.collection('bookings')
         .where('pickup', '==', pickup)
         .where('destination', '==', destination)
@@ -202,7 +194,7 @@ async function checkAndConfirmTrip(
     
     if (pricingSnapshot.empty) {
         console.log(`No price/fleet rule found for trip: ${pickup}-${destination} on ${date}`);
-        return; // No rule, no-op
+        return;
     }
 
     const priceRule = pricingSnapshot.docs[0].data();
@@ -220,20 +212,16 @@ async function checkAndConfirmTrip(
 
     const paidBookings = bookingsSnapshot.docs;
     
-    // Check if there are enough paid passengers to fill at least one vehicle.
     if (paidBookings.length >= seatsPerVehicle) {
-        // Take the first `seatsPerVehicle` bookings from the list to form a full trip
         const bookingsToConfirm = paidBookings.slice(0, seatsPerVehicle);
         
         const batch = db.batch();
         bookingsToConfirm.forEach(doc => {
-            // Set status to 'Confirmed' and set the confirmedDate to the intendedDate
             batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
         });
         
         await batch.commit();
 
-        // After committing, send confirmation emails for the confirmed group
         for (const doc of bookingsToConfirm) {
             const bookingData = doc.data();
             try {
@@ -246,7 +234,7 @@ async function checkAndConfirmTrip(
                     destination: bookingData.destination,
                     vehicleType: bookingData.vehicleType,
                     totalFare: bookingData.totalFare,
-                    confirmedDate: date, // Use the date we confirmed for
+                    confirmedDate: date,
                 });
             } catch (e) {
                 console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);

@@ -25,7 +25,6 @@ import { useRouter } from 'next/navigation';
 import { useBooking } from '@/context/booking-context';
 import { useSettings } from '@/context/settings-context';
 import { getAvailableSeats } from '@/app/actions/get-availability';
-import { db } from '@/lib/firebase';
 
 
 const bookingSchema = z.object({
@@ -76,7 +75,7 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, setValue, handleSubmit: formHandleSubmit, trigger } = form;
+  const { watch, setValue, handleSubmit: formHandleSubmit } = form;
   const pickup = watch("pickup");
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
@@ -93,15 +92,11 @@ export default function BookingForm() {
   }, [pickup, destination, prices]);
   
   useEffect(() => {
-    // This effect handles all logic that depends on route/date changes.
-    
-    // 1. Reset vehicle type if it's no longer valid for the new route
     const isVehicleValid = availableVehicles.some(p => p.vehicleType === vehicleType);
     if (pickup && destination && vehicleType && !isVehicleValid) {
         setValue('vehicleType', '', { shouldValidate: true });
     }
 
-    // 2. Check for available seats
     const checkSeats = async () => {
         if (pickup && destination && vehicleType && intendedDate) {
             setIsCheckingSeats(true);
@@ -121,15 +116,13 @@ export default function BookingForm() {
                 setIsCheckingSeats(false);
             }
         } else {
-            // If any required field is missing, clear the seat availability
             setAvailableSeats(null);
         }
     };
 
     checkSeats();
-  // We only want this effect to run when these specific fields are changed by the user.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, destination, vehicleType, intendedDate, setValue]);
+  }, [pickup, destination, vehicleType, intendedDate]);
 
 
   const { totalFare, baseFare } = useMemo(() => {
@@ -153,12 +146,14 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
-        if (availableSeats === null || availableSeats <= 0) {
+        const currentSeats = await getAvailableSeats(formData.pickup, formData.destination, formData.vehicleType, format(formData.intendedDate, 'yyyy-MM-dd'));
+        if (currentSeats <= 0) {
             toast({
                 variant: 'destructive',
                 title: 'No Seats Available',
-                description: 'Sorry, this trip is now fully booked. Please try another trip.',
+                description: 'Sorry, the last seat was just taken. Please try another trip.',
             });
+            setAvailableSeats(0);
             setIsProcessing(false);
             return;
         }
@@ -439,7 +434,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || availableSeats === 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || availableSeats === 0 || isCheckingSeats}>
                 {isProcessing || settingsLoading ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
                 {settingsLoading ? 'Loading...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
             </Button>
