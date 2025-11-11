@@ -12,6 +12,7 @@ import { locations, vehicleOptions } from "@/lib/constants";
 import type { PriceRule, Booking } from "@/lib/types";
 import { getAvailableSeats } from "@/app/actions/get-availability";
 import { format, startOfDay, endOfDay } from "date-fns";
+import Link from 'next/link';
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,11 +22,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, ChevronDown, ChevronUp, Phone, User } from "lucide-react";
+import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, List } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -92,7 +91,6 @@ export default function PricingManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-  const [openCollapsible, setOpenCollapsible] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -105,18 +103,9 @@ export default function PricingManager() {
     }
   });
 
- const fetchSeatsAndBookingsInfo = useCallback(async (prices: PriceRule[]) => {
+ const fetchSeatsInfo = useCallback(async (prices: PriceRule[]) => {
       try {
         const todayStr = format(new Date(), 'yyyy-MM-dd');
-        
-        // Fetch all bookings for today
-        const bookingsQuery = query(
-            collection(db, "bookings"),
-            where('intendedDate', '==', todayStr),
-            where('status', 'in', ['Paid', 'Confirmed'])
-        );
-        const bookingsSnapshot = await getDocs(bookingsQuery);
-        const todayBookings = bookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
         
         const seatPromises = prices.map(async (rule) => {
             const availableSeats = await getAvailableSeats({
@@ -126,17 +115,13 @@ export default function PricingManager() {
                 date: todayStr,
             });
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
-            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0, bookings: [] };
+            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0 };
 
             const capacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
             const totalSeats = (rule.vehicleCount || 1) * capacity;
             const bookedSeats = totalSeats - availableSeats;
-            
-            const ruleBookings = todayBookings
-                .filter(b => b.pickup === rule.pickup && b.destination === rule.destination && b.vehicleType === rule.vehicleType)
-                .sort((a, b) => (a.status === 'Confirmed' ? -1 : 1) - (b.status === 'Confirmed' ? -1 : 1) || a.name.localeCompare(b.name));
 
-            return { ...rule, bookedSeats, totalSeats, bookings: ruleBookings };
+            return { ...rule, bookedSeats, totalSeats };
         });
 
         const pricesWithSeats = await Promise.all(seatPromises);
@@ -144,7 +129,7 @@ export default function PricingManager() {
         setPriceListWithSeats(pricesWithSeats);
       } catch (e) {
           console.error("Failed to fetch seat info for admin", e);
-          setPriceListWithSeats(prices.map(p => ({...p, bookings: [] })));
+          setPriceListWithSeats(prices);
       } finally {
         setLoading(false);
       }
@@ -158,7 +143,7 @@ export default function PricingManager() {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
       setPriceList(prices); 
-      fetchSeatsAndBookingsInfo(prices);
+      fetchSeatsInfo(prices);
     }, (error) => {
       console.error("Error fetching prices:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not fetch price list. Please ensure Firestore rules are correctly set up." });
@@ -168,7 +153,7 @@ export default function PricingManager() {
     const bookingsQuery = query(collection(db, "bookings"));
     const unsubscribeBookings = onSnapshot(bookingsQuery, () => {
         if (priceList.length > 0) {
-            fetchSeatsAndBookingsInfo(priceList);
+            fetchSeatsInfo(priceList);
         }
     });
 
@@ -176,7 +161,7 @@ export default function PricingManager() {
         unsubscribePrices();
         unsubscribeBookings();
     };
-  }, [toast, fetchSeatsAndBookingsInfo, priceList]);
+  }, [toast, fetchSeatsInfo, priceList]);
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -354,14 +339,6 @@ export default function PricingManager() {
     }
   };
 
-  const getStatusVariant = (status: Booking['status']) => {
-    switch (status) {
-      case 'Confirmed': return 'default';
-      case 'Paid': return 'secondary';
-      default: return 'outline';
-    }
-  };
-
   if (loading) {
     return <PricingManagerSkeleton />;
   }
@@ -400,100 +377,55 @@ export default function PricingManager() {
                 ) : (
                   priceListWithSeats.map((rule) => {
                     const { bookedSeats, totalSeats } = rule;
-                    const isOpen = openCollapsible === rule.id;
                     return (
-                        <Collapsible asChild key={rule.id} open={isOpen} onOpenChange={() => setOpenCollapsible(isOpen ? null : rule.id)}>
-                            <>
-                                <TableRow className={cn("hover:bg-muted/50 cursor-pointer", isOpen && "bg-muted/50")}>
-                                    <TableCell className="pl-4 font-medium">
-                                         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
-                                            <div>
-                                                <div className="font-medium">{rule.pickup}</div>
-                                                <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                                            </div>
-                                            <div className="ml-auto sm:hidden">
-                                                {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
-                                            </div>
-                                        </CollapsibleTrigger>
-                                    </TableCell>
-                                    <TableCell>{rule.vehicleType}</TableCell>
-                                    <TableCell>₦{rule.price.toLocaleString()}</TableCell>
-                                    <TableCell>{rule.vehicleCount || 1}</TableCell>
-                                    <TableCell>
-                                      {bookedSeats !== undefined && totalSeats !== undefined ? (
-                                         <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                            <span>{bookedSeats}/{totalSeats}</span>
-                                          </div>
-                                      ) : (
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Loader2 className="h-4 w-4 animate-spin"/>
-                                        </div>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="text-right pr-4">
-                                        <div className="flex justify-end items-center">
-                                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(rule); }}><Edit className="h-4 w-4" /></Button>
-                                            <AlertDialog onOpenChange={(open) => !open && ((e: React.MouseEvent) => e.stopPropagation())}>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                        This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                            <CollapsibleTrigger asChild className="hidden sm:flex">
-                                                <Button variant="ghost" size="icon">
-                                                     {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
-                                                </Button>
-                                            </CollapsibleTrigger>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                                <CollapsibleContent asChild>
-                                    <tr className="bg-muted/20 hover:bg-muted/30">
-                                        <TableCell colSpan={6} className="p-0">
-                                            <div className="p-4">
-                                                <h4 className="font-semibold text-md mb-2">Travel List for Today ({format(new Date(), 'PPP')})</h4>
-                                                {rule.bookings && rule.bookings.length > 0 ? (
-                                                    <div className="max-h-60 overflow-y-auto pr-2">
-                                                        <Table>
-                                                             <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>Passenger</TableHead>
-                                                                    <TableHead>Contact</TableHead>
-                                                                    <TableHead>Status</TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {rule.bookings.map(booking => (
-                                                                    <TableRow key={booking.id}>
-                                                                        <TableCell>{booking.name}</TableCell>
-                                                                        <TableCell>{booking.phone}</TableCell>
-                                                                        <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
-                                                                    </TableRow>
-                                                                ))}
-                                                            </TableBody>
-                                                        </Table>
-                                                    </div>
-                                                ) : (
-                                                    <p className="text-sm text-muted-foreground text-center py-4">No passengers have booked this trip for today.</p>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </tr>
-                                </CollapsibleContent>
-                            </>
-                        </Collapsible>
+                        <TableRow key={rule.id}>
+                            <TableCell className="pl-4 font-medium">
+                                <div className="font-medium">{rule.pickup}</div>
+                                <div className="text-sm text-muted-foreground">to {rule.destination}</div>
+                            </TableCell>
+                            <TableCell>{rule.vehicleType}</TableCell>
+                            <TableCell>₦{rule.price.toLocaleString()}</TableCell>
+                            <TableCell>{rule.vehicleCount || 1}</TableCell>
+                            <TableCell>
+                              {bookedSeats !== undefined && totalSeats !== undefined ? (
+                                 <div className="flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                    <span>{bookedSeats}/{totalSeats}</span>
+                                  </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin"/>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right pr-4">
+                                <div className="flex justify-end items-center gap-1">
+                                    <Button asChild variant="ghost" size="sm">
+                                      <Link href={`/admin/travel-list/${rule.id}`}>
+                                          <List className="mr-2 h-4 w-4" /> View List
+                                      </Link>
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(rule)} className={cn(buttonVariants({ variant: "destructive" }))}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                            </TableCell>
+                        </TableRow>
                     );
                   })
                 )}
@@ -610,3 +542,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
