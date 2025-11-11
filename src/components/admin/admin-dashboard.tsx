@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -408,7 +407,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     ));
   };
   
-  if (allBookingsLoading && bookings.length === 0) {
+  if (loading && bookings.length === 0) {
     return <DashboardSkeleton />;
   }
 

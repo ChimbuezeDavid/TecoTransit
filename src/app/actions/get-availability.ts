@@ -52,12 +52,17 @@ export async function getAvailableSeats({
         const priceRule = pricingSnapshot.docs[0].data();
         
         const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
+
         if (!vehicleKey) {
             console.error(`Invalid vehicle type found in price rule: ${priceRule.vehicleType}`);
             return 0;
         }
 
-        const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
+        const vehicleCapacityMap: Record<keyof typeof vehicleOptions, number> = { 
+            '4-seater': 4, 
+            '5-seater': 5, 
+            '7-seater': 7 
+        };
         const vehicleCapacity = vehicleCapacityMap[vehicleKey] || 0;
         
         if (vehicleCapacity === 0) {

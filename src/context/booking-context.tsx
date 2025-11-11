@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -55,7 +54,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return () => {
         unsubscribePrices();
     };
-  }, [toast]);
+  }, []);
 
   // Fetch filtered bookings specifically for the admin dashboard
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
@@ -93,7 +92,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return unsubscribe;
-  }, [toast]);
+  }, []);
 
   const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
     const firestoreBooking = {
@@ -114,13 +113,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
-      // We fetch the latest version of all bookings when the action happens.
-      // This is less efficient than using a stale `allBookings` state but safer.
-      const allBookingsSnapshot = await getDocs(collection(db, 'bookings'));
-      const allBookings = allBookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+      const allBookingsSnapshot = await getDocs(query(collection(db, 'bookings'), where('id', '==', bookingId)));
       
-      const bookingToUpdate = allBookings.find(b => b.id === bookingId);
-      
+      const bookingToUpdate = allBookingsSnapshot.docs.length > 0 ? { id: allBookingsSnapshot.docs[0].id, ...allBookingsSnapshot.docs[0].data() } as Booking : undefined;
+
       if (!bookingToUpdate) {
         throw new Error("Booking not found");
       }
