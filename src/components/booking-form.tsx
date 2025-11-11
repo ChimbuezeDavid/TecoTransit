@@ -7,8 +7,6 @@ import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
-import { useBooking } from '@/context/booking-context';
-import { useSettings } from '@/context/settings-context';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +22,8 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
+import { useBooking } from '@/context/booking-context';
+import { useSettings } from '@/context/settings-context';
 import { getAvailableSeats } from '@/app/actions/get-availability';
 import { db } from '@/lib/firebase';
 
@@ -76,7 +76,7 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
+  const { watch, setValue, handleSubmit: formHandleSubmit, trigger } = form;
   const pickup = watch("pickup");
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
@@ -85,38 +85,52 @@ export default function BookingForm() {
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
-      const filteredPrices = prices.filter(
+      return prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
-       // When pickup/destination changes, reset vehicleType if it's no longer valid
-      if (!filteredPrices.some(p => p.vehicleType === vehicleType)) {
-          setValue('vehicleType', '', { shouldValidate: true });
-      }
-      return filteredPrices;
     }
     return [];
-  }, [pickup, destination, prices, vehicleType, setValue]);
+  }, [pickup, destination, prices]);
   
   useEffect(() => {
+    // This effect handles all logic that depends on route/date changes.
+    
+    // 1. Reset vehicle type if it's no longer valid for the new route
+    const isVehicleValid = availableVehicles.some(p => p.vehicleType === vehicleType);
+    if (pickup && destination && vehicleType && !isVehicleValid) {
+        setValue('vehicleType', '', { shouldValidate: true });
+    }
+
+    // 2. Check for available seats
     const checkSeats = async () => {
         if (pickup && destination && vehicleType && intendedDate) {
             setIsCheckingSeats(true);
+            setAvailableSeats(null);
             try {
                 const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
                 setAvailableSeats(seats);
             } catch (error) {
                 console.error("Failed to get seat count", error);
-                setAvailableSeats(null); // Or handle error appropriately
+                setAvailableSeats(null); 
+                toast({
+                    variant: 'destructive',
+                    title: 'Could Not Check Seats',
+                    description: 'Failed to retrieve seat availability. Please try again.'
+                });
             } finally {
                 setIsCheckingSeats(false);
             }
         } else {
+            // If any required field is missing, clear the seat availability
             setAvailableSeats(null);
         }
     };
 
     checkSeats();
-  }, [pickup, destination, vehicleType, intendedDate]);
+  // We only want this effect to run when these specific fields are changed by the user.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickup, destination, vehicleType, intendedDate, setValue]);
+
 
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
