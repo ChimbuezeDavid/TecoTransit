@@ -4,7 +4,7 @@
 import Paystack from 'paystack';
 import type { BookingFormData, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue }from 'firebase-admin/firestore';
+import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
 import { Resend } from 'resend';
@@ -130,21 +130,27 @@ async function assignBookingToTrip(
 
     const tripsSnapshot = await tripsQuery.get();
     let assigned = false;
+    let assignedTripId: string | null = null;
 
     // 1. Try to find a non-full, existing trip
     for (const doc of tripsSnapshot.docs) {
         const trip = doc.data() as Trip;
         if (!trip.isFull) {
-            await doc.ref.update({
+            const newPassengerCount = trip.passengerIds.length + 1;
+            const updates: { passengerIds: FirebaseFirestore.FieldValue; isFull?: boolean } = {
                 passengerIds: FieldValue.arrayUnion(bookingId),
-            });
-            // Re-check if it's full now
-            if (trip.passengerIds.length + 1 >= trip.capacity) {
-                await doc.ref.update({ isFull: true });
+            };
+
+            if (newPassengerCount >= trip.capacity) {
+                updates.isFull = true;
             }
+
+            await doc.ref.update(updates);
+            
             // Update booking with tripId
             await db.doc(`bookings/${bookingId}`).update({ tripId: doc.id });
             assigned = true;
+            assignedTripId = doc.id;
             break;
         }
     }
@@ -170,6 +176,7 @@ async function assignBookingToTrip(
         await db.collection('trips').doc(newTripId).set(newTrip);
         await db.doc(`bookings/${bookingId}`).update({ tripId: newTripId });
         assigned = true;
+        assignedTripId = newTripId;
     }
 
     // 3. If still not assigned, all vehicles are full. Send alert.
@@ -179,8 +186,8 @@ async function assignBookingToTrip(
     }
 
     // After assignment logic, check for trip confirmation
-    if (assigned) {
-        await checkAndConfirmTrip(db, pickup, destination, vehicleType, intendedDate);
+    if (assignedTripId) {
+        await checkAndConfirmTrip(db, assignedTripId);
     }
 }
 
@@ -215,58 +222,63 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
 
 async function checkAndConfirmTrip(
     db: FirebaseFirestore.Firestore,
-    pickup: string,
-    destination: string,
-    vehicleType: string,
-    date: string
+    tripId: string,
 ) {
-    const tripsQuery = db.collection('trips')
-        .where('pickup', '==', pickup)
-        .where('destination', '==', destination)
-        .where('vehicleType', '==', vehicleType)
-        .where('date', '==', date)
-        .where('isFull', '==', true);
+    const tripRef = db.collection('trips').doc(tripId);
+    const tripDoc = await tripRef.get();
+
+    if (!tripDoc.exists) {
+        console.warn(`Trip with ID ${tripId} not found for confirmation check.`);
+        return;
+    }
+
+    const trip = tripDoc.data() as Trip;
+
+    // Only proceed if the trip is marked as full
+    if (!trip.isFull) {
+        return;
+    }
     
-    const fullTripsSnapshot = await tripsQuery.get();
+    const passengerIds = trip.passengerIds;
+    if (passengerIds.length === 0) return;
+
+    // Find all passengers for this trip
+    const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
+    const bookingsSnapshot = await bookingsQuery.get();
+
+    // Filter for passengers that are 'Paid' and need confirmation
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
+
+    if (bookingsToConfirm.length === 0) return;
+
+    const batch = db.batch();
+    bookingsToConfirm.forEach(doc => {
+        batch.update(doc.ref, { status: 'Confirmed', confirmedDate: trip.date });
+    });
     
-    for (const tripDoc of fullTripsSnapshot.docs) {
-        const trip = tripDoc.data() as Trip;
-        const passengerIds = trip.passengerIds;
+    await batch.commit();
 
-        if (passengerIds.length === 0) continue;
-
-        const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
-        const bookingsSnapshot = await bookingsQuery.get();
-
-        const batch = db.batch();
-        const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
-
-        if (bookingsToConfirm.length === 0) continue;
-
-        bookingsToConfirm.forEach(doc => {
-            batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
-        });
-        
-        await batch.commit();
-
-        // Send emails after committing the batch
-        for (const doc of bookingsToConfirm) {
-            const bookingData = doc.data();
-            try {
-                await sendBookingStatusEmail({
-                    name: bookingData.name,
-                    email: bookingData.email,
-                    status: 'Confirmed',
-                    bookingId: doc.id,
-                    pickup: bookingData.pickup,
-                    destination: bookingData.destination,
-                    vehicleType: bookingData.vehicleType,
-                    totalFare: bookingData.totalFare,
-                    confirmedDate: date,
-                });
-            } catch (e) {
-                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
-            }
+    // Send confirmation emails after the status update is successful
+    for (const doc of bookingsToConfirm) {
+        const bookingData = doc.data();
+        try {
+            await sendBookingStatusEmail({
+                name: bookingData.name,
+                email: bookingData.email,
+                status: 'Confirmed',
+                bookingId: doc.id,
+                pickup: bookingData.pickup,
+                destination: bookingData.destination,
+                vehicleType: bookingData.vehicleType,
+                totalFare: bookingData.totalFare,
+                confirmedDate: trip.date,
+            });
+        } catch (e) {
+            console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+            // Optional: Add to a retry queue or log for manual intervention
         }
     }
 }
+
+
+    
