@@ -8,6 +8,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
 import { getAvailableSeats } from './get-availability';
+import { getFirestore } from 'firebase-admin/firestore';
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -58,8 +59,14 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
 
+        const db = getFirebaseAdmin()?.firestore();
+        if (!db) {
+            throw new Error("Could not connect to the database.");
+        }
+
         // Authoritative final check for seat availability on the server
         const availableSeats = await getAvailableSeats({
+            db: db as any, // Cast because client and admin SDKs have slightly different types
             pickup: bookingDetails.pickup,
             destination: bookingDetails.destination,
             vehicleType: bookingDetails.vehicleType,
@@ -73,10 +80,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error('Sorry, the last seat was just taken. Your payment was successful but the booking could not be completed. Please contact support.');
         }
 
-        const db = getFirebaseAdmin()?.firestore();
-        if (!db) {
-            throw new Error("Could not connect to the database.");
-        }
         const bookingsRef = db.collection('bookings');
         
         // Create the booking with a 'Paid' status
