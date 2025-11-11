@@ -100,18 +100,17 @@ export default function TravelListPage() {
         const tripsQuery = query(
             collection(db, "trips"),
             where('priceRuleId', '==', priceRule.id),
-            orderBy('date', 'asc')
+            orderBy('date', 'asc'),
+            orderBy('vehicleIndex', 'asc')
         );
 
         const unsubscribe = onSnapshot(tripsQuery, (querySnapshot) => {
             const tripsData = querySnapshot.docs.map(doc => doc.data() as Trip);
-            // Secondary sort on the client-side
-            tripsData.sort((a, b) => a.vehicleIndex - b.vehicleIndex);
             setTrips(tripsData);
             setLoading(false);
         }, (err) => {
             console.error("Error fetching trips:", err);
-            setError("Could not fetch trips for this route. Check console for details.");
+            setError("Could not fetch trips for this route. Your security rules might be misconfigured, or you may need to create a composite index in Firestore. Check the browser console for a link to create the required index.");
             setLoading(false);
         });
 
@@ -133,6 +132,7 @@ export default function TravelListPage() {
         }
 
         const unsubscribers = chunks.map(chunk => {
+            if (chunk.length === 0) return () => {};
             const bookingsQuery = query(collection(db, "bookings"), where(documentId(), 'in', chunk));
             return onSnapshot(bookingsQuery, (snapshot) => {
                 const bookingsData: Record<string, Booking> = {};
