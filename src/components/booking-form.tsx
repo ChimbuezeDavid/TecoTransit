@@ -79,24 +79,28 @@ export default function BookingForm() {
 
   const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
   const watchAllFields = watch();
+  const pickup = watch("pickup");
+  const destination = watch("destination");
+  const vehicleType = watch("vehicleType");
+  const intendedDate = watch("intendedDate");
+  const luggageCount = watch("luggageCount");
+
 
   const availableVehicles = useMemo(() => {
-    const { pickup, destination } = watchAllFields;
     if (pickup && destination && prices) {
       return prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
     }
     return [];
-  }, [watchAllFields.pickup, watchAllFields.destination, prices]);
+  }, [pickup, destination, prices]);
 
   const { totalFare, baseFare } = useMemo(() => {
-    const { vehicleType, luggageCount } = watchAllFields;
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
     const newBaseFare = vehicleRule ? vehicleRule.price : 0;
     const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
     return { totalFare: newTotalFare, baseFare: newBaseFare };
-  }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
+  }, [availableVehicles, vehicleType, luggageCount]);
 
   
   const onBookingSubmit = async (formData: z.infer<typeof bookingSchema>) => {
@@ -210,8 +214,6 @@ export default function BookingForm() {
   }, [watch, getValues, setValue, trigger, availableVehicles]);
 
   useEffect(() => {
-    const { pickup, destination, vehicleType, intendedDate } = watchAllFields;
-    
     const checkSeats = async () => {
         if (pickup && destination && vehicleType && intendedDate) {
             setSeatsLoading(true);
@@ -233,7 +235,7 @@ export default function BookingForm() {
         }
     };
     checkSeats();
-  }, [watchAllFields.pickup, watchAllFields.destination, watchAllFields.vehicleType, watchAllFields.intendedDate]);
+  }, [pickup, destination, vehicleType, intendedDate]);
 
 
   const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
