@@ -246,6 +246,32 @@ export default function BookingForm() {
     return null;
   }
 
+  const renderSubmitButtonContent = () => {
+    if (isProcessing || settingsLoading) {
+      return (
+        <>
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+          <span>{settingsLoading ? 'Loading...' : 'Processing...'}</span>
+        </>
+      );
+    }
+    if (isPaystackEnabled) {
+      return (
+        <>
+          <CreditCard className="mr-2 h-5 w-5" />
+          <span>Proceed to Payment</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <Send className="mr-2 h-5 w-5" />
+        <span>Submit Booking</span>
+      </>
+    );
+  };
+
+
   return (
     <>
     <Card className="w-full shadow-2xl shadow-primary/10">
@@ -436,8 +462,7 @@ export default function BookingForm() {
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
             <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || availableSeats === 0 || isCheckingSeats}>
-                {isProcessing || settingsLoading ? ( <Loader2 className="mr-2 h-5 w-5 animate-spin" /> ) : isPaystackEnabled ? ( <CreditCard className="mr-2 h-5 w-5" /> ) : ( <Send className="mr-2 h-5 w-5" /> )}
-                {settingsLoading ? 'Loading...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking'}
+              {renderSubmitButtonContent()}
             </Button>
           </CardFooter>
         </form>
@@ -453,3 +478,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
