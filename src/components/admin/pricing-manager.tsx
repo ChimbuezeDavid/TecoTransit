@@ -434,7 +434,7 @@ export default function PricingManager() {
                                     <TableCell className="text-right pr-4">
                                         <div className="flex justify-end items-center">
                                             <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(rule); }}><Edit className="h-4 w-4" /></Button>
-                                            <AlertDialog onOpenChange={(open) => !open && (e) => e.stopPropagation()}>
+                                            <AlertDialog onOpenChange={(open) => !open && ((e: React.MouseEvent) => e.stopPropagation())}>
                                                 <AlertDialogTrigger asChild>
                                                     <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                                                 </AlertDialogTrigger>
@@ -562,6 +562,7 @@ export default function PricingManager() {
                         <FormLabel>No. of Vehicles</FormLabel>
                         <FormControl>
                             <Input 
+                                id="vehicleCount"
                                 type="number"
                                 inputMode="numeric" 
                                 min="1"
