@@ -26,9 +26,9 @@ import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  pickup: z.string({ required_error: 'Please select a pickup location.' }),
-  destination: z.string({ required_error: 'Please select a destination.' }),
-  vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
+  pickup: z.string({ required_error: 'Please select a pickup location.' }).min(1, 'Please select a pickup location.'),
+  destination: z.string({ required_error: 'Please select a destination.' }).min(1, 'Please select a destination.'),
+  vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }).min(1, 'You need to select a vehicle type.'),
   price: z.coerce.number().positive({ message: "Price must be a positive number." }),
   vehicleCount: z.coerce.number().min(0, { message: "Vehicle count cannot be negative." }),
 }).refine(data => data.pickup !== data.destination, {
@@ -438,9 +438,9 @@ export default function PricingManager() {
                 <FormField control={form.control} name="pickup" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Pickup Location</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
-                    <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
+                        <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage />
                 </FormItem>
@@ -448,9 +448,9 @@ export default function PricingManager() {
                 <FormField control={form.control} name="destination" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
-                    <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
+                        <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
                     </Select>
                     <FormMessage />
                 </FormItem>
@@ -458,7 +458,7 @@ export default function PricingManager() {
                 <FormField control={form.control} name="vehicleType" render={({ field }) => (
                 <FormItem className="sm:col-span-2">
                     <FormLabel>Vehicle Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
                     <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
                     </Select>
@@ -498,14 +498,15 @@ export default function PricingManager() {
                     </FormItem>
                 )} />
             </div>
-            <DialogFooter className="pt-4 px-6 pb-6 flex-col sm:flex-row sm:justify-between w-full bg-muted/50 rounded-b-lg">
+            <DialogFooter className="mt-6 flex-col sm:flex-row sm:justify-between w-full bg-muted/50 rounded-b-lg p-6">
                 {editMode && (
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                            <Button type="button" variant="outline" className="w-full sm:w-auto sm:mr-auto text-amber-600 border-amber-600/50 hover:bg-amber-50 hover:text-amber-700" disabled={isResetting}>
-                                {isResetting ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+                                {isResetting ? <Loader2 className="animate-spin mr-2" /> : <RotateCcw className="mr-2" />}
                                 Reset Seats
-                            </Button>                        </AlertDialogTrigger>
+                            </Button>                        
+                        </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure you want to reset the seats?</AlertDialogTitle>
@@ -538,7 +539,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
-
-    
 
     
