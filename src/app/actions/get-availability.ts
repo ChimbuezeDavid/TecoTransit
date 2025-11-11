@@ -2,12 +2,13 @@
 
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { vehicleOptions } from "@/lib/constants";
 
 /**
  * Calculates the number of available seats for a specific route, irrespective of date.
- * This is based on the total configured capacity minus all paid or confirmed bookings.
+ * This is the single source of truth for seat availability.
  * @param priceRuleId - The unique identifier for the price rule (e.g., "abuad_ajah-lagos_4-seater-sienna").
- * @returns The number of seats currently available in the pool for this route.
+ * @returns The number of seats currently available for this route.
  */
 export const getAvailableSeats = async (priceRuleId: string): Promise<number> => {
     try {
@@ -24,14 +25,18 @@ export const getAvailableSeats = async (priceRuleId: string): Promise<number> =>
         }
 
         const priceRule = priceRuleSnap.data();
+
+        // The total number of seats is pre-calculated and stored in the price rule.
         const totalSeats = priceRule.seatsAvailable || 0;
+        
+        if (totalSeats === 0) return 0;
 
         // Count all bookings for this route that are 'Paid' or 'Confirmed'
         const bookingsQuery = query(
             collection(db, 'bookings'),
             where('pickup', '==', priceRule.pickup),
             where('destination', '==', priceRule.destination),
-            where('vehicleType', '==', priceRule.vehicleType), // This was the missing filter
+            where('vehicleType', '==', priceRule.vehicleType),
             where('status', 'in', ['Paid', 'Confirmed'])
         );
         

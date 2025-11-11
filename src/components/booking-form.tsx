@@ -122,7 +122,10 @@ export default function BookingForm() {
             }
         };
 
-        checkSeats();
+        const intervalId = setInterval(checkSeats, 5000); // Re-check every 5 seconds
+        checkSeats(); // Initial check
+
+        return () => clearInterval(intervalId); // Cleanup on component unmount
     }, [pickup, destination, vehicleType]);
 
   const { totalFare, baseFare } = useMemo(() => {
@@ -210,7 +213,7 @@ export default function BookingForm() {
         return null;
     }
     
-    if (isCheckingSeats) {
+    if (isCheckingSeats && availableSeats === null) { // Only show loader on initial check
       return (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -241,29 +244,17 @@ export default function BookingForm() {
   };
 
    const renderSubmitButtonContent = () => {
-    if (isProcessing || settingsLoading) {
-      return (
-        <>
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          <span>{settingsLoading ? 'Loading...' : 'Processing...'}</span>
-        </>
-      );
-    }
-    if (isPaystackEnabled) {
-      return (
-        <>
-          <CreditCard className="mr-2 h-5 w-5" />
-          <span>Proceed to Payment</span>
-        </>
-      );
-    }
+    const isLoading = isProcessing || settingsLoading;
+    const buttonText = settingsLoading ? 'Loading...' : isProcessing ? 'Processing...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking';
+    const Icon = isLoading ? Loader2 : isPaystackEnabled ? CreditCard : Send;
+    
     return (
-      <>
-        <Send className="mr-2 h-5 w-5" />
-        <span>Submit Booking</span>
-      </>
+        <>
+            <Icon className={cn("mr-2 h-5 w-5", isLoading && "animate-spin")} />
+            <span>{buttonText}</span>
+        </>
     );
-  };
+   };
 
 
   return (
@@ -472,5 +463,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    

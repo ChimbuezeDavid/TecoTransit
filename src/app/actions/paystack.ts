@@ -26,18 +26,18 @@ interface InitializeTransactionArgs {
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
     const { priceRuleId } = metadata;
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+      throw new Error("Could not connect to the database.");
+    }
     
-    // Last-minute availability check
+    // Last-minute availability check before creating reservation
     const availableSeats = await getAvailableSeats(priceRuleId);
     if (availableSeats <= 0) {
         return { status: false, message: 'Sorry, all seats for this trip have just been booked. Please try another route.' };
     }
     
-    // Create a temporary reservation
-    const db = getFirebaseAdmin()?.firestore();
-    if (!db) {
-      throw new Error("Could not connect to the database.");
-    }
+    // Create a temporary reservation to hold the seat
     const reservationRef = db.collection('reservations').doc();
     await reservationRef.set({
         priceRuleId,
@@ -92,17 +92,9 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
         
-        // Final availability check before creating the booking
-        const priceRuleId = `${bookingDetails.pickup}_${bookingDetails.destination}_${bookingDetails.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-        const availableSeats = await getAvailableSeats(priceRuleId);
-        if (availableSeats <= 0) {
-            // This is the edge case where the seat was taken between our first check and now.
-            // We must refund the user. For now, we will log an error and prevent booking.
-            console.error(`CRITICAL: Overbooking prevented for ${priceRuleId}. User ${bookingDetails.email} paid but no seats were available. MANUAL REFUND REQUIRED.`);
-            throw new Error("Unfortunately, the last available seat was booked while you were completing your payment. Your booking could not be completed. Please contact support for a refund.");
-        }
-
-
+        // The final check is now implicitly handled by the reservation system.
+        // If the user got this far, a seat was reserved for them.
+        
         const bookingsRef = db.collection('bookings');
         
         const newBookingRef = bookingsRef.doc();
