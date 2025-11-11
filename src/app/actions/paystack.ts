@@ -4,11 +4,10 @@
 import Paystack from 'paystack';
 import type { BookingFormData } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue }from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
-import { getAvailableSeats } from './get-availability';
-import { getFirestore } from 'firebase-admin/firestore';
+import { collection, query, where, getDocs, Firestore } from "firebase/firestore";
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -21,6 +20,63 @@ interface InitializeTransactionArgs {
   amount: number; // in kobo
   metadata: Record<string, any>;
 }
+
+// This is a new, server-side-only version of getAvailableSeats
+// It's separate from the client-side logic to ensure server-side checks are robust.
+const getAvailableSeatsOnServer = async (
+    db: FirebaseFirestore.Firestore, 
+    pickup: string, 
+    destination: string, 
+    vehicleType: string, 
+    date: string
+): Promise<number> => {
+    try {
+        const pricingQuery = query(
+            collection(db, 'prices'),
+            where('pickup', '==', pickup),
+            where('destination', '==', destination),
+            where('vehicleType', '==', vehicleType)
+        );
+
+        const bookingsQuery = query(
+            collection(db, 'bookings'),
+            where('pickup', '==', pickup),
+            where('destination', '==', destination),
+            where('vehicleType', '==', vehicleType),
+            where('intendedDate', '==', date),
+            where('status', 'in', ['Paid', 'Confirmed'])
+        );
+
+        const [pricingSnapshot, bookingsSnapshot] = await Promise.all([
+            getDocs(pricingQuery as any),
+            getDocs(bookingsQuery as any),
+        ]);
+
+        if (pricingSnapshot.empty) {
+            return 0;
+        }
+
+        const priceRule = pricingSnapshot.docs[0].data();
+        const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
+        
+        if (!vehicleKey) {
+            return 0;
+        }
+
+        const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
+        const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
+        const totalSeats = (priceRule.vehicleCount || 0) * seatsPerVehicle;
+
+        const bookedSeats = bookingsSnapshot.size;
+
+        return totalSeats - bookedSeats;
+
+    } catch (error) {
+        console.error("Error getting available seats on server:", error);
+        return 0;
+    }
+};
+
 
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
@@ -65,13 +121,13 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         }
 
         // Authoritative final check for seat availability on the server
-        const availableSeats = await getAvailableSeats({
-            db: db as any, // Cast because client and admin SDKs have slightly different types
-            pickup: bookingDetails.pickup,
-            destination: bookingDetails.destination,
-            vehicleType: bookingDetails.vehicleType,
-            date: bookingDetails.intendedDate,
-        });
+        const availableSeats = await getAvailableSeatsOnServer(
+            db,
+            bookingDetails.pickup,
+            bookingDetails.destination,
+            bookingDetails.vehicleType,
+            bookingDetails.intendedDate,
+        );
 
         if (availableSeats <= 0) {
             // This is the critical race condition check.
@@ -195,3 +251,5 @@ async function checkAndConfirmTrip(
         }
     }
 }
+
+    

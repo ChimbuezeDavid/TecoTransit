@@ -25,7 +25,6 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
-import { getAvailableSeats } from '@/app/actions/get-availability';
 import { db } from '@/lib/firebase';
 
 
@@ -55,7 +54,7 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { prices, bookings: allBookings, loading: pricesLoading, createBooking } = useBooking();
   const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
@@ -63,8 +62,6 @@ export default function BookingForm() {
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   
-  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
-  const [seatsLoading, setSeatsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
@@ -86,52 +83,18 @@ export default function BookingForm() {
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
-      return prices.filter(
+      const filteredPrices = prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
+       // When pickup/destination changes, reset vehicleType if it's no longer valid
+      if (!filteredPrices.some(p => p.vehicleType === vehicleType)) {
+          setValue('vehicleType', '', { shouldValidate: true });
+      }
+      return filteredPrices;
     }
     return [];
-  }, [pickup, destination, prices]);
+  }, [pickup, destination, prices, vehicleType, setValue]);
   
-  // This effect handles all logic that depends on form field changes.
-  // It's structured to avoid infinite loops by depending on primitive values.
-  useEffect(() => {
-    // 1. Reset dependent fields
-    const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === vehicleType);
-    if (!currentVehicleStillAvailable) {
-        setValue('vehicleType', '', { shouldValidate: true });
-    }
-
-    const selectedVehicleDetails = allVehicleOptions[vehicleType as keyof typeof allVehicleOptions];
-    if (selectedVehicleDetails) {
-        const maxLuggages = selectedVehicleDetails.maxLuggages ?? 0;
-        if (luggageCount > maxLuggages) {
-            setValue('luggageCount', maxLuggages, { shouldValidate: true });
-        }
-    }
-    
-    // 2. Check seat availability if all required fields are present
-    setAvailableSeats(null);
-    if (pickup && destination && vehicleType && intendedDate) {
-        setSeatsLoading(true);
-        getAvailableSeats({
-            db,
-            pickup,
-            destination,
-            vehicleType,
-            date: format(intendedDate, 'yyyy-MM-dd'),
-        }).then(seats => {
-            setAvailableSeats(seats);
-        }).catch(err => {
-            console.error("Failed to get seat count", err);
-            setAvailableSeats(null);
-        }).finally(() => {
-            setSeatsLoading(false);
-        });
-    }
-  }, [pickup, destination, vehicleType, intendedDate, availableVehicles, luggageCount, setValue]);
-
-
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
     const newBaseFare = vehicleRule ? vehicleRule.price : 0;
@@ -139,7 +102,32 @@ export default function BookingForm() {
     return { totalFare: newTotalFare, baseFare: newBaseFare };
   }, [availableVehicles, vehicleType, luggageCount]);
 
-  
+  const availableSeats = useMemo(() => {
+    if (!pickup || !destination || !vehicleType || !intendedDate) {
+        return null;
+    }
+
+    const priceRule = prices.find(p => p.pickup === pickup && p.destination === destination && p.vehicleType === vehicleType);
+    if (!priceRule) return 0;
+    
+    const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === priceRule.vehicleType) as keyof typeof allVehicleOptions | undefined;
+    if (!vehicleKey) return 0;
+
+    const vehicleCapacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
+    const totalSeats = (priceRule.vehicleCount || 0) * vehicleCapacity;
+    
+    const intendedDateStr = format(intendedDate, 'yyyy-MM-dd');
+    const bookedSeats = allBookings.filter(b => 
+        b.pickup === pickup &&
+        b.destination === destination &&
+        b.vehicleType === vehicleType &&
+        b.intendedDate === intendedDateStr
+    ).length;
+
+    return totalSeats - bookedSeats;
+}, [pickup, destination, vehicleType, intendedDate, prices, allBookings]);
+
+
   const onBookingSubmit = async (formData: z.infer<typeof bookingSchema>) => {
     if (baseFare <= 0) {
       toast({
@@ -153,23 +141,13 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
-        // Final check on the client before proceeding, server will do the authoritative check
-        const seatsNowAvailable = await getAvailableSeats({
-            db,
-            pickup: formData.pickup,
-            destination: formData.destination,
-            vehicleType: formData.vehicleType,
-            date: format(formData.intendedDate, 'yyyy-MM-dd')
-        });
-
-        if (seatsNowAvailable <= 0) {
+        if (availableSeats === null || availableSeats <= 0) {
             toast({
                 variant: 'destructive',
                 title: 'No Seats Available',
                 description: 'Sorry, this trip is now fully booked. Please try another trip.',
             });
             setIsProcessing(false);
-            setAvailableSeats(0); // Update UI
             return;
         }
         
@@ -230,7 +208,7 @@ export default function BookingForm() {
     [];
 
   const renderSeatStatus = () => {
-    if (seatsLoading) {
+    if (pricesLoading) {
         return (
             <div className="flex items-center text-sm text-muted-foreground mt-2">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -467,3 +445,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
