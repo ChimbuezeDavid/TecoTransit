@@ -20,7 +20,7 @@ export type Booking = {
   tripId?: string; // Optional ID to group passengers in a confirmed trip
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId'> & {
     intendedDate: Date;
     alternativeDate: Date;
     privacyPolicy: boolean;

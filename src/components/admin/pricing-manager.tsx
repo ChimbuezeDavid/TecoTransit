@@ -79,7 +79,7 @@ function PricingManagerSkeleton() {
 
 export default function PricingManager() {
   const { toast } = useToast();
-  const { bookings: allBookings, loading: bookingsLoading } = useBooking();
+  const { allBookings, loading: bookingsLoading } = useBooking();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

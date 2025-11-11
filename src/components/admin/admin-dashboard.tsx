@@ -355,10 +355,27 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
   const VehicleIcon = selectedBooking?.vehicleType.includes('Bus') ? Bus : Car;
 
   const renderTableContent = () => {
+    if (loading) {
+        return [...Array(5)].map((_, i) => (
+             <TableRow key={i}>
+                <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-40 mt-2" />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-32 mt-2" />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
+            </TableRow>
+        ));
+    }
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={6} className="text-center py-10 text-destructive">
+          <TableCell colSpan={5} className="text-center py-10 text-destructive">
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
@@ -392,7 +409,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     ));
   };
   
-  if (loading && allBookings.length === 0) {
+  if (allBookingsLoading && allBookings.length === 0) {
     return <DashboardSkeleton />;
   }
 

@@ -11,6 +11,7 @@ import { sendBookingStatusEmail } from '@/app/actions/send-email';
 
 interface BookingContextType {
   bookings: Booking[];
+  allBookings: Booking[];
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
@@ -25,7 +26,8 @@ interface BookingContextType {
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: React.ReactNode }) => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]); // For filtered dashboard view
+  const [allBookings, setAllBookings] = useState<Booking[]>([]); // For calculations
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,21 +42,21 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     toast({ variant: 'destructive', title: `Error ${context}`, description: message, duration: 10000 });
   };
 
+  // Fetch prices and ALL bookings for calculations
   useEffect(() => {
     const pricesQuery = query(collection(db, "prices"));
     const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
       const pricesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
       setPrices(pricesData);
-      setLoading(false);
+      setLoading(false); // Prices are the primary data for the booking form
     }, (err) => {
       handleFirestoreError(err, 'fetching prices');
       setLoading(false);
     });
 
-    // Also fetch all bookings for seat calculations
-    const bookingsQuery = query(collection(db, "bookings"));
-    const unsubscribeBookings = onSnapshot(bookingsQuery, (querySnapshot) => {
-         const bookingsData = querySnapshot.docs.map(doc => {
+    const allBookingsQuery = query(collection(db, "bookings"));
+    const unsubscribeAllBookings = onSnapshot(allBookingsQuery, (querySnapshot) => {
+        const bookingsData = querySnapshot.docs.map(doc => {
             const data = doc.data();
             const createdAtMillis = data.createdAt instanceof Timestamp 
                 ? data.createdAt.toMillis()
@@ -66,18 +68,20 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
               createdAt: createdAtMillis,
             } as Booking;
       });
-      setBookings(bookingsData);
+      setAllBookings(bookingsData);
     }, (err) => {
-        handleFirestoreError(err, 'fetching all bookings');
+        // This might fail if rules don't allow general reads, but it's for background calculation
+        console.warn("Could not fetch all bookings for calculation:", err.message);
     });
 
 
     return () => {
         unsubscribePrices();
-        unsubscribeBookings();
+        unsubscribeAllBookings();
     };
   }, [toast]);
 
+  // Fetch filtered bookings specifically for the admin dashboard
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
     setLoading(true);
     setError(null);
@@ -105,8 +109,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           createdAt: createdAtMillis,
         } as Booking;
       });
-      // This will only set the filtered bookings for the admin dashboard view
-      // The full list is already held in state from the initial useEffect
       setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
@@ -137,7 +139,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
-      const bookingToUpdate = bookings.find(b => b.id === bookingId);
+      const bookingToUpdate = allBookings.find(b => b.id === bookingId);
       
       if (!bookingToUpdate) {
         throw new Error("Booking not found");
@@ -168,16 +170,12 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
         });
       });
       
-  }, [bookings, toast]);
+  }, [allBookings, toast]);
 
   const deleteBooking = useCallback(async (id: string) => {
-      const bookingToDelete = bookings.find(b => b.id === id);
-      if (!bookingToDelete) {
-        throw new Error("Booking not found");
-      }
-      const bookingDocRef = doc(db, 'bookings', bookingToDelete.id);
+      const bookingDocRef = doc(db, 'bookings', id);
       await deleteDoc(bookingDocRef);
-  }, [bookings]);
+  }, []);
 
   const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
     const startTimestamp = Timestamp.fromDate(startDate);
@@ -208,6 +206,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const value = {
     bookings,
+    allBookings,
     prices,
     loading,
     error,
