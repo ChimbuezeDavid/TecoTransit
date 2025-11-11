@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -91,38 +92,38 @@ export default function BookingForm() {
     return [];
   }, [pickup, destination, prices]);
   
-  useEffect(() => {
-    const isVehicleValid = availableVehicles.some(p => p.vehicleType === vehicleType);
-    if (pickup && destination && vehicleType && !isVehicleValid) {
-        setValue('vehicleType', '', { shouldValidate: true });
-    }
-
-    const checkSeats = async () => {
-        if (pickup && destination && vehicleType && intendedDate) {
-            setIsCheckingSeats(true);
-            setAvailableSeats(null);
-            try {
-                const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
-                setAvailableSeats(seats);
-            } catch (error) {
-                console.error("Failed to get seat count", error);
-                setAvailableSeats(null); 
-                toast({
-                    variant: 'destructive',
-                    title: 'Could Not Check Seats',
-                    description: 'Failed to retrieve seat availability. Please try again.'
-                });
-            } finally {
-                setIsCheckingSeats(false);
+    useEffect(() => {
+        const checkSeats = async () => {
+            if (pickup && destination && vehicleType && intendedDate) {
+                setIsCheckingSeats(true);
+                setAvailableSeats(null);
+                try {
+                    const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
+                    setAvailableSeats(seats);
+                } catch (error) {
+                    console.error("Failed to get seat count", error);
+                    setAvailableSeats(null); 
+                    toast({
+                        variant: 'destructive',
+                        title: 'Could Not Check Seats',
+                        description: 'Failed to retrieve seat availability. Please try again.'
+                    });
+                } finally {
+                    setIsCheckingSeats(false);
+                }
+            } else {
+                setAvailableSeats(null);
             }
-        } else {
-            setAvailableSeats(null);
-        }
-    };
+        };
 
-    checkSeats();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pickup, destination, vehicleType, intendedDate]);
+        const isVehicleValid = availableVehicles.some(p => p.vehicleType === vehicleType);
+        if (pickup && destination && vehicleType && !isVehicleValid) {
+            setValue('vehicleType', '', { shouldValidate: true });
+        }
+        
+        checkSeats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pickup, destination, vehicleType, intendedDate, setValue]);
 
 
   const { totalFare, baseFare } = useMemo(() => {
@@ -452,3 +453,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
