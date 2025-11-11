@@ -102,11 +102,12 @@ async function checkAndConfirmTrip(
     vehicleType: string,
     date: string // This is the intendedDate
 ) {
+    // Fetch only the bookings that are 'Paid' and waiting for confirmation.
     const bookingsQuery = db.collection('bookings')
         .where('pickup', '==', pickup)
         .where('destination', '==', destination)
         .where('vehicleType', '==', vehicleType)
-        .where('intendedDate', '==', date) // CORRECTED: Query by intendedDate
+        .where('intendedDate', '==', date)
         .where('status', '==', 'Paid');
 
     const pricingQuery = db.collection('prices')
@@ -133,25 +134,27 @@ async function checkAndConfirmTrip(
     }
     
     const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
-    const vehicleCapacity = vehicleCapacityMap[vehicleKey] || 0;
+    const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
     
-    // Total capacity for just one vehicle of this type.
-    const seatsPerVehicle = vehicleCapacity;
+    if (seatsPerVehicle === 0) return;
+
     const paidBookings = bookingsSnapshot.docs;
     
-    // Check if the number of paid bookings fills one or more vehicles exactly.
-    if (paidBookings.length > 0 && paidBookings.length % seatsPerVehicle === 0) {
-        // This trip is full, confirm all 'Paid' bookings for this list
+    // Check if there are enough paid passengers to fill at least one vehicle.
+    if (paidBookings.length >= seatsPerVehicle) {
+        // Take the first `seatsPerVehicle` bookings from the list to form a full trip
+        const bookingsToConfirm = paidBookings.slice(0, seatsPerVehicle);
+        
         const batch = db.batch();
-        paidBookings.forEach(doc => {
+        bookingsToConfirm.forEach(doc => {
             // Set status to 'Confirmed' and set the confirmedDate to the intendedDate
             batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
         });
         
         await batch.commit();
 
-        // After committing, send confirmation emails
-        for (const doc of paidBookings) {
+        // After committing, send confirmation emails for the confirmed group
+        for (const doc of bookingsToConfirm) {
             const bookingData = doc.data();
             try {
                 await sendBookingStatusEmail({

@@ -17,6 +17,7 @@ export type Booking = {
   status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
+  tripId?: string; // Optional ID to group passengers in a confirmed trip
 };
 
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt'> & {
