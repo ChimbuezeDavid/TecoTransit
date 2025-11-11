@@ -100,17 +100,18 @@ export default function TravelListPage() {
         const tripsQuery = query(
             collection(db, "trips"),
             where('priceRuleId', '==', priceRule.id),
-            orderBy('date', 'asc'),
-            orderBy('vehicleIndex', 'asc')
+            orderBy('date', 'asc')
         );
 
         const unsubscribe = onSnapshot(tripsQuery, (querySnapshot) => {
             const tripsData = querySnapshot.docs.map(doc => doc.data() as Trip);
+            // Secondary sort on the client-side
+            tripsData.sort((a, b) => a.vehicleIndex - b.vehicleIndex);
             setTrips(tripsData);
             setLoading(false);
         }, (err) => {
             console.error("Error fetching trips:", err);
-            setError("Could not fetch trips for this route.");
+            setError("Could not fetch trips for this route. Check console for details.");
             setLoading(false);
         });
 
