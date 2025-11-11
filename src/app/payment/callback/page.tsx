@@ -13,9 +13,14 @@ function PaymentCallback() {
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment, please wait...');
+  const [hasVerified, setHasVerified] = useState(false);
 
   useEffect(() => {
     const reference = searchParams.get('reference');
+
+    if (hasVerified) {
+        return;
+    }
 
     if (!reference) {
       setStatus('error');
@@ -24,6 +29,7 @@ function PaymentCallback() {
     }
 
     const verify = async () => {
+      setHasVerified(true);
       try {
         const result = await verifyTransactionAndCreateBooking(reference);
         if (result.success) {
@@ -40,7 +46,7 @@ function PaymentCallback() {
     };
 
     verify();
-  }, [searchParams]);
+  }, [searchParams, hasVerified]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
@@ -79,7 +85,7 @@ export default function PaymentCallbackPage() {
     return (
         <Suspense fallback={
             <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <h1 className="text-2xl font-bold">Loading...</h1>
             </div>
         }>
