@@ -279,21 +279,21 @@ export default function PricingManager() {
     try {
         const bookingsSnapshot = await getDocs(bookingsQuery);
         if (bookingsSnapshot.empty) {
-            toast({ title: "No seats to reset", description: "There are no 'Paid' or 'Confirmed' bookings for this route." });
+            toast({ title: "No seats to reset", description: "There are no 'Paid' or 'Confirmed' bookings for this route to reset." });
             setIsResetting(false);
             return;
         }
 
         const batch = writeBatch(db);
         bookingsSnapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
+            batch.update(doc.ref, { status: 'Pending' });
         });
 
         await batch.commit();
 
         toast({
             title: "Seats Reset Successfully",
-            description: `${bookingsSnapshot.size} booking(s) for this route have been deleted.`,
+            description: `${bookingsSnapshot.size} booking(s) for this route have been moved to 'Pending' status.`,
         });
 
     } catch (e) {
@@ -489,7 +489,7 @@ export default function PricingManager() {
                 {editMode && (
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                           <Button type="button" variant="destructive" className="w-full sm:w-auto sm:mr-auto" disabled={isResetting}>
+                           <Button type="button" variant="outline" className="w-full sm:w-auto sm:mr-auto text-amber-600 border-amber-600/50 hover:bg-amber-50 hover:text-amber-700" disabled={isResetting}>
                                 {isResetting ? <Loader2 className="animate-spin" /> : <RotateCcw />}
                                 Reset Seats
                             </Button>
@@ -498,7 +498,7 @@ export default function PricingManager() {
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure you want to reset the seats?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will permanently delete all 'Paid' and 'Confirmed' bookings for the <strong>{editMode.pickup} to {editMode.destination} ({editMode.vehicleType})</strong> route. This action cannot be undone.
+                                    This action will move all 'Paid' and 'Confirmed' bookings for the <strong>{editMode.pickup} to {editMode.destination} ({editMode.vehicleType})</strong> route to a 'Pending' status. This will make the seats available again but will NOT delete the booking records.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -522,4 +522,5 @@ export default function PricingManager() {
   );
 }
 
+    
     
