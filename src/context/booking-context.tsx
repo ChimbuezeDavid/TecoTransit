@@ -10,25 +10,22 @@ import { format } from 'date-fns';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
 
 interface BookingContextType {
-  bookings: Booking[]; // This will hold all paid/confirmed bookings for client-side filtering
+  bookings: Booking[]; 
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
-  fetchDashboardBookings: (status: Booking['status'] | 'All') => () => void;
+  fetchBookings: (status: Booking['status'] | 'All') => () => void;
   createBooking: (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => Promise<Booking>;
   updateBookingStatus: (bookingId: string, status: 'Cancelled') => Promise<void>;
   deleteBooking: (id: string) => Promise<void>;
   deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
-  clearBookings: () => void; // This might be for dashboard state, maybe rename to clearDashboardBookings
+  clearBookings: () => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: React.ReactNode }) => {
-  // `bookings` now holds all relevant bookings for the client-side form
   const [bookings, setBookings] = useState<Booking[]>([]);
-  // `dashboardBookings` is specifically for the admin dashboard view
-  const [dashboardBookings, setDashboardBookings] = useState<Booking[]>([]);
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,43 +40,24 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     toast({ variant: 'destructive', title: `Error ${context}`, description: message, duration: 10000 });
   };
 
-  // Fetch prices and ALL paid/confirmed bookings for client-side availability checks
   useEffect(() => {
     setLoading(true);
     const pricesQuery = query(collection(db, "prices"));
     const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
       const pricesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
       setPrices(pricesData);
+      setLoading(false);
     }, (err) => {
       handleFirestoreError(err, 'fetching prices');
-    });
-
-    // Fetch all bookings that could possibly affect availability
-    const bookingsQuery = query(collection(db, "bookings"), where('status', 'in', ['Paid', 'Confirmed']));
-    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
-        const bookingsData = snapshot.docs.map(doc => {
-            const data = doc.data();
-             return {
-              id: doc.id,
-              ...data,
-              createdAt: data.createdAt?.toMillis(),
-            } as Booking;
-        });
-        setBookings(bookingsData);
-        setLoading(false);
-    }, (err) => {
-        handleFirestoreError(err, 'fetching all bookings');
-        setLoading(false);
+      setLoading(false);
     });
 
     return () => {
         unsubscribePrices();
-        unsubscribeBookings();
     };
   }, []);
 
-  // Fetch filtered bookings specifically for the admin dashboard
-  const fetchDashboardBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
+  const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
     setLoading(true);
     setError(null);
     
@@ -106,7 +84,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
           createdAt: createdAtMillis,
         } as Booking;
       });
-      setDashboardBookings(bookingsData); // Update the separate dashboard state
+      setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
       handleFirestoreError(err, 'fetching dashboard bookings');
@@ -136,7 +114,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
       const bookingDocRef = doc(db, 'bookings', bookingId);
-      // We need to fetch the document to get details for the email
       const allBookingsSnapshot = await getDocs(query(collection(db, 'bookings')));
       const bookingToUpdate = allBookingsSnapshot.docs.map(d => ({id: d.id, ...d.data()})).find(b => b.id === bookingId) as Booking | undefined;
 
@@ -197,19 +174,16 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
   
   const clearBookings = useCallback(() => {
-    setDashboardBookings([]);
+    setBookings([]);
     setLoading(true);
   }, []);
 
   const value = {
-    // The public `bookings` holds all paid/confirmed bookings for the form
-    bookings: bookings,
-    // We expose the dashboard-specific bookings through a renamed property for clarity in the hook
-    dashboardBookings: dashboardBookings,
+    bookings,
     prices,
     loading,
     error,
-    fetchDashboardBookings,
+    fetchBookings,
     createBooking,
     updateBookingStatus,
     deleteBooking,
@@ -229,9 +203,5 @@ export const useBooking = () => {
   if (context === undefined) {
     throw new Error('useBooking must be used within a BookingProvider');
   }
-  // To avoid confusion, we'll rename the fetched dashboard bookings in the hook's return value
-  const { fetchDashboardBookings: fetchBookings, dashboardBookings, ...rest } = context as any;
-  return { ...rest, bookings: dashboardBookings, fetchBookings };
+  return context;
 };
-
-    

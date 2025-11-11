@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -25,6 +24,7 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
+import { getAvailableSeats } from '@/app/actions/get-availability';
 import { db } from '@/lib/firebase';
 
 
@@ -54,13 +54,15 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, bookings: allBookings, loading: pricesLoading, createBooking } = useBooking();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
   const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
+  const [isCheckingSeats, setIsCheckingSeats] = useState(false);
   
 
   const form = useForm<z.infer<typeof bookingSchema>>({
@@ -95,37 +97,33 @@ export default function BookingForm() {
     return [];
   }, [pickup, destination, prices, vehicleType, setValue]);
   
+  useEffect(() => {
+    const checkSeats = async () => {
+        if (pickup && destination && vehicleType && intendedDate) {
+            setIsCheckingSeats(true);
+            try {
+                const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
+                setAvailableSeats(seats);
+            } catch (error) {
+                console.error("Failed to get seat count", error);
+                setAvailableSeats(null); // Or handle error appropriately
+            } finally {
+                setIsCheckingSeats(false);
+            }
+        } else {
+            setAvailableSeats(null);
+        }
+    };
+
+    checkSeats();
+  }, [pickup, destination, vehicleType, intendedDate]);
+
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
     const newBaseFare = vehicleRule ? vehicleRule.price : 0;
     const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
     return { totalFare: newTotalFare, baseFare: newBaseFare };
   }, [availableVehicles, vehicleType, luggageCount]);
-
-  const availableSeats = useMemo(() => {
-    if (!pickup || !destination || !vehicleType || !intendedDate) {
-        return null;
-    }
-
-    const priceRule = prices.find(p => p.pickup === pickup && p.destination === destination && p.vehicleType === vehicleType);
-    if (!priceRule) return 0;
-    
-    const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === priceRule.vehicleType) as keyof typeof allVehicleOptions | undefined;
-    if (!vehicleKey) return 0;
-
-    const vehicleCapacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
-    const totalSeats = (priceRule.vehicleCount || 0) * vehicleCapacity;
-    
-    const intendedDateStr = format(intendedDate, 'yyyy-MM-dd');
-    const bookedSeats = allBookings.filter(b => 
-        b.pickup === pickup &&
-        b.destination === destination &&
-        b.vehicleType === vehicleType &&
-        b.intendedDate === intendedDateStr
-    ).length;
-
-    return totalSeats - bookedSeats;
-}, [pickup, destination, vehicleType, intendedDate, prices, allBookings]);
 
 
   const onBookingSubmit = async (formData: z.infer<typeof bookingSchema>) => {
@@ -208,7 +206,7 @@ export default function BookingForm() {
     [];
 
   const renderSeatStatus = () => {
-    if (pricesLoading) {
+    if (isCheckingSeats) {
         return (
             <div className="flex items-center text-sm text-muted-foreground mt-2">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -445,5 +443,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    
