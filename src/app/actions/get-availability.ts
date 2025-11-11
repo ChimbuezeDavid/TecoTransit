@@ -1,6 +1,6 @@
 'use server';
 
-import { collection, query, where, getDocs, Firestore } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { vehicleOptions } from '@/lib/constants';
 import { db } from "@/lib/firebase";
 
@@ -33,13 +33,14 @@ export const getAvailableSeats = async (
         ]);
 
         if (pricingSnapshot.empty) {
-            console.error("No pricing rule found for this route.");
-            return 0; // No rule, no seats.
+            // No pricing rule means no vehicles are assigned to this route.
+            return 0; 
         }
 
         const priceRule = pricingSnapshot.docs[0].data();
+        
         const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
-
+        
         if (!vehicleKey) {
             console.error(`Invalid vehicle type found in price rule: ${priceRule.vehicleType}`);
             return 0;
@@ -47,7 +48,9 @@ export const getAvailableSeats = async (
 
         const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
         const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
-        const totalSeats = (priceRule.vehicleCount || 0) * seatsPerVehicle;
+        
+        // Use ?? to default to 0 if vehicleCount is undefined or null
+        const totalSeats = (priceRule.vehicleCount ?? 0) * seatsPerVehicle;
         
         const bookedSeats = bookingsSnapshot.size;
 
