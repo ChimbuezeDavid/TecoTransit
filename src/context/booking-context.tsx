@@ -48,26 +48,20 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   };
   
   useEffect(() => {
-    // Only fetch prices if a user is logged in (admin)
-    if (user) {
-        setLoading(true);
-        const pricesQuery = query(collection(db, "prices"));
-        const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
-            const pricesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
-            setPrices(pricesData);
-            setLoading(false);
-        }, (err) => {
-            handleFirestoreError(err, 'fetching prices');
-            setLoading(false);
-        });
-
-        return () => unsubscribePrices();
-    } else {
-        // If no user, clear the prices and stop loading
-        setPrices([]);
+    // Pricing rules are public data needed for the booking form, so we fetch them regardless of auth state.
+    setLoading(true);
+    const pricesQuery = query(collection(db, "prices"));
+    const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
+        const pricesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PriceRule));
+        setPrices(pricesData);
         setLoading(false);
-    }
-  }, [user]); // Re-run this effect when the user's auth state changes
+    }, (err) => {
+        handleFirestoreError(err, 'fetching prices');
+        setLoading(false);
+    });
+
+    return () => unsubscribePrices();
+  }, []);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
     setLoading(true);
