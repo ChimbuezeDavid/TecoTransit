@@ -1,9 +1,7 @@
+'use server';
 
-'use client';
-
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { vehicleOptions } from './constants';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { vehicleOptions } from '@/lib/constants';
 
 interface GetAvailableSeatsArgs {
     pickup: string;
@@ -18,28 +16,32 @@ export async function getAvailableSeats({
     vehicleType,
     date,
 }: GetAvailableSeatsArgs): Promise<number> {
+    
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+        console.error("Could not connect to the database to check seats.");
+        // If we can't connect, we can't guarantee a seat.
+        return 0;
+    }
+
     try {
         // Query for the specific pricing/fleet rule
-        const pricingQuery = query(
-            collection(db, 'prices'),
-            where('pickup', '==', pickup),
-            where('destination', '==', destination),
-            where('vehicleType', '==', vehicleType)
-        );
+        const pricingQuery = db.collection('prices')
+            .where('pickup', '==', pickup)
+            .where('destination', '==', destination)
+            .where('vehicleType', '==', vehicleType);
 
         // Query for bookings that are already 'Paid' or 'Confirmed' for that specific trip on that date
-        const bookingsQuery = query(
-            collection(db, 'bookings'),
-            where('pickup', '==', pickup),
-            where('destination', '==', destination),
-            where('vehicleType', '==', vehicleType),
-            where('intendedDate', '==', date), // Check against the intended date
-            where('status', 'in', ['Paid', 'Confirmed'])
-        );
+        const bookingsQuery = db.collection('bookings')
+            .where('pickup', '==', pickup)
+            .where('destination', '==', destination)
+            .where('vehicleType', '==', vehicleType)
+            .where('intendedDate', '==', date) // Check against the intended date
+            .where('status', 'in', ['Paid', 'Confirmed']);
 
         const [pricingSnapshot, bookingsSnapshot] = await Promise.all([
-            getDocs(pricingQuery),
-            getDocs(bookingsQuery),
+            pricingQuery.get(),
+            bookingsQuery.get(),
         ]);
 
         if (pricingSnapshot.empty) {

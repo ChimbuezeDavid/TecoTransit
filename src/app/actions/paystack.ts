@@ -7,6 +7,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
+import { getAvailableSeats } from './get-availability';
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -57,6 +58,21 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'alternativeDate' | 'privacyPolicy'> & { intendedDate: string, alternativeDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
 
+        // Authoritative final check for seat availability on the server
+        const availableSeats = await getAvailableSeats({
+            pickup: bookingDetails.pickup,
+            destination: bookingDetails.destination,
+            vehicleType: bookingDetails.vehicleType,
+            date: bookingDetails.intendedDate,
+        });
+
+        if (availableSeats <= 0) {
+            // This is the critical race condition check.
+            // Ideally, you would trigger a refund here if possible, or at least notify admins.
+            console.warn(`Overbooking prevented for trip ${bookingDetails.pickup} to ${bookingDetails.destination} on ${bookingDetails.intendedDate}. User: ${bookingDetails.email}`);
+            throw new Error('Sorry, the last seat was just taken. Your payment was successful but the booking could not be completed. Please contact support.');
+        }
+
         const db = getFirebaseAdmin()?.firestore();
         if (!db) {
             throw new Error("Could not connect to the database.");
@@ -90,6 +106,8 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 
     } catch (error: any) {
         console.error('Verification and booking creation failed:', error);
+        // We should not create a booking if the server-side check fails.
+        // The user's payment was successful, so this situation requires manual intervention (e.g., refund).
         return { success: false, error: error.message };
     }
 };

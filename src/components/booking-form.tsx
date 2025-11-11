@@ -25,7 +25,7 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
-import { getAvailableSeats } from '@/lib/firebase-client-utils';
+import { getAvailableSeats } from '@/app/actions/get-availability';
 
 
 const bookingSchema = z.object({
@@ -121,6 +121,7 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
+        // Final check on the client before proceeding, server will do the authoritative check
         const seatsNowAvailable = await getAvailableSeats({
             pickup: formData.pickup,
             destination: formData.destination,
