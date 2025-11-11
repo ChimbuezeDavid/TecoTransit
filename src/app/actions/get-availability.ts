@@ -1,3 +1,4 @@
+
 'use server';
 
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -61,3 +62,4 @@ export const getAvailableSeats = async (
         return 0; // Return 0 on any error to be safe.
     }
 };
+
