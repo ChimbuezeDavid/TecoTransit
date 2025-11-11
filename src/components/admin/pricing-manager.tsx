@@ -1,17 +1,16 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch, Timestamp } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch, Timestamp, endOfDay, startOfDay } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
 import type { PriceRule, Booking } from "@/lib/types";
-import { getAvailableSeats } from "@/app/actions/get-availability";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import Link from 'next/link';
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -37,7 +36,7 @@ const formSchema = z.object({
   path: ["destination"],
 });
 
-type PriceRuleWithSeats = PriceRule & { bookedSeats?: number; totalSeats?: number; };
+type PriceRuleWithSeats = PriceRule & { bookedSeats: number; totalSeats: number; };
 
 
 function PricingManagerSkeleton() {
@@ -86,7 +85,7 @@ function PricingManagerSkeleton() {
 export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
-  const [priceListWithSeats, setPriceListWithSeats] = useState<PriceRuleWithSeats[]>([]);
+  const [todaysBookings, setTodaysBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
@@ -103,65 +102,61 @@ export default function PricingManager() {
     }
   });
 
- const fetchSeatsInfo = useCallback(async (prices: PriceRule[]) => {
-      try {
-        const todayStr = format(new Date(), 'yyyy-MM-dd');
-        
-        const seatPromises = prices.map(async (rule) => {
-            const availableSeats = await getAvailableSeats({
-                pickup: rule.pickup,
-                destination: rule.destination,
-                vehicleType: rule.vehicleType,
-                date: todayStr,
-            });
-            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
-            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0 };
-
-            const capacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
-            const totalSeats = (rule.vehicleCount || 1) * capacity;
-            const bookedSeats = totalSeats - availableSeats;
-
-            return { ...rule, bookedSeats, totalSeats };
-        });
-
-        const pricesWithSeats = await Promise.all(seatPromises);
-        pricesWithSeats.sort((a,b) => a.pickup.localeCompare(b.pickup) || a.destination.localeCompare(b.destination));
-        setPriceListWithSeats(pricesWithSeats);
-      } catch (e) {
-          console.error("Failed to fetch seat info for admin", e);
-          setPriceListWithSeats(prices);
-      } finally {
-        setLoading(false);
-      }
-    }, []);
-
+  // Fetch all price rules
   useEffect(() => {
     const q = query(collection(db, "prices"));
-    const unsubscribePrices = onSnapshot(q, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const prices: PriceRule[] = [];
       querySnapshot.forEach((doc) => {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
-      setPriceList(prices); 
-      fetchSeatsInfo(prices);
+      prices.sort((a,b) => a.pickup.localeCompare(b.pickup) || a.destination.localeCompare(b.destination));
+      setPriceList(prices);
+      setLoading(false);
     }, (error) => {
       console.error("Error fetching prices:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not fetch price list. Please ensure Firestore rules are correctly set up." });
       setLoading(false);
     });
-
-    const bookingsQuery = query(collection(db, "bookings"));
-    const unsubscribeBookings = onSnapshot(bookingsQuery, () => {
-        if (priceList.length > 0) {
-            fetchSeatsInfo(priceList);
-        }
+    return () => unsubscribe();
+  }, [toast]);
+  
+  // Fetch all of today's paid/confirmed bookings in a single query
+  useEffect(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const bookingsQuery = query(
+        collection(db, "bookings"),
+        where('intendedDate', '==', todayStr),
+        where('status', 'in', ['Paid', 'Confirmed'])
+    );
+    
+    const unsubscribe = onSnapshot(bookingsQuery, (snapshot) => {
+        const bookingsData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Booking);
+        setTodaysBookings(bookingsData);
+    }, (error) => {
+        console.error("Error fetching today's bookings:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch real-time booking data." });
     });
 
-    return () => {
-        unsubscribePrices();
-        unsubscribeBookings();
-    };
-  }, [toast, fetchSeatsInfo, priceList]);
+    return () => unsubscribe();
+  }, [toast]);
+
+  const priceListWithSeats = useMemo((): PriceRuleWithSeats[] => {
+      return priceList.map(rule => {
+        const bookedSeats = todaysBookings.filter(b => 
+            b.pickup === rule.pickup && 
+            b.destination === rule.destination && 
+            b.vehicleType === rule.vehicleType
+        ).length;
+
+        const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
+        const capacity = vehicleKey ? { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0 : 0;
+        const totalSeats = (rule.vehicleCount ?? 0) * capacity;
+
+        return { ...rule, bookedSeats, totalSeats };
+      });
+  }, [priceList, todaysBookings]);
+
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -171,7 +166,7 @@ export default function PricingManager() {
                 destination: editMode.destination,
                 vehicleType: editMode.vehicleType,
                 price: editMode.price,
-                vehicleCount: editMode.vehicleCount || 1,
+                vehicleCount: editMode.vehicleCount,
             });
         } else {
             form.reset({
@@ -385,18 +380,12 @@ export default function PricingManager() {
                             </TableCell>
                             <TableCell>{rule.vehicleType}</TableCell>
                             <TableCell>₦{rule.price.toLocaleString()}</TableCell>
-                            <TableCell>{rule.vehicleCount || 1}</TableCell>
+                            <TableCell>{rule.vehicleCount}</TableCell>
                             <TableCell>
-                              {bookedSeats !== undefined && totalSeats !== undefined ? (
-                                 <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                    <span>{bookedSeats}/{totalSeats}</span>
-                                  </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Loader2 className="h-4 w-4 animate-spin"/>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span>{bookedSeats}/{totalSeats}</span>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right pr-4">
                                 <div className="flex justify-end items-center gap-1">
@@ -547,5 +536,7 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
 
     
