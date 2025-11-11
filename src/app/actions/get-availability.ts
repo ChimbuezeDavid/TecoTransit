@@ -33,17 +33,17 @@ export const getAvailableSeats = async (
 
     const priceRule = pricingSnapshot.docs[0].data() as PriceRule;
     
-    // Find the short key ('4-seater') from the full name ('4-Seater Sienna')
-    const vehicleKey = Object.keys(vehicleOptions).find(
-      key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType
-    ) as keyof typeof vehicleOptions | undefined;
+    // Find the vehicle entry from its name (e.g., '4-Seater Sienna')
+    const vehicleDetail = Object.values(vehicleOptions).find(
+      v => v.name === priceRule.vehicleType
+    );
 
-    if (!vehicleKey) {
+    if (!vehicleDetail) {
       // If the vehicle type in the price rule is invalid, no seats available.
       return 0; 
     }
     
-    const capacity = vehicleOptions[vehicleKey].capacity;
+    const capacity = vehicleDetail.capacity;
     const vehicleCount = priceRule.vehicleCount || 0; // Default to 0 if not set
     const totalSeats = vehicleCount * capacity;
 
