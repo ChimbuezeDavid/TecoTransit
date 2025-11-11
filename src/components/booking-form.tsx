@@ -78,13 +78,11 @@ export default function BookingForm() {
   });
 
   const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
-  const watchAllFields = watch();
   const pickup = watch("pickup");
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
   const intendedDate = watch("intendedDate");
   const luggageCount = watch("luggageCount");
-
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
@@ -94,6 +92,45 @@ export default function BookingForm() {
     }
     return [];
   }, [pickup, destination, prices]);
+  
+  // This effect handles all logic that depends on form field changes.
+  // It's structured to avoid infinite loops by depending on primitive values.
+  useEffect(() => {
+    // 1. Reset dependent fields
+    const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === vehicleType);
+    if (!currentVehicleStillAvailable) {
+        setValue('vehicleType', '', { shouldValidate: true });
+    }
+
+    const selectedVehicleDetails = allVehicleOptions[vehicleType as keyof typeof allVehicleOptions];
+    if (selectedVehicleDetails) {
+        const maxLuggages = selectedVehicleDetails.maxLuggages ?? 0;
+        if (luggageCount > maxLuggages) {
+            setValue('luggageCount', maxLuggages, { shouldValidate: true });
+        }
+    }
+    
+    // 2. Check seat availability if all required fields are present
+    setAvailableSeats(null);
+    if (pickup && destination && vehicleType && intendedDate) {
+        setSeatsLoading(true);
+        getAvailableSeats({
+            db,
+            pickup,
+            destination,
+            vehicleType,
+            date: format(intendedDate, 'yyyy-MM-dd'),
+        }).then(seats => {
+            setAvailableSeats(seats);
+        }).catch(err => {
+            console.error("Failed to get seat count", err);
+            setAvailableSeats(null);
+        }).finally(() => {
+            setSeatsLoading(false);
+        });
+    }
+  }, [pickup, destination, vehicleType, intendedDate, availableVehicles, luggageCount, setValue]);
+
 
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
@@ -187,58 +224,7 @@ export default function BookingForm() {
     }
   };
 
-
-  useEffect(() => {
-    const subscription = watch((values, { name }) => {
-       if (name && ['pickup', 'destination', 'vehicleType', 'intendedDate'].includes(name)) {
-          setAvailableSeats(null);
-       }
-       if (name === 'pickup' || name === 'destination') {
-            const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === values.vehicleType);
-            if (!currentVehicleStillAvailable) {
-                setValue('vehicleType', '');
-                trigger('vehicleType');
-            }
-       }
-       if (name === 'vehicleType' && values.vehicleType) {
-            const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === values.vehicleType) as keyof typeof allVehicleOptions;
-            const maxLuggages = allVehicleOptions[vehicleKey]?.maxLuggages ?? 0;
-            const currentLuggages = getValues('luggageCount');
-            if (currentLuggages > maxLuggages) {
-                setValue('luggageCount', maxLuggages);
-            }
-            trigger('luggageCount');
-       }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, getValues, setValue, trigger, availableVehicles]);
-
-  useEffect(() => {
-    const checkSeats = async () => {
-        if (pickup && destination && vehicleType && intendedDate) {
-            setSeatsLoading(true);
-            try {
-                const seats = await getAvailableSeats({
-                    db,
-                    pickup,
-                    destination,
-                    vehicleType,
-                    date: format(intendedDate, 'yyyy-MM-dd'),
-                });
-                setAvailableSeats(seats);
-            } catch (err) {
-                console.error("Failed to get seat count", err);
-                setAvailableSeats(null); // Clear on error
-            } finally {
-                setSeatsLoading(false);
-            }
-        }
-    };
-    checkSeats();
-  }, [pickup, destination, vehicleType, intendedDate]);
-
-
-  const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
+  const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
@@ -353,12 +339,12 @@ export default function BookingForm() {
                 <FormField control={form.control} name="destination" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAllFields.pickup}>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!pickup}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!watchAllFields.pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {locations.filter(loc => loc !== watchAllFields.pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        {locations.filter(loc => loc !== pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -401,7 +387,7 @@ export default function BookingForm() {
                             <SelectTrigger>
                                 <SelectValue placeholder={
                                     pricesLoading ? 'Loading vehicles...' : 
-                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
+                                    !pickup || !destination ? 'Select route first' : 
                                     availableVehicles.length === 0 ? 'No vehicles for this route' :
                                     'Select a vehicle'
                                 } />
@@ -421,9 +407,9 @@ export default function BookingForm() {
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Number of Bags (Max {selectedVehicleDetails?.maxLuggages ?? 'N/A'})</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!watchAllFields.vehicleType}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!watchAllFields.vehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!vehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                         {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
