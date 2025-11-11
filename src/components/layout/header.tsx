@@ -62,7 +62,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[240px]">
-                <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
+                <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                     <Route className="h-6 w-6" />
                     <span className="font-headline">TecoTransit</span>
                 </Link>
