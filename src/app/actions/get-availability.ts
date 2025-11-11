@@ -31,7 +31,7 @@ export const getAvailableSeats = async (priceRuleId: string): Promise<number> =>
             collection(db, 'bookings'),
             where('pickup', '==', priceRule.pickup),
             where('destination', '==', priceRule.destination),
-            where('vehicleType', '==', priceRule.vehicleType),
+            where('vehicleType', '==', priceRule.vehicleType), // This was the missing filter
             where('status', 'in', ['Paid', 'Confirmed'])
         );
         
