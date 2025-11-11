@@ -148,9 +148,12 @@ export default function PricingManager() {
             b.destination === rule.destination && 
             b.vehicleType === rule.vehicleType
         ).length;
-
-        const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
-        const capacity = vehicleKey ? { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0 : 0;
+        
+        const vehicleKey = Object.keys(vehicleOptions).find(
+            (key) => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType
+        ) as keyof typeof vehicleOptions | undefined;
+        
+        const capacity = vehicleKey ? vehicleOptions[vehicleKey].capacity : 0;
         const totalSeats = (rule.vehicleCount ?? 0) * capacity;
 
         return { ...rule, bookedSeats, totalSeats };
@@ -502,8 +505,7 @@ export default function PricingManager() {
                            <Button type="button" variant="outline" className="w-full sm:w-auto sm:mr-auto text-amber-600 border-amber-600/50 hover:bg-amber-50 hover:text-amber-700" disabled={isResetting}>
                                 {isResetting ? <Loader2 className="animate-spin" /> : <RotateCcw />}
                                 Reset Seats
-                            </Button>
-                        </AlertDialogTrigger>
+                            </Button>                        </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Are you sure you want to reset the seats?</AlertDialogTitle>

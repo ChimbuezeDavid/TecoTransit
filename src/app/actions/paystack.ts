@@ -52,9 +52,8 @@ const getAvailableSeatsOnServer = async (
             return 0;
         }
 
-        const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
-        const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
-        const totalSeats = (priceRule.vehicleCount || 0) * seatsPerVehicle;
+        const capacity = vehicleOptions[vehicleKey].capacity;
+        const totalSeats = (priceRule.vehicleCount || 0) * capacity;
 
         if (totalSeats <= 0) {
             return 0;
@@ -203,15 +202,14 @@ async function checkAndConfirmTrip(
         return;
     }
     
-    const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
-    const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
+    const capacity = vehicleOptions[vehicleKey].capacity;
     
-    if (seatsPerVehicle === 0) return;
+    if (capacity === 0) return;
 
     const paidBookings = bookingsSnapshot.docs;
     
-    if (paidBookings.length >= seatsPerVehicle) {
-        const bookingsToConfirm = paidBookings.slice(0, seatsPerVehicle);
+    if (paidBookings.length >= capacity) {
+        const bookingsToConfirm = paidBookings.slice(0, capacity);
         
         const batch = db.batch();
         bookingsToConfirm.forEach(doc => {

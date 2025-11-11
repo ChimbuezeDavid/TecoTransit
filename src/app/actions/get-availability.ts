@@ -3,7 +3,7 @@
 
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { vehicleOptions } from '@/lib/constants';
-import { db } from "@/lib/firebase"; // Correctly use the client SDK instance for server components
+import { db } from "@/lib/firebase"; 
 
 interface PriceRule {
   pickup: string;
@@ -45,14 +45,12 @@ export const getAvailableSeats = async (
     ) as keyof typeof vehicleOptions | undefined;
 
     if (!vehicleKey) {
-      // Invalid vehicle type in the pricing rule.
       return 0; 
     }
     
-    const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
-    const seatsPerVehicle = vehicleCapacityMap[vehicleKey] || 0;
+    const capacity = vehicleOptions[vehicleKey].capacity;
     const vehicleCount = priceRule.vehicleCount ?? 0;
-    const totalSeats = vehicleCount * seatsPerVehicle;
+    const totalSeats = vehicleCount * capacity;
 
     if (totalSeats <= 0) {
       return 0;
