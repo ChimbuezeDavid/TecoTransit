@@ -4,13 +4,7 @@
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { vehicleOptions } from '@/lib/constants';
 import { db } from "@/lib/firebase"; 
-
-interface PriceRule {
-  pickup: string;
-  destination: string;
-  vehicleType: string;
-  vehicleCount?: number;
-}
+import type { PriceRule } from "@/lib/types";
 
 export const getAvailableSeats = async (
   pickup: string, 
@@ -33,7 +27,7 @@ export const getAvailableSeats = async (
     const pricingSnapshot = await getDocs(pricesQuery);
 
     if (pricingSnapshot.empty) {
-      // If no rule exists for this route, no seats are available.
+      // If no pricing rule exists, no seats are available.
       return 0; 
     }
 
@@ -45,11 +39,12 @@ export const getAvailableSeats = async (
     ) as keyof typeof vehicleOptions | undefined;
 
     if (!vehicleKey) {
+      // If the vehicle type in the price rule is invalid, no seats available.
       return 0; 
     }
     
     const capacity = vehicleOptions[vehicleKey].capacity;
-    const vehicleCount = priceRule.vehicleCount ?? 0;
+    const vehicleCount = priceRule.vehicleCount || 0; // Default to 0 if not set
     const totalSeats = vehicleCount * capacity;
 
     if (totalSeats <= 0) {

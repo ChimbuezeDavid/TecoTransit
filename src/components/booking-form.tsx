@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -92,38 +92,37 @@ export default function BookingForm() {
     return [];
   }, [pickup, destination, prices]);
   
-    useEffect(() => {
-        const checkSeats = async () => {
-            if (pickup && destination && vehicleType && intendedDate) {
-                setIsCheckingSeats(true);
-                setAvailableSeats(null);
-                try {
-                    const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
-                    setAvailableSeats(seats);
-                } catch (error) {
-                    console.error("Failed to get seat count", error);
-                    setAvailableSeats(null); 
-                    toast({
-                        variant: 'destructive',
-                        title: 'Could Not Check Seats',
-                        description: 'Failed to retrieve seat availability. Please try again.'
-                    });
-                } finally {
-                    setIsCheckingSeats(false);
-                }
-            } else {
-                setAvailableSeats(null);
-            }
-        };
-
-        const isVehicleValid = availableVehicles.some(p => p.vehicleType === vehicleType);
-        if (pickup && destination && vehicleType && !isVehicleValid) {
-            setValue('vehicleType', '', { shouldValidate: true });
+  const checkSeats = useCallback(async () => {
+    if (pickup && destination && vehicleType && intendedDate) {
+        setIsCheckingSeats(true);
+        setAvailableSeats(null);
+        try {
+            const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
+            setAvailableSeats(seats);
+        } catch (error) {
+            console.error("Failed to get seat count", error);
+            setAvailableSeats(null); 
+            toast({
+                variant: 'destructive',
+                title: 'Could Not Check Seats',
+                description: 'Failed to retrieve seat availability. Please try again.'
+            });
+        } finally {
+            setIsCheckingSeats(false);
         }
-        
-        checkSeats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pickup, destination, vehicleType, intendedDate, setValue]);
+    } else {
+        setAvailableSeats(null);
+    }
+  }, [pickup, destination, vehicleType, intendedDate, toast]);
+
+
+  useEffect(() => {
+    const isVehicleStillValid = availableVehicles.some(p => p.vehicleType === vehicleType);
+    if (pickup && destination && vehicleType && !isVehicleStillValid) {
+        setValue('vehicleType', '', { shouldValidate: true });
+    }
+    checkSeats();
+  }, [pickup, destination, vehicleType, intendedDate, setValue, availableVehicles, checkSeats]);
 
 
   const { totalFare, baseFare } = useMemo(() => {
@@ -147,6 +146,7 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
+        // Final check before proceeding
         const currentSeats = await getAvailableSeats(formData.pickup, formData.destination, formData.vehicleType, format(formData.intendedDate, 'yyyy-MM-dd'));
         if (currentSeats <= 0) {
             toast({
@@ -453,5 +453,3 @@ export default function BookingForm() {
     </>
   );
 }
-
-    

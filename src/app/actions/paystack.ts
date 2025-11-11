@@ -7,7 +7,8 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue }from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
-import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
+import type { PriceRule } from '@/lib/types';
+
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -23,7 +24,7 @@ interface InitializeTransactionArgs {
 
 // This function now uses the Admin SDK's firestore instance correctly.
 const getAvailableSeatsOnServer = async (
-    db: FirebaseFirestore.Firestore, // Note: This is the Admin SDK's Firestore type
+    db: FirebaseFirestore.Firestore,
     pickup: string, 
     destination: string, 
     vehicleType: string, 
@@ -43,7 +44,7 @@ const getAvailableSeatsOnServer = async (
             return 0;
         }
 
-        const priceRule = pricingSnapshot.docs[0].data();
+        const priceRule = pricingSnapshot.docs[0].data() as PriceRule;
         
         const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
         
