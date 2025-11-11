@@ -300,7 +300,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -311,7 +311,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
             `"${b.pickup.replace(/"/g, '""')}"`,
             `"${b.destination.replace(/"/g, '""')}"`,
             b.intendedDate,
-            b.alternativeDate,
             `"${b.vehicleType.replace(/"/g, '""')}"`,
             b.luggageCount,
             b.totalFare,
@@ -638,20 +637,13 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                             
                             {/* Departure Dates */}
                             <div className="space-y-4 sm:col-span-2">
-                                <h3 className="font-semibold text-lg">Departure Dates</h3>
+                                <h3 className="font-semibold text-lg">Departure Date</h3>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="flex items-start gap-3">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                         <div>
                                             <span className="font-medium text-foreground">Intended:</span>
                                             <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
-                                        </div>
-                                    </div>
-                                     <div className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="font-medium text-foreground">Alternative:</span>
-                                            <p>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
                                         </div>
                                     </div>
                                 </div>

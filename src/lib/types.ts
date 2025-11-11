@@ -9,7 +9,6 @@ export type Booking = {
   pickup: string;
   destination: string;
   intendedDate: string; // Stored as 'yyyy-MM-dd'
-  alternativeDate: string; // Stored as 'yyyy-MM-dd'
   vehicleType: string;
   luggageCount: number;
   totalFare: number;
@@ -20,9 +19,8 @@ export type Booking = {
   tripId?: string; // Optional ID to group passengers in a confirmed trip
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate'> & {
     intendedDate: Date;
-    alternativeDate: Date;
     privacyPolicy: boolean;
 };
 

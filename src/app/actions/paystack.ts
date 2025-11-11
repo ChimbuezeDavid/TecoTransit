@@ -56,7 +56,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error('Booking metadata is missing from transaction.');
         }
         
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'alternativeDate' | 'privacyPolicy'> & { intendedDate: string, alternativeDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
+        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
 
         // Authoritative final check for seat availability on the server
         const availableSeats = await getAvailableSeats({
@@ -144,10 +144,10 @@ async function checkAndConfirmTrip(
     }
 
     const priceRule = pricingSnapshot.docs[0].data();
-    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === vehicleType) as keyof typeof vehicleOptions | undefined;
+    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
     
     if (!vehicleKey) {
-        console.error(`Invalid vehicle type found: ${vehicleType}`);
+        console.error(`Invalid vehicle type found: ${priceRule.vehicleType}`);
         return;
     }
     

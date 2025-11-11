@@ -34,8 +34,7 @@ const bookingSchema = z.object({
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
-  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
-  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
+  intendedDate: z.date({ required_error: 'A departure date is required.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   luggageCount: z.coerce.number().min(0).max(10),
   privacyPolicy: z.literal(true, {
@@ -44,14 +43,6 @@ const bookingSchema = z.object({
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
-}).refine(data => {
-    if (data.intendedDate && data.alternativeDate) {
-        return data.alternativeDate > data.intendedDate;
-    }
-    return true;
-}, {
-    message: "Alternative date must be after the intended date.",
-    path: ["alternativeDate"],
 });
 
 const contactOptions = [
@@ -69,7 +60,6 @@ export default function BookingForm() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
-  const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   
   const [availableSeats, setAvailableSeats] = useState<number | null>(null);
@@ -133,7 +123,7 @@ export default function BookingForm() {
             toast({
                 variant: 'destructive',
                 title: 'No Seats Available',
-                description: 'Sorry, this trip is now fully booked. Please try the alternative date or another trip.',
+                description: 'Sorry, this trip is now fully booked. Please try another trip.',
             });
             setIsProcessing(false);
             setAvailableSeats(0); // Update UI
@@ -150,7 +140,6 @@ export default function BookingForm() {
               pickup: bookingDataWithFare.pickup,
               destination: bookingDataWithFare.destination,
               intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
-              alternativeDate: format(bookingDataWithFare.alternativeDate, 'yyyy-MM-dd'),
               vehicleType: bookingDataWithFare.vehicleType,
               luggageCount: bookingDataWithFare.luggageCount,
               totalFare: bookingDataWithFare.totalFare,
@@ -204,10 +193,6 @@ export default function BookingForm() {
                 setValue('vehicleType', '');
                 trigger('vehicleType');
             }
-       }
-       if (name === 'intendedDate' && values.intendedDate) {
-            setValue('alternativeDate', undefined as any);
-            trigger('alternativeDate');
        }
        if (name === 'vehicleType' && values.vehicleType) {
             const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === values.vehicleType) as keyof typeof allVehicleOptions;
@@ -376,7 +361,7 @@ export default function BookingForm() {
                 )} />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
-                    <FormLabel>Intended Departure</FormLabel>
+                    <FormLabel>Departure Date</FormLabel>
                     <Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}>
                         <PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -393,32 +378,6 @@ export default function BookingForm() {
                                     setIsIntendedDatePopoverOpen(false);
                                 }}
                                 disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Alternative Departure</FormLabel>
-                    <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
-                        <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={(date) => {
-                                    field.onChange(date);
-                                    setIsAlternativeDatePopoverOpen(false);
-                                }}
-                                disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
                                 initialFocus 
                             />
                         </PopoverContent>

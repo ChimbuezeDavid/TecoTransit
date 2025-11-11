@@ -101,7 +101,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       createdAt: Timestamp.now(),
       status: 'Pending' as const,
       intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
-      alternativeDate: format(data.alternativeDate, 'yyyy-MM-dd'),
     };
     
     const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
