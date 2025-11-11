@@ -62,6 +62,7 @@ export default function LandingPage() {
           fill
           priority
           className="object-cover"
+          sizes="100vw"
           data-ai-hint={placeholderImages.hero['data-ai-hint']}
         />
         <div className="absolute inset-0 bg-black/50" />
@@ -152,6 +153,7 @@ export default function LandingPage() {
                   src={dest.image.src}
                   alt={`Image of ${dest.name}`}
                   fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                   data-ai-hint={dest.image['data-ai-hint']}
                 />
