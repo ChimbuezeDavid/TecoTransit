@@ -26,6 +26,7 @@ import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
 import { getAvailableSeats } from '@/app/actions/get-availability';
+import { db } from '@/lib/firebase';
 
 
 const bookingSchema = z.object({
@@ -113,6 +114,7 @@ export default function BookingForm() {
     try {
         // Final check on the client before proceeding, server will do the authoritative check
         const seatsNowAvailable = await getAvailableSeats({
+            db,
             pickup: formData.pickup,
             destination: formData.destination,
             vehicleType: formData.vehicleType,
@@ -215,6 +217,7 @@ export default function BookingForm() {
             setSeatsLoading(true);
             try {
                 const seats = await getAvailableSeats({
+                    db,
                     pickup,
                     destination,
                     vehicleType,

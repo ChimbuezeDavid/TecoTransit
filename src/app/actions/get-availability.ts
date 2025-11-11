@@ -1,24 +1,18 @@
 
 'use server';
 
-import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { vehicleOptions } from "@/lib/constants";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, Firestore } from "firebase/firestore";
 
 interface GetAvailableSeatsArgs {
+    db: Firestore;
     pickup: string;
     destination: string;
     vehicleType: string;
     date: string; // YYYY-MM-DD
 }
 
-export const getAvailableSeats = async ({ pickup, destination, vehicleType, date }: GetAvailableSeatsArgs): Promise<number> => {
-    const db = getFirebaseAdmin()?.firestore();
-    if (!db) {
-        console.error("Could not connect to the database.");
-        return 0;
-    }
-
+export const getAvailableSeats = async ({ db, pickup, destination, vehicleType, date }: GetAvailableSeatsArgs): Promise<number> => {
     try {
         const pricingQuery = query(
             collection(db, 'prices'),
@@ -66,4 +60,3 @@ export const getAvailableSeats = async ({ pickup, destination, vehicleType, date
         return 0; // Return 0 on error to be safe
     }
 };
-
