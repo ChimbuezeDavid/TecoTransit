@@ -7,7 +7,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue }from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
-import { collection, query, where, getDocs, Firestore } from "firebase/firestore";
+import { collection, query, where, getDocs, type Firestore } from "firebase/firestore";
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
@@ -21,23 +21,22 @@ interface InitializeTransactionArgs {
   metadata: Record<string, any>;
 }
 
+// This function now uses the Admin SDK's firestore instance correctly.
 const getAvailableSeatsOnServer = async (
-    db: FirebaseFirestore.Firestore, 
+    db: FirebaseFirestore.Firestore, // Note: This is the Admin SDK's Firestore type
     pickup: string, 
     destination: string, 
     vehicleType: string, 
     date: string
 ): Promise<number> => {
     try {
-        const pricesCollection = collection(db as any, 'prices');
-        const pricesQuery = query(
-            pricesCollection,
-            where('pickup', '==', pickup),
-            where('destination', '==', destination),
-            where('vehicleType', '==', vehicleType)
-        );
+        const pricesCollection = db.collection('prices');
+        const pricesQuery = pricesCollection
+            .where('pickup', '==', pickup)
+            .where('destination', '==', destination)
+            .where('vehicleType', '==', vehicleType);
         
-        const pricingSnapshot = await getDocs(pricesQuery as any);
+        const pricingSnapshot = await pricesQuery.get();
 
         if (pricingSnapshot.empty) {
             console.error("Server Check: No pricing rule found for this route.");
@@ -61,20 +60,19 @@ const getAvailableSeatsOnServer = async (
             return 0;
         }
 
-        const bookingsCollection = collection(db as any, 'bookings');
-        const bookingsQuery = query(
-            bookingsCollection,
-            where('pickup', '==', pickup),
-            where('destination', '==', destination),
-            where('vehicleType', '==', vehicleType),
-            where('intendedDate', '==', date),
-            where('status', 'in', ['Paid', 'Confirmed'])
-        );
+        const bookingsCollection = db.collection('bookings');
+        const bookingsQuery = bookingsCollection
+            .where('pickup', '==', pickup)
+            .where('destination', '==', destination)
+            .where('vehicleType', '==', vehicleType)
+            .where('intendedDate', '==', date)
+            .where('status', 'in', ['Paid', 'Confirmed']);
         
-        const bookingsSnapshot = await getDocs(bookingsQuery as any);
+        const bookingsSnapshot = await bookingsQuery.get();
         const bookedSeats = bookingsSnapshot.size;
 
-        return totalSeats - bookedSeats;
+        const available = totalSeats - bookedSeats;
+        return available < 0 ? 0 : available;
 
     } catch (error) {
         console.error("Error getting available seats on server:", error);

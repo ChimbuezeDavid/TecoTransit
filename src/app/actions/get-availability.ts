@@ -1,8 +1,9 @@
+
 'use server';
 
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { vehicleOptions } from '@/lib/constants';
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase"; // Correctly use the client SDK instance for server components
 
 interface PriceRule {
   pickup: string;
@@ -32,7 +33,8 @@ export const getAvailableSeats = async (
     const pricingSnapshot = await getDocs(pricesQuery);
 
     if (pricingSnapshot.empty) {
-      return 0;
+      // If no rule exists for this route, no seats are available.
+      return 0; 
     }
 
     const priceRule = pricingSnapshot.docs[0].data() as PriceRule;
@@ -43,7 +45,8 @@ export const getAvailableSeats = async (
     ) as keyof typeof vehicleOptions | undefined;
 
     if (!vehicleKey) {
-      return 0; // Invalid vehicle type in price rule
+      // Invalid vehicle type in the pricing rule.
+      return 0; 
     }
     
     const vehicleCapacityMap = { '4-seater': 4, '5-seater': 5, '7-seater': 7 };
@@ -74,6 +77,6 @@ export const getAvailableSeats = async (
 
   } catch (error) {
     console.error("Error getting available seats:", error);
-    return 0;
+    return 0; // Return 0 on any error to be safe.
   }
 };
