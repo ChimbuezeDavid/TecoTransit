@@ -31,7 +31,7 @@ const formSchema = z.object({
   destination: z.string({ required_error: 'Please select a destination.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   price: z.coerce.number().positive({ message: "Price must be a positive number." }),
-  vehicleCount: z.coerce.number().min(1, { message: "There must be at least one vehicle." }),
+  vehicleCount: z.coerce.number().min(0, { message: "Vehicle count cannot be negative." }),
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
@@ -441,7 +441,7 @@ export default function PricingManager() {
           <DialogDescription>Set the fare and vehicle count for a route. A return trip will be created automatically.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="px-6 grid sm:grid-cols-2 gap-x-6 gap-y-4">
                 <FormField control={form.control} name="pickup" render={({ field }) => (
                 <FormItem>
@@ -497,7 +497,7 @@ export default function PricingManager() {
                                 id="vehicleCount"
                                 type="number"
                                 inputMode="numeric" 
-                                min="1"
+                                min="0"
                                 placeholder="1"
                                 {...field}
                             />
@@ -547,3 +547,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
