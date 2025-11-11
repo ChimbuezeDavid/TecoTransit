@@ -66,3 +66,4 @@ export const getAvailableSeats = async ({ pickup, destination, vehicleType, date
         return 0; // Return 0 on error to be safe
     }
 };
+
