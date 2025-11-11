@@ -22,65 +22,6 @@ interface InitializeTransactionArgs {
   metadata: Record<string, any>;
 }
 
-// This function now uses the Admin SDK's firestore instance correctly.
-const getAvailableSeatsOnServer = async (
-    db: FirebaseFirestore.Firestore,
-    pickup: string, 
-    destination: string, 
-    vehicleType: string, 
-    date: string
-): Promise<number> => {
-    try {
-        const pricesCollection = db.collection('prices');
-        const pricesQuery = pricesCollection
-            .where('pickup', '==', pickup)
-            .where('destination', '==', destination)
-            .where('vehicleType', '==', vehicleType);
-        
-        const pricingSnapshot = await pricesQuery.get();
-
-        if (pricingSnapshot.empty) {
-            console.error("Server Check: No pricing rule found for this route.");
-            return 0;
-        }
-
-        const priceRule = pricingSnapshot.docs[0].data() as PriceRule;
-        
-        const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
-        
-        if (!vehicleKey) {
-            console.error(`Server Check: Invalid vehicle type in price rule: ${priceRule.vehicleType}`);
-            return 0;
-        }
-
-        const capacity = vehicleOptions[vehicleKey].capacity;
-        const totalSeats = (priceRule.vehicleCount || 0) * capacity;
-
-        if (totalSeats <= 0) {
-            return 0;
-        }
-
-        const bookingsCollection = db.collection('bookings');
-        const bookingsQuery = bookingsCollection
-            .where('pickup', '==', pickup)
-            .where('destination', '==', destination)
-            .where('vehicleType', '==', vehicleType)
-            .where('intendedDate', '==', date)
-            .where('status', 'in', ['Paid', 'Confirmed']);
-        
-        const bookingsSnapshot = await bookingsQuery.get();
-        const bookedSeats = bookingsSnapshot.size;
-
-        const available = totalSeats - bookedSeats;
-        return available < 0 ? 0 : available;
-
-    } catch (error) {
-        console.error("Error getting available seats on server:", error);
-        return 0;
-    }
-};
-
-
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
     const baseUrl = process.env.VERCEL_URL 
@@ -122,18 +63,8 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error("Could not connect to the database.");
         }
 
-        const availableSeats = await getAvailableSeatsOnServer(
-            db,
-            bookingDetails.pickup,
-            bookingDetails.destination,
-            bookingDetails.vehicleType,
-            bookingDetails.intendedDate,
-        );
-
-        if (availableSeats <= 0) {
-            console.warn(`Overbooking prevented for trip ${bookingDetails.pickup} to ${bookingDetails.destination} on ${bookingDetails.intendedDate}. User: ${bookingDetails.email}`);
-            throw new Error('Sorry, the last seat was just taken. Your payment was successful but the booking could not be completed. Please contact support for a refund.');
-        }
+        // Since availability system is removed, we directly create the booking.
+        // The check for seats is removed from here. Admin will manage overbooking manually.
 
         const bookingsRef = db.collection('bookings');
         
@@ -209,33 +140,42 @@ async function checkAndConfirmTrip(
 
     const paidBookings = bookingsSnapshot.docs;
     
+    // This logic assumes we fill one vehicle at a time based on capacity
     if (paidBookings.length >= capacity) {
         const bookingsToConfirm = paidBookings.slice(0, capacity);
         
         const batch = db.batch();
         bookingsToConfirm.forEach(doc => {
-            batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
+            // Only update if not already confirmed
+            if (doc.data().status !== 'Confirmed') {
+                batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
+            }
         });
         
         await batch.commit();
 
         for (const doc of bookingsToConfirm) {
             const bookingData = doc.data();
-            try {
-                await sendBookingStatusEmail({
-                    name: bookingData.name,
-                    email: bookingData.email,
-                    status: 'Confirmed',
-                    bookingId: doc.id,
-                    pickup: bookingData.pickup,
-                    destination: bookingData.destination,
-                    vehicleType: bookingData.vehicleType,
-                    totalFare: bookingData.totalFare,
-                    confirmedDate: date,
-                });
-            } catch (e) {
-                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+            // Only send email if status was changed
+            if (bookingData.status !== 'Confirmed') {
+                try {
+                    await sendBookingStatusEmail({
+                        name: bookingData.name,
+                        email: bookingData.email,
+                        status: 'Confirmed',
+                        bookingId: doc.id,
+                        pickup: bookingData.pickup,
+                        destination: bookingData.destination,
+                        vehicleType: bookingData.vehicleType,
+                        totalFare: bookingData.totalFare,
+                        confirmedDate: date,
+                    });
+                } catch (e) {
+                    console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+                }
             }
         }
     }
 }
+
+    

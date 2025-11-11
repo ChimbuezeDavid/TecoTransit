@@ -36,8 +36,6 @@ const formSchema = z.object({
   path: ["destination"],
 });
 
-type PriceRuleWithSeats = PriceRule & { bookedSeats: number; totalSeats: number; };
-
 
 function PricingManagerSkeleton() {
     return (
@@ -54,7 +52,6 @@ function PricingManagerSkeleton() {
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                              <TableHead><Skeleton className="h-5 w-16" /></TableHead>
-                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -68,7 +65,6 @@ function PricingManagerSkeleton() {
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-12" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                                 <TableCell className="text-right flex justify-end gap-2">
                                     <Skeleton className="h-8 w-8" />
                                     <Skeleton className="h-8 w-8" />
@@ -85,11 +81,9 @@ function PricingManagerSkeleton() {
 export default function PricingManager() {
   const { toast } = useToast();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
-  const [todaysBookings, setTodaysBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -120,45 +114,6 @@ export default function PricingManager() {
     });
     return () => unsubscribe();
   }, [toast]);
-  
-  // Fetch all of today's paid/confirmed bookings in a single query
-  useEffect(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const bookingsQuery = query(
-        collection(db, "bookings"),
-        where('intendedDate', '==', todayStr),
-        where('status', 'in', ['Paid', 'Confirmed'])
-    );
-    
-    const unsubscribe = onSnapshot(bookingsQuery, (snapshot) => {
-        const bookingsData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Booking);
-        setTodaysBookings(bookingsData);
-    }, (error) => {
-        console.error("Error fetching today's bookings:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not fetch real-time booking data." });
-    });
-
-    return () => unsubscribe();
-  }, [toast]);
-
-  const priceListWithSeats = useMemo((): PriceRuleWithSeats[] => {
-      return priceList.map(rule => {
-        const bookedSeats = todaysBookings.filter(b => 
-            b.pickup === rule.pickup && 
-            b.destination === rule.destination && 
-            b.vehicleType === rule.vehicleType
-        ).length;
-        
-        const vehicleKey = Object.keys(vehicleOptions).find(
-            (key) => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType
-        ) as keyof typeof vehicleOptions | undefined;
-        
-        const capacity = vehicleKey ? vehicleOptions[vehicleKey].capacity : 0;
-        const totalSeats = (rule.vehicleCount ?? 0) * capacity;
-
-        return { ...rule, bookedSeats, totalSeats };
-      });
-  }, [priceList, todaysBookings]);
 
   
   useEffect(() => {
@@ -293,50 +248,6 @@ export default function PricingManager() {
     }
   }
 
-  const handleResetSeats = async () => {
-    if (!editMode) return;
-    setIsResetting(true);
-
-    const bookingsQuery = query(
-        collection(db, "bookings"),
-        where('pickup', '==', editMode.pickup),
-        where('destination', '==', editMode.destination),
-        where('vehicleType', '==', editMode.vehicleType),
-        where('status', 'in', ['Paid', 'Confirmed'])
-    );
-
-    try {
-        const bookingsSnapshot = await getDocs(bookingsQuery);
-        if (bookingsSnapshot.empty) {
-            toast({ title: "No seats to reset", description: "There are no 'Paid' or 'Confirmed' bookings for this route to reset." });
-            setIsResetting(false);
-            return;
-        }
-
-        const batch = writeBatch(db);
-        bookingsSnapshot.docs.forEach(doc => {
-            batch.update(doc.ref, { status: 'Pending' });
-        });
-
-        await batch.commit();
-
-        toast({
-            title: "Seats Reset Successfully",
-            description: `${bookingsSnapshot.size} booking(s) for this route have been moved to 'Pending' status.`,
-        });
-
-    } catch (e) {
-        console.error("Error resetting seats:", e);
-        toast({
-            variant: "destructive",
-            title: "Reset Failed",
-            description: "Could not reset the seats for this route. Please try again.",
-        });
-    } finally {
-        setIsResetting(false);
-    }
-  };
-
   if (loading) {
     return <PricingManagerSkeleton />;
   }
@@ -348,7 +259,7 @@ export default function PricingManager() {
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div>
                     <CardTitle>Route & Pricing Management</CardTitle>
-                    <CardDescription>Manage fares, vehicles, and view passenger lists for all routes.</CardDescription>
+                    <CardDescription>Manage fares and vehicles for all routes.</CardDescription>
                 </div>
                  <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2" />
@@ -365,16 +276,14 @@ export default function PricingManager() {
                   <TableHead>Vehicle</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Vehicles</TableHead>
-                  <TableHead>Seats Today</TableHead>
                   <TableHead className="text-right pr-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {priceListWithSeats.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                {priceList.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                 ) : (
-                  priceListWithSeats.map((rule) => {
-                    const { bookedSeats, totalSeats } = rule;
+                  priceList.map((rule) => {
                     return (
                         <TableRow key={rule.id}>
                             <TableCell className="pl-4 font-medium">
@@ -384,12 +293,6 @@ export default function PricingManager() {
                             <TableCell>{rule.vehicleType}</TableCell>
                             <TableCell>₦{rule.price.toLocaleString()}</TableCell>
                             <TableCell>{rule.vehicleCount}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span>{bookedSeats}/{totalSeats}</span>
-                              </div>
-                            </TableCell>
                             <TableCell className="text-right pr-4">
                                 <div className="flex justify-end items-center gap-1">
                                     <Button asChild variant="ghost" size="icon">
@@ -498,40 +401,13 @@ export default function PricingManager() {
                     </FormItem>
                 )} />
             </div>
-            <DialogFooter className="mt-6 flex-col sm:flex-row sm:justify-between w-full bg-muted/50 rounded-b-lg p-6">
-                {editMode && (
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button type="button" variant="outline" className="w-full sm:w-auto sm:mr-auto text-amber-600 border-amber-600/50 hover:bg-amber-50 hover:text-amber-700" disabled={isResetting}>
-                                {isResetting ? <Loader2 className="animate-spin mr-2" /> : <RotateCcw className="mr-2" />}
-                                Reset Seats
-                            </Button>                        
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you sure you want to reset the seats?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action will move all 'Paid' and 'Confirmed' bookings for the <strong>{editMode.pickup} to {editMode.destination} ({editMode.vehicleType})</strong> route to a 'Pending' status. This will make the seats available again but will NOT delete the booking records.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleResetSeats} disabled={isResetting} className={cn(buttonVariants({ variant: "destructive" }))}>
-                                     {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Yes, Reset Seats
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
-                 <div className="flex sm:justify-end gap-2 w-full sm:w-auto">
-                    <DialogTrigger asChild>
-                        <Button type="button" variant="ghost">Cancel</Button>
-                    </DialogTrigger>
-                    <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                        {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
-                    </Button>
-                 </div>
+            <DialogFooter className="mt-6 flex sm:justify-end gap-2 w-full bg-muted/50 rounded-b-lg p-6">
+                <DialogTrigger asChild>
+                    <Button type="button" variant="ghost">Cancel</Button>
+                </DialogTrigger>
+                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
+                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
+                </Button>
             </DialogFooter>
           </form>
         </Form>

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -25,7 +25,6 @@ import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
 import { useBooking } from '@/context/booking-context';
 import { useSettings } from '@/context/settings-context';
-import { getAvailableSeats } from '@/app/actions/get-availability';
 
 
 const bookingSchema = z.object({
@@ -61,8 +60,6 @@ export default function BookingForm() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
-  const [isCheckingSeats, setIsCheckingSeats] = useState(false);
   
 
   const form = useForm<z.infer<typeof bookingSchema>>({
@@ -80,7 +77,6 @@ export default function BookingForm() {
   const pickup = watch("pickup");
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
-  const intendedDate = watch("intendedDate");
   const luggageCount = watch("luggageCount");
 
   const availableVehicles = useMemo(() => {
@@ -92,37 +88,12 @@ export default function BookingForm() {
     return [];
   }, [pickup, destination, prices]);
   
-  const checkSeats = useCallback(async () => {
-    if (pickup && destination && vehicleType && intendedDate) {
-        setIsCheckingSeats(true);
-        setAvailableSeats(null);
-        try {
-            const seats = await getAvailableSeats(pickup, destination, vehicleType, format(intendedDate, 'yyyy-MM-dd'));
-            setAvailableSeats(seats);
-        } catch (error) {
-            console.error("Failed to get seat count", error);
-            setAvailableSeats(null); 
-            toast({
-                variant: 'destructive',
-                title: 'Could Not Check Seats',
-                description: 'Failed to retrieve seat availability. Please try again.'
-            });
-        } finally {
-            setIsCheckingSeats(false);
-        }
-    } else {
-        setAvailableSeats(null);
-    }
-  }, [pickup, destination, vehicleType, intendedDate, toast]);
-
-
   useEffect(() => {
     const isVehicleStillValid = availableVehicles.some(p => p.vehicleType === vehicleType);
     if (pickup && destination && vehicleType && !isVehicleStillValid) {
         setValue('vehicleType', '', { shouldValidate: true });
     }
-    checkSeats();
-  }, [pickup, destination, vehicleType, intendedDate, setValue, availableVehicles, checkSeats]);
+  }, [pickup, destination, vehicleType, setValue, availableVehicles]);
 
 
   const { totalFare, baseFare } = useMemo(() => {
@@ -146,19 +117,6 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
-        // Final check before proceeding
-        const currentSeats = await getAvailableSeats(formData.pickup, formData.destination, formData.vehicleType, format(formData.intendedDate, 'yyyy-MM-dd'));
-        if (currentSeats <= 0) {
-            toast({
-                variant: 'destructive',
-                title: 'No Seats Available',
-                description: 'Sorry, the last seat was just taken. Please try another trip.',
-            });
-            setAvailableSeats(0);
-            setIsProcessing(false);
-            return;
-        }
-        
         if (isPaystackEnabled) {
             // Live Mode: Proceed to Paystack
             const bookingDataWithFare = { ...formData, totalFare };
@@ -214,37 +172,6 @@ export default function BookingForm() {
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
-
-  const renderSeatStatus = () => {
-    if (isCheckingSeats) {
-        return (
-            <div className="flex items-center text-sm text-muted-foreground mt-2">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Checking availability...</span>
-            </div>
-        )
-    }
-
-    if (availableSeats !== null) {
-        if (availableSeats > 0) {
-            return (
-                <div className="flex items-center text-sm text-green-600 mt-2 font-medium">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    <span>{availableSeats} Seat{availableSeats > 1 ? 's' : ''} Available</span>
-                </div>
-            )
-        } else {
-            return (
-                <div className="flex items-center text-sm text-destructive mt-2 font-medium">
-                    <AlertCircle className="mr-2 h-4 w-4" />
-                    <span>Fully Booked</span>
-                </div>
-            )
-        }
-    }
-
-    return null;
-  }
 
   const renderSubmitButtonContent = () => {
     if (isProcessing || settingsLoading) {
@@ -411,7 +338,6 @@ export default function BookingForm() {
                             ))}
                             </SelectContent>
                         </Select>
-                        {renderSeatStatus()}
                         <FormMessage />
                         </FormItem>
                     )}
@@ -461,7 +387,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || availableSeats === 0 || isCheckingSeats}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
               {renderSubmitButtonContent()}
             </Button>
           </CardFooter>
@@ -478,3 +404,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
