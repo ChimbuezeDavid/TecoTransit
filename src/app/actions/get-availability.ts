@@ -1,12 +1,17 @@
-
 'use server';
 
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 
-export const getAvailableSeats = async (priceRuleId: string, date: string): Promise<number> => {
+/**
+ * Calculates the number of available seats for a specific route, irrespective of date.
+ * This is based on the total configured capacity minus all paid or confirmed bookings.
+ * @param priceRuleId - The unique identifier for the price rule (e.g., "abuad_ajah-lagos_4-seater-sienna").
+ * @returns The number of seats currently available in the pool for this route.
+ */
+export const getAvailableSeats = async (priceRuleId: string): Promise<number> => {
     try {
-        if (!priceRuleId || !date) {
+        if (!priceRuleId) {
             return 0;
         }
 
@@ -14,31 +19,29 @@ export const getAvailableSeats = async (priceRuleId: string, date: string): Prom
         const priceRuleSnap = await getDoc(priceRuleRef);
 
         if (!priceRuleSnap.exists()) {
-            // This route configuration does not exist.
+            console.warn(`Price rule ${priceRuleId} does not exist.`);
             return 0;
         }
 
         const priceRule = priceRuleSnap.data();
         const totalSeats = priceRule.seatsAvailable || 0;
 
-        // Count bookings for this specific route and date that are 'Paid' or 'Confirmed'
+        // Count all bookings for this route that are 'Paid' or 'Confirmed'
         const bookingsQuery = query(
             collection(db, 'bookings'),
             where('pickup', '==', priceRule.pickup),
             where('destination', '==', priceRule.destination),
             where('vehicleType', '==', priceRule.vehicleType),
-            where('intendedDate', '==', date),
             where('status', 'in', ['Paid', 'Confirmed'])
         );
-
+        
         const bookingsSnapshot = await getDocs(bookingsQuery);
         const bookedSeats = bookingsSnapshot.size;
         
-        // Count temporary reservations for this route and date
+        // Also count temporary reservations for this route
         const reservationsQuery = query(
             collection(db, 'reservations'),
-            where('priceRuleId', '==', priceRuleId),
-            where('date', '==', date)
+            where('priceRuleId', '==', priceRuleId)
         );
         const reservationsSnapshot = await getDocs(reservationsQuery);
         const reservedSeats = reservationsSnapshot.size;

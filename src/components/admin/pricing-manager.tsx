@@ -7,11 +7,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch, Timestamp, endOfDay, startOfDay } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
-import type { PriceRule, Booking } from "@/lib/types";
-import { format } from "date-fns";
+import type { PriceRule } from "@/lib/types";
 import Link from 'next/link';
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, List, Armchair } from "lucide-react";
+import { Trash2, Edit, PlusCircle, List, Armchair } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 

@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import Paystack from 'paystack';
@@ -27,13 +26,11 @@ interface InitializeTransactionArgs {
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
     const { priceRuleId } = metadata;
-    const bookingDetails = JSON.parse(metadata.booking_details);
-    const date = bookingDetails.intendedDate;
-
+    
     // Last-minute availability check
-    const availableSeats = await getAvailableSeats(priceRuleId, date);
+    const availableSeats = await getAvailableSeats(priceRuleId);
     if (availableSeats <= 0) {
-        return { status: false, message: 'Sorry, all seats for this trip have just been booked. Please try another date or route.' };
+        return { status: false, message: 'Sorry, all seats for this trip have just been booked. Please try another route.' };
     }
     
     // Create a temporary reservation
@@ -44,7 +41,6 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
     const reservationRef = db.collection('reservations').doc();
     await reservationRef.set({
         priceRuleId,
-        date,
         createdAt: FieldValue.serverTimestamp(),
     });
     
@@ -98,11 +94,11 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         // Final availability check before creating the booking
         const priceRuleId = `${bookingDetails.pickup}_${bookingDetails.destination}_${bookingDetails.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-        const availableSeats = await getAvailableSeats(priceRuleId, bookingDetails.intendedDate);
+        const availableSeats = await getAvailableSeats(priceRuleId);
         if (availableSeats <= 0) {
             // This is the edge case where the seat was taken between our first check and now.
             // We must refund the user. For now, we will log an error and prevent booking.
-            console.error(`CRITICAL: Overbooking prevented for ${priceRuleId} on ${bookingDetails.intendedDate}. User ${bookingDetails.email} paid but no seats were available. MANUAL REFUND REQUIRED.`);
+            console.error(`CRITICAL: Overbooking prevented for ${priceRuleId}. User ${bookingDetails.email} paid but no seats were available. MANUAL REFUND REQUIRED.`);
             throw new Error("Unfortunately, the last available seat was booked while you were completing your payment. Your booking could not be completed. Please contact support for a refund.");
         }
 
@@ -143,13 +139,12 @@ async function checkAndConfirmTrip(
     pickup: string,
     destination: string,
     vehicleType: string,
-    date: string
+    date: string // Note: date is used to find a date to confirm for, but not for seat counting
 ) {
     const bookingsQuery = db.collection('bookings')
         .where('pickup', '==', pickup)
         .where('destination', '==', destination)
         .where('vehicleType', '==', vehicleType)
-        .where('intendedDate', '==', date)
         .where('status', '==', 'Paid');
 
     const pricingQuery = db.collection('prices')
@@ -163,7 +158,7 @@ async function checkAndConfirmTrip(
     ]);
     
     if (pricingSnapshot.empty) {
-        console.log(`No price/fleet rule found for trip: ${pickup}-${destination} on ${date}`);
+        console.log(`No price/fleet rule found for trip: ${pickup}-${destination}`);
         return;
     }
 
@@ -179,10 +174,12 @@ async function checkAndConfirmTrip(
         const bookingsToConfirm = paidBookings.slice(0, capacity);
         
         const batch = db.batch();
+        const confirmationDate = format(new Date(), 'yyyy-MM-dd'); // Confirm for today or a relevant date
+        
         bookingsToConfirm.forEach(doc => {
             // Only update if not already confirmed
             if (doc.data().status !== 'Confirmed') {
-                batch.update(doc.ref, { status: 'Confirmed', confirmedDate: date });
+                batch.update(doc.ref, { status: 'Confirmed', confirmedDate: confirmationDate });
             }
         });
         
@@ -202,7 +199,7 @@ async function checkAndConfirmTrip(
                         destination: bookingData.destination,
                         vehicleType: bookingData.vehicleType,
                         totalFare: bookingData.totalFare,
-                        confirmedDate: date,
+                        confirmedDate: confirmationDate,
                     });
                 } catch (e) {
                     console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
@@ -211,5 +208,3 @@ async function checkAndConfirmTrip(
         }
     }
 }
-
-    

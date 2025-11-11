@@ -82,7 +82,6 @@ export default function BookingForm() {
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
   const luggageCount = watch("luggageCount");
-  const intendedDate = watch("intendedDate");
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
@@ -105,13 +104,12 @@ export default function BookingForm() {
 
     useEffect(() => {
         const checkSeats = async () => {
-            if (pickup && destination && vehicleType && intendedDate) {
+            if (pickup && destination && vehicleType) {
                 setIsCheckingSeats(true);
                 setAvailableSeats(null);
                 try {
                     const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-                    const date = format(intendedDate, 'yyyy-MM-dd');
-                    const seats = await getAvailableSeats(priceRuleId, date);
+                    const seats = await getAvailableSeats(priceRuleId);
                     setAvailableSeats(seats);
                 } catch (error) {
                     console.error("Error checking seats:", error);
@@ -125,7 +123,7 @@ export default function BookingForm() {
         };
 
         checkSeats();
-    }, [pickup, destination, vehicleType, intendedDate]);
+    }, [pickup, destination, vehicleType]);
 
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
@@ -208,7 +206,7 @@ export default function BookingForm() {
     [];
 
   const renderSeatStatus = () => {
-    if (!pickup || !destination || !vehicleType || !intendedDate) {
+    if (!pickup || !destination || !vehicleType) {
         return null;
     }
     
@@ -233,7 +231,7 @@ export default function BookingForm() {
         return (
           <div className="flex items-center gap-2 text-sm font-medium text-destructive">
             <Armchair className="h-4 w-4" />
-            <span>No seats available for this date</span>
+            <span>No seats available for this route</span>
           </div>
         );
       }
