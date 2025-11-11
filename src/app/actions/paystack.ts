@@ -31,35 +31,38 @@ const getAvailableSeatsOnServer = async (
     date: string
 ): Promise<number> => {
     try {
-        const pricingQuery = query(
-            collection(db, 'prices'),
+        const pricesQuery = query(
+            collection(db as any, 'prices'),
             where('pickup', '==', pickup),
             where('destination', '==', destination),
             where('vehicleType', '==', vehicleType)
         );
 
         const bookingsQuery = query(
-            collection(db, 'bookings'),
+            collection(db as any, 'bookings'),
             where('pickup', '==', pickup),
             where('destination', '==', destination),
             where('vehicleType', '==', vehicleType),
             where('intendedDate', '==', date),
             where('status', 'in', ['Paid', 'Confirmed'])
         );
-
+        
         const [pricingSnapshot, bookingsSnapshot] = await Promise.all([
-            getDocs(pricingQuery as any),
+            getDocs(pricesQuery as any),
             getDocs(bookingsQuery as any),
         ]);
 
+
         if (pricingSnapshot.empty) {
-            return 0;
+            console.error("No pricing rule found for this route on the server.");
+            return 0; // No rule, no seats.
         }
 
         const priceRule = pricingSnapshot.docs[0].data();
         const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
         
         if (!vehicleKey) {
+            console.error(`Invalid vehicle type found in price rule: ${priceRule.vehicleType}`);
             return 0;
         }
 
@@ -73,7 +76,7 @@ const getAvailableSeatsOnServer = async (
 
     } catch (error) {
         console.error("Error getting available seats on server:", error);
-        return 0;
+        return 0; // Return 0 on any error to be safe.
     }
 };
 
@@ -251,5 +254,3 @@ async function checkAndConfirmTrip(
         }
     }
 }
-
-    
