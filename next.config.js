@@ -31,11 +31,11 @@ const nextConfig = {
       },
     ],
   },
-  rewrites() {
+  async rewrites() {
     return [
       {
-        source: '/__/auth/action',
-        destination: '/auth/action',
+        source: '/__/auth/:path*',
+        destination: '/auth/:path*',
       },
     ]
   },
