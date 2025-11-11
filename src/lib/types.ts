@@ -17,7 +17,20 @@ export type Booking = {
   status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
-  tripId?: string; // Optional ID to group passengers in a confirmed trip
+  tripId?: string; // ID of the trip this booking is assigned to
+};
+
+export type Trip = {
+    id: string; // e.g. abuad-ajah-lagos_4-seater-sienna_2024-09-21_1
+    priceRuleId: string;
+    pickup: string;
+    destination: string;
+    vehicleType: string;
+    date: string; // 'yyyy-MM-dd'
+    vehicleIndex: number; // 1, 2, 3...
+    capacity: number;
+    passengerIds: string[];
+    isFull: boolean;
 };
 
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate'> & {

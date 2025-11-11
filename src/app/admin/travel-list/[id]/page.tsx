@@ -4,15 +4,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import type { PriceRule, Booking } from '@/lib/types';
+import { doc, getDoc, collection, query, where, onSnapshot, orderBy, documentId } from 'firebase/firestore';
+import type { PriceRule, Booking, Trip } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, User, Phone, Car, Bus, MessageSquare } from 'lucide-react';
+import { AlertCircle, User, Phone, Car, Bus, MessageSquare, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -32,6 +31,7 @@ function TravelListSkeleton() {
                 <Card key={i}>
                     <CardHeader>
                         <Skeleton className="h-6 w-40" />
+                        <Skeleton className="h-5 w-52 mt-2" />
                     </CardHeader>
                     <CardContent>
                         <Table>
@@ -39,7 +39,6 @@ function TravelListSkeleton() {
                                 <TableRow>
                                     <TableHead><Skeleton className="h-5 w-32" /></TableHead>
                                     <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -47,7 +46,6 @@ function TravelListSkeleton() {
                                     <TableRow key={j}>
                                         <TableCell><Skeleton className="h-5 w-28" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -62,90 +60,103 @@ function TravelListSkeleton() {
 
 export default function TravelListPage() {
     const params = useParams();
-    const id = params.id as string;
+    const priceRuleId = params.id as string;
 
     const [priceRule, setPriceRule] = useState<PriceRule | null>(null);
-    const [bookings, setBookings] = useState<Booking[]>([]);
+    const [trips, setTrips] = useState<Trip[]>([]);
+    const [bookings, setBookings] = useState<Record<string, Booking>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Fetch the main price rule
     useEffect(() => {
-        if (!id) {
+        if (!priceRuleId) {
             setError("Price rule ID is missing.");
             setLoading(false);
             return;
         }
 
-        const fetchPriceRule = async () => {
-            const ruleDocRef = doc(db, 'prices', id);
-            try {
-                const ruleDocSnap = await getDoc(ruleDocRef);
-                if (ruleDocSnap.exists()) {
-                    const ruleData = { id: ruleDocSnap.id, ...ruleDocSnap.data() } as PriceRule;
-                    setPriceRule(ruleData);
-                } else {
-                    setError("Price rule not found.");
-                }
-            } catch (e) {
-                console.error("Error fetching price rule:", e);
-                setError("Failed to fetch price rule details.");
+        const ruleDocRef = doc(db, 'prices', priceRuleId);
+        const unsubscribe = onSnapshot(ruleDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setPriceRule({ id: docSnap.id, ...docSnap.data() } as PriceRule);
+            } else {
+                setError("Price rule not found.");
+                setLoading(false);
             }
-        };
+        }, (e) => {
+            console.error("Error fetching price rule:", e);
+            setError("Failed to fetch price rule details.");
+            setLoading(false);
+        });
 
-        fetchPriceRule();
-    }, [id]);
+        return () => unsubscribe();
+    }, [priceRuleId]);
 
+    // Fetch trips related to this price rule
     useEffect(() => {
         if (!priceRule) return;
 
-        const bookingsQuery = query(
-            collection(db, "bookings"),
-            where('pickup', '==', priceRule.pickup),
-            where('destination', '==', priceRule.destination),
-            where('vehicleType', '==', priceRule.vehicleType),
-            where('status', 'in', ['Paid', 'Confirmed']),
-            orderBy('intendedDate', 'asc'),
-            orderBy('createdAt', 'asc')
+        const tripsQuery = query(
+            collection(db, "trips"),
+            where('priceRuleId', '==', priceRule.id),
+            orderBy('date', 'asc'),
+            orderBy('vehicleIndex', 'asc')
         );
 
-        const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
-            const bookingsData = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-                } as Booking;
-            });
-            setBookings(bookingsData);
+        const unsubscribe = onSnapshot(tripsQuery, (querySnapshot) => {
+            const tripsData = querySnapshot.docs.map(doc => doc.data() as Trip);
+            setTrips(tripsData);
             setLoading(false);
         }, (err) => {
-            console.error("Error fetching bookings:", err);
-            setError("Could not fetch bookings for this route.");
+            console.error("Error fetching trips:", err);
+            setError("Could not fetch trips for this route.");
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, [priceRule]);
 
-    const groupedBookings = useMemo(() => {
-        return bookings.reduce((acc, booking) => {
-            const date = booking.intendedDate;
+    // Fetch all bookings for the loaded trips
+    useEffect(() => {
+        const allPassengerIds = trips.flatMap(trip => trip.passengerIds);
+        if (allPassengerIds.length === 0) {
+            setBookings({});
+            return;
+        }
+        
+        // Firestore 'in' queries are limited to 30 elements.
+        const chunks = [];
+        for (let i = 0; i < allPassengerIds.length; i += 30) {
+            chunks.push(allPassengerIds.slice(i, i + 30));
+        }
+
+        const unsubscribers = chunks.map(chunk => {
+            const bookingsQuery = query(collection(db, "bookings"), where(documentId(), 'in', chunk));
+            return onSnapshot(bookingsQuery, (snapshot) => {
+                const bookingsData: Record<string, Booking> = {};
+                snapshot.forEach(doc => {
+                    bookingsData[doc.id] = { id: doc.id, ...doc.data() } as Booking;
+                });
+                setBookings(prev => ({ ...prev, ...bookingsData }));
+            });
+        });
+
+        return () => unsubscribers.forEach(unsub => unsub());
+
+    }, [trips]);
+
+
+    const groupedTripsByDate = useMemo(() => {
+        return trips.reduce((acc, trip) => {
+            const date = trip.date;
             if (!acc[date]) {
                 acc[date] = [];
             }
-            acc[date].push(booking);
+            acc[date].push(trip);
             return acc;
-        }, {} as Record<string, Booking[]>);
-    }, [bookings]);
-
-    const getStatusVariant = (status: Booking['status']) => {
-        switch (status) {
-          case 'Confirmed': return 'default';
-          case 'Paid': return 'secondary';
-          default: return 'outline';
-        }
-    };
+        }, {} as Record<string, Trip[]>);
+    }, [trips]);
     
     const VehicleIcon = priceRule?.vehicleType.includes('Bus') ? Bus : Car;
 
@@ -183,56 +194,73 @@ export default function TravelListPage() {
                 </Button>
             </div>
 
-            {Object.keys(groupedBookings).length === 0 ? (
+            {Object.keys(groupedTripsByDate).length === 0 ? (
                  <div className="text-center py-20">
                     <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-semibold">No Bookings Yet</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">There are no 'Paid' or 'Confirmed' bookings for this route.</p>
+                    <h3 className="mt-4 text-lg font-semibold">No Trips Scheduled Yet</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Paid bookings for this route will automatically create trips here.</p>
                 </div>
             ) : (
-                Object.entries(groupedBookings).map(([date, bookingsForDate]) => (
-                    <Card key={date}>
-                        <CardHeader>
-                            <CardTitle>{format(parseISO(date), 'EEEE, MMMM dd, yyyy')}</CardTitle>
-                            <CardDescription>{bookingsForDate.length} passenger(s) scheduled.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Passenger</TableHead>
-                                        <TableHead>Phone Number</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {bookingsForDate.map(booking => (
-                                        <TableRow key={booking.id}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{booking.name}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                     <Phone className="h-4 w-4 text-muted-foreground" />
-                                                     <a href={`tel:${booking.phone}`} className="hover:underline">{booking.phone}</a>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                Object.entries(groupedTripsByDate).map(([date, tripsForDate]) => (
+                    <div key={date}>
+                        <h2 className="text-xl font-semibold mb-4 pl-1">{format(parseISO(date), 'EEEE, MMMM dd, yyyy')}</h2>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {tripsForDate.map((trip) => (
+                            <Card key={trip.id}>
+                                <CardHeader>
+                                    <CardTitle>Car {trip.vehicleIndex}</CardTitle>
+                                    <CardDescription>
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4" />
+                                            <span>{trip.passengerIds.length} / {trip.capacity} passengers</span>
+                                        </div>
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {trip.passengerIds.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground py-4 text-center">No passengers yet.</p>
+                                    ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Passenger</TableHead>
+                                                <TableHead>Phone</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {trip.passengerIds.map(passengerId => {
+                                                const booking = bookings[passengerId];
+                                                if (!booking) return (
+                                                    <TableRow key={passengerId}>
+                                                        <TableCell colSpan={2}><Skeleton className="h-5 w-full" /></TableCell>
+                                                    </TableRow>
+                                                );
+                                                return (
+                                                <TableRow key={passengerId}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="h-4 w-4 text-muted-foreground" />
+                                                            <span>{booking.name}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Phone className="h-4 w-4 text-muted-foreground" />
+                                                            <a href={`tel:${booking.phone}`} className="hover:underline">{booking.phone}</a>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )})}
+                                        </TableBody>
+                                    </Table>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        ))}
+                        </div>
+                    </div>
                 ))
             )}
         </div>
     );
 }
-
-    
