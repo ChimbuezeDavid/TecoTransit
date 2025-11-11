@@ -32,7 +32,6 @@ export type PriceRule = {
     vehicleType: string;
     price: number;
     vehicleCount: number; // Number of vehicles for this route
-    seatsAvailable: number; // Total seat capacity for this route (vehicleCount * capacity)
 }
 
 export type Feedback = {
@@ -42,11 +41,4 @@ export type Feedback = {
   message: string;
   createdAt: Date;
 };
-
-export type Reservation = {
-  id: string;
-  priceRuleId: string;
-  date: string; // 'yyyy-MM-dd'
-  createdAt: any; // Firestore ServerTimestamp
-}
     

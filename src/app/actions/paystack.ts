@@ -7,7 +7,6 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue }from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
-import { getAvailableSeats } from './get-availability';
 import { format } from 'date-fns';
 
 
@@ -31,19 +30,6 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
       throw new Error("Could not connect to the database.");
     }
     
-    // Last-minute availability check before creating reservation
-    const availableSeats = await getAvailableSeats(priceRuleId);
-    if (availableSeats <= 0) {
-        return { status: false, message: 'Sorry, all seats for this trip have just been booked. Please try another route.' };
-    }
-    
-    // Create a temporary reservation to hold the seat
-    const reservationRef = db.collection('reservations').doc();
-    await reservationRef.set({
-        priceRuleId,
-        createdAt: FieldValue.serverTimestamp(),
-    });
-    
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NEXT_PUBLIC_BASE_URL;
@@ -53,7 +39,7 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
     const response = await paystack.transaction.initialize({
       email,
       amount: Math.round(amount),
-      metadata: { ...metadata, reservationId: reservationRef.id },
+      metadata: { ...metadata },
       callback_url: callbackUrl
     });
     return { status: true, data: response.data };
@@ -73,14 +59,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 
         const verificationResponse = await paystack.transaction.verify(reference);
         const metadata = verificationResponse.data?.metadata;
-        const reservationId = metadata?.reservationId;
-
-        // Clean up reservation regardless of payment status
-        if (reservationId) {
-            const reservationRef = db.collection('reservations').doc(reservationId);
-            // We can delete this without waiting for it to finish
-            reservationRef.delete().catch(e => console.error("Failed to delete reservation:", e));
-        }
 
         if (verificationResponse.data?.status !== 'success') {
             throw new Error('Payment was not successful.');
@@ -91,9 +69,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         }
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
-        
-        // The final check is now implicitly handled by the reservation system.
-        // If the user got this far, a seat was reserved for them.
         
         const bookingsRef = db.collection('bookings');
         
@@ -155,8 +130,11 @@ async function checkAndConfirmTrip(
     }
 
     const priceRule = pricingSnapshot.docs[0].data();
-    const capacity = priceRule.seatsAvailable || 0;
     
+    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
+    const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
+    const capacity = (priceRule.vehicleCount || 0) * capacityPerVehicle;
+
     if (capacity === 0) return;
 
     const paidBookings = bookingsSnapshot.docs;
