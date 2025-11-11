@@ -1,13 +1,15 @@
 
+
 'use server';
 
 import Paystack from 'paystack';
-import type { BookingFormData } from '@/lib/types';
+import type { BookingFormData, PriceRule } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue }from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
-import type { PriceRule } from '@/lib/types';
+import { getAvailableSeats } from './get-availability';
+import { format } from 'date-fns';
 
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
@@ -24,6 +26,28 @@ interface InitializeTransactionArgs {
 
 export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
   try {
+    const { priceRuleId } = metadata;
+    const bookingDetails = JSON.parse(metadata.booking_details);
+    const date = bookingDetails.intendedDate;
+
+    // Last-minute availability check
+    const availableSeats = await getAvailableSeats(priceRuleId, date);
+    if (availableSeats <= 0) {
+        return { status: false, message: 'Sorry, all seats for this trip have just been booked. Please try another date or route.' };
+    }
+    
+    // Create a temporary reservation
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+      throw new Error("Could not connect to the database.");
+    }
+    const reservationRef = db.collection('reservations').doc();
+    await reservationRef.set({
+        priceRuleId,
+        date,
+        createdAt: FieldValue.serverTimestamp(),
+    });
+    
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : process.env.NEXT_PUBLIC_BASE_URL;
@@ -33,7 +57,7 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
     const response = await paystack.transaction.initialize({
       email,
       amount: Math.round(amount),
-      metadata,
+      metadata: { ...metadata, reservationId: reservationRef.id },
       callback_url: callbackUrl
     });
     return { status: true, data: response.data };
@@ -46,25 +70,42 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
 
 export const verifyTransactionAndCreateBooking = async (reference: string) => {
     try {
-        const verificationResponse = await paystack.transaction.verify(reference);
-        if (verificationResponse.data?.status !== 'success') {
-            throw new Error('Payment was not successful.');
-        }
-
-        const metadata = verificationResponse.data.metadata;
-        if (!metadata || !metadata.booking_details) {
-            throw new Error('Booking metadata is missing from transaction.');
-        }
-        
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
-
         const db = getFirebaseAdmin()?.firestore();
         if (!db) {
             throw new Error("Could not connect to the database.");
         }
 
-        // Since availability system is removed, we directly create the booking.
-        // The check for seats is removed from here. Admin will manage overbooking manually.
+        const verificationResponse = await paystack.transaction.verify(reference);
+        const metadata = verificationResponse.data?.metadata;
+        const reservationId = metadata?.reservationId;
+
+        // Clean up reservation regardless of payment status
+        if (reservationId) {
+            const reservationRef = db.collection('reservations').doc(reservationId);
+            // We can delete this without waiting for it to finish
+            reservationRef.delete().catch(e => console.error("Failed to delete reservation:", e));
+        }
+
+        if (verificationResponse.data?.status !== 'success') {
+            throw new Error('Payment was not successful.');
+        }
+
+        if (!metadata || !metadata.booking_details) {
+            throw new Error('Booking metadata is missing from transaction.');
+        }
+        
+        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
+        
+        // Final availability check before creating the booking
+        const priceRuleId = `${bookingDetails.pickup}_${bookingDetails.destination}_${bookingDetails.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+        const availableSeats = await getAvailableSeats(priceRuleId, bookingDetails.intendedDate);
+        if (availableSeats <= 0) {
+            // This is the edge case where the seat was taken between our first check and now.
+            // We must refund the user. For now, we will log an error and prevent booking.
+            console.error(`CRITICAL: Overbooking prevented for ${priceRuleId} on ${bookingDetails.intendedDate}. User ${bookingDetails.email} paid but no seats were available. MANUAL REFUND REQUIRED.`);
+            throw new Error("Unfortunately, the last available seat was booked while you were completing your payment. Your booking could not be completed. Please contact support for a refund.");
+        }
+
 
         const bookingsRef = db.collection('bookings');
         
@@ -127,14 +168,7 @@ async function checkAndConfirmTrip(
     }
 
     const priceRule = pricingSnapshot.docs[0].data();
-    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
-    
-    if (!vehicleKey) {
-        console.error(`Invalid vehicle type found: ${priceRule.vehicleType}`);
-        return;
-    }
-    
-    const capacity = vehicleOptions[vehicleKey].capacity;
+    const capacity = priceRule.seatsAvailable || 0;
     
     if (capacity === 0) return;
 

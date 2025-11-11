@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -21,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, List } from "lucide-react";
+import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, List, Armchair } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +53,7 @@ function PricingManagerSkeleton() {
                             <TableHead><Skeleton className="h-5 w-24" /></TableHead>
                             <TableHead><Skeleton className="h-5 w-20" /></TableHead>
                              <TableHead><Skeleton className="h-5 w-16" /></TableHead>
+                             <TableHead><Skeleton className="h-5 w-16" /></TableHead>
                             <TableHead className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -64,6 +66,7 @@ function PricingManagerSkeleton() {
                                 </TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                                 <TableCell className="text-right flex justify-end gap-2">
                                     <Skeleton className="h-8 w-8" />
@@ -119,13 +122,7 @@ export default function PricingManager() {
   useEffect(() => {
     if (isDialogOpen) {
         if (editMode) {
-            form.reset({
-                pickup: editMode.pickup,
-                destination: editMode.destination,
-                vehicleType: editMode.vehicleType,
-                price: editMode.price,
-                vehicleCount: editMode.vehicleCount,
-            });
+            form.reset(editMode);
         } else {
             form.reset({
                 pickup: "",
@@ -191,19 +188,25 @@ export default function PricingManager() {
         return;
     }
 
+    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === data.vehicleType);
+    const capacity = vehicleKey ? vehicleOptions[vehicleKey as keyof typeof vehicleOptions].capacity : 0;
+    const seatsAvailable = data.vehicleCount * capacity;
+
+    const finalData = { ...data, seatsAvailable };
+
     const reciprocalPriceId = `${data.destination}_${data.pickup}_${data.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
     
     const priceRef = doc(db, "prices", priceId);
     const reciprocalPriceRef = doc(db, "prices", reciprocalPriceId);
 
     const reciprocalData = {
-        ...data,
+        ...finalData,
         pickup: data.destination,
         destination: data.pickup,
     };
 
     try {
-      await setDoc(priceRef, data, { merge: true });
+      await setDoc(priceRef, finalData, { merge: true });
       await setDoc(reciprocalPriceRef, reciprocalData, { merge: true });
       
       if (editMode && editMode.id !== priceId) {
@@ -276,12 +279,13 @@ export default function PricingManager() {
                   <TableHead>Vehicle</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Vehicles</TableHead>
+                  <TableHead>Total Seats</TableHead>
                   <TableHead className="text-right pr-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {priceList.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                 ) : (
                   priceList.map((rule) => {
                     return (
@@ -293,6 +297,12 @@ export default function PricingManager() {
                             <TableCell>{rule.vehicleType}</TableCell>
                             <TableCell>₦{rule.price.toLocaleString()}</TableCell>
                             <TableCell>{rule.vehicleCount}</TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-2">
+                                    <Armchair className="h-4 w-4 text-muted-foreground" />
+                                    <span>{rule.seatsAvailable}</span>
+                                </div>
+                            </TableCell>
                             <TableCell className="text-right pr-4">
                                 <div className="flex justify-end items-center gap-1">
                                     <Button asChild variant="ghost" size="icon">

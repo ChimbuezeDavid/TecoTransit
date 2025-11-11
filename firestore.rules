@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -15,6 +16,12 @@ service cloud.firestore {
 
     match /prices/{priceId} {
       allow read, write: if isAdmin();
+    }
+    
+    // Reservations can be created by anyone, but only managed by admins (or server logic)
+    match /reservations/{reservationId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin();
     }
 
     // Settings can be read by anyone but only written by admins.

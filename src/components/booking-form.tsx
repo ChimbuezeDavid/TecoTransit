@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -17,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send, Armchair } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
@@ -25,6 +26,7 @@ import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
 import { useBooking } from '@/context/booking-context';
 import { useSettings } from '@/context/settings-context';
+import { getAvailableSeats } from '@/app/actions/get-availability';
 
 
 const bookingSchema = z.object({
@@ -60,6 +62,8 @@ export default function BookingForm() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState<number | null>(null);
+  const [isCheckingSeats, setIsCheckingSeats] = useState(false);
   
 
   const form = useForm<z.infer<typeof bookingSchema>>({
@@ -78,12 +82,16 @@ export default function BookingForm() {
   const destination = watch("destination");
   const vehicleType = watch("vehicleType");
   const luggageCount = watch("luggageCount");
+  const intendedDate = watch("intendedDate");
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
-      return prices.filter(
+      const priceRule = prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
+       if (priceRule.length > 0) {
+        return priceRule;
+      }
     }
     return [];
   }, [pickup, destination, prices]);
@@ -95,6 +103,29 @@ export default function BookingForm() {
     }
   }, [pickup, destination, vehicleType, setValue, availableVehicles]);
 
+    useEffect(() => {
+        const checkSeats = async () => {
+            if (pickup && destination && vehicleType && intendedDate) {
+                setIsCheckingSeats(true);
+                setAvailableSeats(null);
+                try {
+                    const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+                    const date = format(intendedDate, 'yyyy-MM-dd');
+                    const seats = await getAvailableSeats(priceRuleId, date);
+                    setAvailableSeats(seats);
+                } catch (error) {
+                    console.error("Error checking seats:", error);
+                    setAvailableSeats(null); // Set to null on error to hide stale data
+                } finally {
+                    setIsCheckingSeats(false);
+                }
+            } else {
+                 setAvailableSeats(null);
+            }
+        };
+
+        checkSeats();
+    }, [pickup, destination, vehicleType, intendedDate]);
 
   const { totalFare, baseFare } = useMemo(() => {
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
@@ -117,6 +148,8 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
+        const priceRuleId = `${formData.pickup}_${formData.destination}_${formData.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+        
         if (isPaystackEnabled) {
             // Live Mode: Proceed to Paystack
             const bookingDataWithFare = { ...formData, totalFare };
@@ -136,6 +169,7 @@ export default function BookingForm() {
                 email: cleanBookingData.email,
                 amount: cleanBookingData.totalFare * 100, // Amount in kobo
                 metadata: {
+                    priceRuleId,
                     booking_details: JSON.stringify(cleanBookingData),
                     custom_fields: [
                         { display_name: "Customer Name", variable_name: "customer_name", value: cleanBookingData.name },
@@ -173,7 +207,42 @@ export default function BookingForm() {
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
 
-  const renderSubmitButtonContent = () => {
+  const renderSeatStatus = () => {
+    if (!pickup || !destination || !vehicleType || !intendedDate) {
+        return null;
+    }
+    
+    if (isCheckingSeats) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Checking availability...</span>
+        </div>
+      );
+    }
+  
+    if (availableSeats !== null) {
+      if (availableSeats > 0) {
+        return (
+          <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+            <Armchair className="h-4 w-4" />
+            <span>{availableSeats} seat(s) available</span>
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
+            <Armchair className="h-4 w-4" />
+            <span>No seats available for this date</span>
+          </div>
+        );
+      }
+    }
+  
+    return null;
+  };
+
+   const renderSubmitButtonContent = () => {
     if (isProcessing || settingsLoading) {
       return (
         <>
@@ -356,6 +425,7 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
+                 <div className="md:col-span-2 h-6 flex items-center">{renderSeatStatus()}</div>
             </div>
             <FormField
               control={form.control}
@@ -387,7 +457,7 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0 || (availableSeats !== null && availableSeats <= 0)}>
               {renderSubmitButtonContent()}
             </Button>
           </CardFooter>
