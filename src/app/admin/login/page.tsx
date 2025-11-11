@@ -10,7 +10,7 @@ export default function AdminLoginPage() {
       <Button asChild variant="ghost" className="absolute top-4 left-4 sm:top-8 sm:left-8">
         <Link href="/">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          <span>Back to Home</span>
+          <span>Back to Homepage</span>
         </Link>
       </Button>
       <LoginForm />

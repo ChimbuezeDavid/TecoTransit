@@ -1,0 +1,30 @@
+{
+  "hero": {
+    "src": "https://picsum.photos/seed/roadtrip/1600/900",
+    "data-ai-hint": "road trip"
+  },
+  "destinationAbeokuta": {
+    "src": "https://picsum.photos/seed/abeokuta/600/400",
+    "data-ai-hint": "city nigeria"
+  },
+  "destinationAjah": {
+    "src": "https://picsum.photos/seed/ajah/600/400",
+    "data-ai-hint": "lagos bridge"
+  },
+  "destinationFestac": {
+    "src": "https://picsum.photos/seed/festac/600/400",
+    "data-ai-hint": "lagos nigeria"
+  },
+  "destinationIbadan": {
+    "src": "https://picsum.photos/seed/ibadan/600/400",
+    "data-ai-hint": "historic city"
+  },
+  "destinationIyanaPaja": {
+    "src": "https://picsum.photos/seed/iyanapaja/600/400",
+    "data-ai-hint": "bus terminal"
+  },
+  "destinationOjota": {
+    "src": "https://picsum.photos/seed/ojota/600/400",
+    "data-ai-hint": "city market"
+  }
+}
