@@ -1,4 +1,5 @@
 
+
 import { Route } from "lucide-react";
 import Link from "next/link";
 
@@ -17,6 +18,8 @@ export default function Footer() {
                         </p>
                         <span className="hidden sm:inline">|</span>
                         <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+                        <span className="hidden sm:inline">|</span>
+                        <Link href="/feedback" className="hover:text-primary transition-colors">Leave Feedback</Link>
                      </div>
                 </div>
             </div>

@@ -1,11 +1,10 @@
-// THIS FILE IS MANAGED BY AN AI ASSISTANT. DO NOT EDIT DIRECTLY.
-
 'use client';
 
 import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 import { BookingProvider } from '@/context/booking-context';
+import { SettingsProvider } from '@/context/settings-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
 import './globals.css';
@@ -68,36 +67,12 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                  if (registrations.length > 0) {
-                    console.log('Found active service workers. Unregistering...');
-                    const unregisterPromises = registrations.map(reg => reg.unregister());
-                    Promise.all(unregisterPromises).then(() => {
-                        console.log('All service workers unregistered. Reloading page...');
-                        window.location.reload(true);
-                    });
-                  }
-                });
-                
-                // Add a listener to prevent new service workers from being installed.
-                navigator.serviceWorker.addEventListener('controllerchange', () => {
-                  console.log('New service worker detected, reloading page to take control.');
-                  window.location.reload(true);
-                });
-              }
-            `,
-          }}
-        />
         <title>TecoTransit</title>
         <meta name="description" content="Book Your Trip with TecoTransit. Fast, reliable, and comfortable rides to your destination." />
         <meta name="theme-color" content="#D4AF37" />
       </head>
       <body
-        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} ${montserrat.variable} ${garamond.variable} font-body antialiased flex flex-col h-full bg-muted/20`}
+        className={`${ptSans.variable} ${playfairDisplay.variable} ${robotoMono.variable} ${lobster.variable} ${pacifico.variable} ${montserrat.variable} ${garamond.variable} font-body antialiased flex flex-col h-full bg-background`}
       >
         <ThemeProvider
           attribute="class"
@@ -106,18 +81,20 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <BookingProvider>
-              {isAdminPage ? (
-                <>{children}</>
-              ) : (
-                <div className="flex flex-col min-h-screen">
-                  <Header />
-                  <main className="flex-grow">{children}</main>
-                  <Footer />
-                </div>
-              )}
-              <Toaster />
-            </BookingProvider>
+            <SettingsProvider>
+              <BookingProvider>
+                {isAdminPage ? (
+                  <>{children}</>
+                ) : (
+                  <div className="flex flex-col min-h-screen">
+                    <Header />
+                    <main className="flex-grow">{children}</main>
+                    <Footer />
+                  </div>
+                )}
+                <Toaster />
+              </BookingProvider>
+            </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>
         <Analytics />

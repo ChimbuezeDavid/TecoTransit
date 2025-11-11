@@ -1,37 +1,45 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Admins can do anything
     function isAdmin() {
+      // In a real app, this should be a custom claim, but for now we check for any authenticated user.
       return request.auth != null;
     }
 
-    // Anyone can read prices and alerts
-    match /prices/{priceId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    match /alerts/{alertId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // Bookings can be created by anyone, but only managed by admins.
-    // A 'create' request must include a `createdAt` timestamp to prevent spam.
+    // Admins can read/write all booking, pricing, and trip data
     match /bookings/{bookingId} {
-      allow read, update, delete: if isAdmin();
-      allow create: if request.resource.data.createdAt == request.time;
+      allow read, write: if isAdmin();
     }
 
-    // Booking summaries are managed entirely by the backend/admins.
-    match /booking_summaries/{bookingId} {
-        allow read: if true;
-        allow create, update, delete: if isAdmin();
+    match /prices/{priceId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /trips/{tripId} {
+      allow read, write: if isAdmin();
     }
     
+    // Reservations can be created by anyone, but only managed by admins (or server logic)
+    match /reservations/{reservationId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin();
+    }
+
+    // Settings can be read by anyone but only written by admins.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Feedback can be created by anyone, but only managed by admins.
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     // User and token data is admin-only.
     match /users/{userId} {
       allow read, write: if isAdmin();

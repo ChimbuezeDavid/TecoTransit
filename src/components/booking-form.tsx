@@ -1,15 +1,14 @@
 
+
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { locations, vehicleOptions as allVehicleOptions, LUGGAGE_FARE } from '@/lib/constants';
-import { useBooking } from '@/context/booking-context';
-import type { BookingFormData } from '@/lib/types';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +18,14 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard } from 'lucide-react';
+import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, CreditCard, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
+import { useBooking } from '@/context/booking-context';
+import { useSettings } from '@/context/settings-context';
 
 
 const bookingSchema = z.object({
@@ -33,8 +34,7 @@ const bookingSchema = z.object({
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
   destination: z.string({ required_error: 'Please select a destination.' }),
-  intendedDate: z.date({ required_error: 'An intended date of departure is required.' }),
-  alternativeDate: z.date({ required_error: 'An alternative date is required.' }),
+  intendedDate: z.date({ required_error: 'A departure date is required.' }),
   vehicleType: z.string({ required_error: 'You need to select a vehicle type.' }),
   luggageCount: z.coerce.number().min(0).max(10),
   privacyPolicy: z.literal(true, {
@@ -43,14 +43,6 @@ const bookingSchema = z.object({
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
-}).refine(data => {
-    if (data.intendedDate && data.alternativeDate) {
-        return data.alternativeDate > data.intendedDate;
-    }
-    return true;
-}, {
-    message: "Alternative date must be after the intended date.",
-    path: ["alternativeDate"],
 });
 
 const contactOptions = [
@@ -62,14 +54,15 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading } = useBooking();
+  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isIntendedDatePopoverOpen, setIsIntendedDatePopoverOpen] = useState(false);
-  const [isAlternativeDatePopoverOpen, setIsAlternativeDatePopoverOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
   
+
   const form = useForm<z.infer<typeof bookingSchema>>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -81,28 +74,39 @@ export default function BookingForm() {
     },
   });
 
-  const { watch, getValues, setValue, trigger, handleSubmit: formHandleSubmit } = form;
-  const watchAllFields = watch();
+  const { watch, setValue, handleSubmit: formHandleSubmit } = form;
+  const pickup = watch("pickup");
+  const destination = watch("destination");
+  const vehicleType = watch("vehicleType");
+  const luggageCount = watch("luggageCount");
 
   const availableVehicles = useMemo(() => {
-    const { pickup, destination } = watchAllFields;
     if (pickup && destination && prices) {
-      return prices.filter(
+      const priceRule = prices.filter(
         (p) => p.pickup === pickup && p.destination === destination
       );
+       if (priceRule.length > 0) {
+        return priceRule;
+      }
     }
     return [];
-  }, [watchAllFields.pickup, watchAllFields.destination, prices]);
+  }, [pickup, destination, prices]);
+  
+  useEffect(() => {
+    const isVehicleStillValid = availableVehicles.some(p => p.vehicleType === vehicleType);
+    if (pickup && destination && vehicleType && !isVehicleStillValid) {
+        setValue('vehicleType', '', { shouldValidate: true });
+    }
+  }, [pickup, destination, vehicleType, setValue, availableVehicles]);
 
   const { totalFare, baseFare } = useMemo(() => {
-    const { vehicleType, luggageCount } = watchAllFields;
     const vehicleRule = availableVehicles.find(v => v.vehicleType === vehicleType);
     const newBaseFare = vehicleRule ? vehicleRule.price : 0;
     const newTotalFare = newBaseFare + ((luggageCount ?? 0) * LUGGAGE_FARE);
     return { totalFare: newTotalFare, baseFare: newBaseFare };
-  }, [availableVehicles, watchAllFields.vehicleType, watchAllFields.luggageCount]);
+  }, [availableVehicles, vehicleType, luggageCount]);
 
-  
+
   const onBookingSubmit = async (formData: z.infer<typeof bookingSchema>) => {
     if (baseFare <= 0) {
       toast({
@@ -116,90 +120,79 @@ export default function BookingForm() {
     setIsProcessing(true);
 
     try {
-        const bookingDataWithFare = { ...formData, totalFare };
-
-        const cleanBookingData = {
-          name: bookingDataWithFare.name,
-          email: bookingDataWithFare.email,
-          phone: bookingDataWithFare.phone,
-          pickup: bookingDataWithFare.pickup,
-          destination: bookingDataWithFare.destination,
-          intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
-          alternativeDate: format(bookingDataWithFare.alternativeDate, 'yyyy-MM-dd'),
-          vehicleType: bookingDataWithFare.vehicleType,
-          luggageCount: bookingDataWithFare.luggageCount,
-          totalFare: bookingDataWithFare.totalFare,
-        };
-
-        const result = await initializeTransaction({
-            email: cleanBookingData.email,
-            amount: cleanBookingData.totalFare * 100, // Amount in kobo
-            metadata: {
-                booking_details: JSON.stringify(cleanBookingData),
-                custom_fields: [
-                    {
-                        display_name: "Customer Name",
-                        variable_name: "customer_name",
-                        value: cleanBookingData.name
-                    },
-                    {
-                        display_name: "Route",
-                        variable_name: "route",
-                        value: `${cleanBookingData.pickup} to ${cleanBookingData.destination}`
-                    }
-                ]
-            }
-        });
+        const priceRuleId = `${formData.pickup}_${formData.destination}_${formData.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
         
-        if (result.status && result.data?.authorization_url) {
-            router.push(result.data.authorization_url);
+        if (isPaystackEnabled) {
+            // Live Mode: Proceed to Paystack
+            const bookingDataWithFare = { ...formData, totalFare };
+            const cleanBookingData = {
+              name: bookingDataWithFare.name,
+              email: bookingDataWithFare.email,
+              phone: bookingDataWithFare.phone,
+              pickup: bookingDataWithFare.pickup,
+              destination: bookingDataWithFare.destination,
+              intendedDate: format(bookingDataWithFare.intendedDate, 'yyyy-MM-dd'),
+              vehicleType: bookingDataWithFare.vehicleType,
+              luggageCount: bookingDataWithFare.luggageCount,
+              totalFare: bookingDataWithFare.totalFare,
+            };
+
+            const result = await initializeTransaction({
+                email: cleanBookingData.email,
+                amount: cleanBookingData.totalFare * 100, // Amount in kobo
+                metadata: {
+                    priceRuleId,
+                    booking_details: JSON.stringify(cleanBookingData),
+                    custom_fields: [
+                        { display_name: "Customer Name", variable_name: "customer_name", value: cleanBookingData.name },
+                        { display_name: "Route", variable_name: "route", value: `${cleanBookingData.pickup} to ${cleanBookingData.destination}` }
+                    ]
+                }
+            });
+            
+            if (result.status && result.data?.authorization_url) {
+                router.push(result.data.authorization_url);
+            } else {
+                throw new Error(result.message || 'Failed to initialize transaction.');
+            }
         } else {
-            throw new Error(result.message || 'Failed to initialize transaction.');
+            // Test Mode: Bypass Paystack and create a pending booking
+            await createBooking({ ...formData, totalFare });
+            setIsConfirmationOpen(true);
+            form.reset();
         }
 
     } catch (error) {
-        console.error("Payment initialization error:", error);
+        console.error("Booking/Payment error:", error);
         toast({
             variant: "destructive",
             title: "Oh no! Something went wrong.",
-            description: `We couldn't start the payment process. Please try again. ${error instanceof Error ? error.message : ''}`,
+            description: `We couldn't process your request. Please try again. ${error instanceof Error ? error.message : ''}`,
         });
+    } finally {
         setIsProcessing(false);
     }
   };
 
-
-  useEffect(() => {
-    const subscription = watch((values, { name }) => {
-       if (name === 'pickup' || name === 'destination') {
-            const currentVehicleStillAvailable = availableVehicles.some(v => v.vehicleType === values.vehicleType);
-            if (!currentVehicleStillAvailable) {
-                setValue('vehicleType', '');
-                trigger('vehicleType');
-            }
-       }
-       if (name === 'intendedDate' && values.intendedDate) {
-            setValue('alternativeDate', undefined as any);
-            trigger('alternativeDate');
-       }
-       if (name === 'vehicleType' && values.vehicleType) {
-            const vehicleKey = Object.keys(allVehicleOptions).find(key => allVehicleOptions[key as keyof typeof allVehicleOptions].name === values.vehicleType) as keyof typeof allVehicleOptions;
-            const maxLuggages = allVehicleOptions[vehicleKey]?.maxLuggages ?? 0;
-            const currentLuggages = getValues('luggageCount');
-            if (currentLuggages > maxLuggages) {
-                setValue('luggageCount', maxLuggages);
-            }
-            trigger('luggageCount');
-       }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, getValues, setValue, trigger, availableVehicles]);
-
-
-  const selectedVehicleDetails = watchAllFields.vehicleType ? Object.values(allVehicleOptions).find(v => v.name === watchAllFields.vehicleType) : null;
+  const selectedVehicleDetails = vehicleType ? Object.values(allVehicleOptions).find(v => v.name === vehicleType) : null;
   const luggageOptions = selectedVehicleDetails ? 
     [...Array((selectedVehicleDetails.maxLuggages ?? 0) + 1).keys()] : 
     [];
+
+
+   const renderSubmitButtonContent = () => {
+    const isLoading = isProcessing || settingsLoading;
+    const buttonText = settingsLoading ? 'Loading...' : isProcessing ? 'Processing...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking';
+    const Icon = isLoading ? Loader2 : isPaystackEnabled ? CreditCard : Send;
+    
+    return (
+        <>
+            <Icon className={cn("mr-2 h-5 w-5", isLoading && "animate-spin")} />
+            <span>{buttonText}</span>
+        </>
+    );
+   };
+
 
   return (
     <>
@@ -280,47 +273,20 @@ export default function BookingForm() {
                 <FormField control={form.control} name="destination" render={({ field }) => (
                     <FormItem>
                     <FormLabel>Destination</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!watchAllFields.pickup}>
+                    <Select onValueChange={field.onChange} value={field.value || ''} disabled={!pickup}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!watchAllFields.pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!pickup ? 'Select pickup first' : 'Select a destination'} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {locations.filter(loc => loc !== watchAllFields.pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
+                        {locations.filter(loc => loc !== pickup).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
                     </FormItem>
                 )} />
-                 <FormField
-                    control={form.control}
-                    name="vehicleType"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Vehicle Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder={
-                                    pricesLoading ? 'Loading vehicles...' : 
-                                    !watchAllFields.pickup || !watchAllFields.destination ? 'Select route first' : 
-                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
-                                    'Select a vehicle'
-                                } />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            {availableVehicles.map((v) => (
-                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
-                            ))}
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
                 <FormField control={form.control} name="intendedDate" render={({ field }) => (
                     <FormItem className="flex flex-col">
-                    <FormLabel>Intended Departure</FormLabel>
+                    <FormLabel>Departure Date</FormLabel>
                     <Popover open={isIntendedDatePopoverOpen} onOpenChange={setIsIntendedDatePopoverOpen}>
                         <PopoverTrigger asChild><FormControl>
                             <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
@@ -344,38 +310,39 @@ export default function BookingForm() {
                     <FormMessage />
                     </FormItem>
                 )} />
-                <FormField control={form.control} name="alternativeDate" render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                    <FormLabel>Alternative Departure</FormLabel>
-                    <Popover open={isAlternativeDatePopoverOpen} onOpenChange={setIsAlternativeDatePopoverOpen}>
-                        <PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("w-full justify-start pl-3 text-left font-normal", !field.value && "text-muted-foreground")} disabled={!watchAllFields.intendedDate}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                            </Button>
-                        </FormControl></PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar 
-                                mode="single" 
-                                selected={field.value} 
-                                onSelect={(date) => {
-                                    field.onChange(date);
-                                    setIsAlternativeDatePopoverOpen(false);
-                                }}
-                                disabled={(date) => date <= (watchAllFields.intendedDate || new Date(new Date().setHours(0,0,0,0)))} 
-                                initialFocus 
-                            />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    </FormItem>
-                )} />
+                 <FormField
+                    control={form.control}
+                    name="vehicleType"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Vehicle Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={pricesLoading || availableVehicles.length === 0}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={
+                                    pricesLoading ? 'Loading vehicles...' : 
+                                    !pickup || !destination ? 'Select route first' : 
+                                    availableVehicles.length === 0 ? 'No vehicles for this route' :
+                                    'Select a vehicle'
+                                } />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {availableVehicles.map((v) => (
+                                <SelectItem key={v.id} value={v.vehicleType}>{v.vehicleType}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
                  <FormField control={form.control} name="luggageCount" render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                     <FormLabel>Number of Bags (Max {selectedVehicleDetails?.maxLuggages ?? 'N/A'})</FormLabel>
-                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!watchAllFields.vehicleType}>
+                    <Select onValueChange={(value) => field.onChange(parseInt(value, 10))} value={String(field.value || 0)} disabled={!vehicleType}>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder={!watchAllFields.vehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder={!vehicleType ? "Select vehicle first" : "Select number of bags"} /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
                         {luggageOptions.map(i => <SelectItem key={i} value={String(i)}>{i === 0 ? 'None' : `${i} bag${i > 1 ? 's' : ''}`}</SelectItem>)}
@@ -415,13 +382,8 @@ export default function BookingForm() {
                 <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || totalFare <= 0}>
-                {isProcessing ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : (
-                    <CreditCard className="mr-2 h-5 w-5" />
-                )}
-                Proceed to Payment
+            <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
+              {renderSubmitButtonContent()}
             </Button>
           </CardFooter>
         </form>
@@ -430,7 +392,9 @@ export default function BookingForm() {
 
     <BookingConfirmationDialog
       isOpen={isConfirmationOpen}
-      onClose={() => setIsConfirmationOpen(false)}
+      onClose={() => {
+        setIsConfirmationOpen(false);
+      }}
     />
     </>
   );

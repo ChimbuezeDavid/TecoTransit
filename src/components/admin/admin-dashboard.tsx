@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -9,8 +7,6 @@ import { useBooking } from "@/context/booking-context";
 import type { Booking } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 import Link from 'next/link';
-import Image from 'next/image';
-
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -18,22 +14,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, ExternalLink, CreditCard, Ban, ShieldAlert, ShieldCheck, TrendingUp, Users, Wallet } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, CreditCard, Ban, ShieldAlert, ShieldCheck, Check, CircleDot } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
-import { ScrollArea } from "../ui/scroll-area";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
 import { verifyPayment } from "@/app/actions/verify-payment";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis } from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const ITEMS_PER_PAGE = 10;
@@ -41,20 +31,6 @@ const ITEMS_PER_PAGE = 10;
 function DashboardSkeleton() {
     return (
         <div className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
-                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
-                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-8 w-24 mt-2" /><Skeleton className="h-4 w-48 mt-1" /></CardHeader></Card>
-            </div>
-             <Card>
-                <CardHeader>
-                    <Skeleton className="h-7 w-48" />
-                    <Skeleton className="h-4 w-72 mt-2" />
-                </CardHeader>
-                <CardContent className="pl-2">
-                    <Skeleton className="h-[350px] w-full" />
-                </CardContent>
-             </Card>
             <Card>
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
@@ -206,7 +182,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
-  const [confirmedDate, setConfirmedDate] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -234,42 +209,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     setCurrentPage(1);
   }, [statusFilter]);
 
-   const { totalRevenue, totalBookings, avgBookingValue, chartData } = useMemo(() => {
-    const confirmedBookings = allBookings.filter(b => b.status === 'Confirmed');
-    const revenue = confirmedBookings.reduce((sum, b) => sum + b.totalFare, 0);
-    const bookingsCount = confirmedBookings.length;
-    const avgValue = bookingsCount > 0 ? revenue / bookingsCount : 0;
-
-    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(new Date(), i)).reverse();
-    const dailyBookings = last7Days.map(day => {
-        const dayStart = startOfDay(day);
-        const dayEnd = endOfDay(day);
-        const count = allBookings.filter(b => {
-            const bookingDate = new Date(b.createdAt);
-            return bookingDate >= dayStart && bookingDate <= dayEnd;
-        }).length;
-
-        return {
-            date: format(day, 'MMM d'),
-            bookings: count,
-        };
-    });
-
-    return { 
-        totalRevenue: revenue, 
-        totalBookings: bookingsCount, 
-        avgBookingValue: avgValue,
-        chartData: dailyBookings
-    };
-  }, [allBookings]);
-
-  const chartConfig = {
-    bookings: {
-      label: "Bookings",
-      color: "hsl(var(--primary))",
-    },
-  };
-  
   const totalPages = Math.ceil(bookings.length / ITEMS_PER_PAGE);
   const paginatedBookings = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -279,26 +218,16 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
 
   const openDialog = (booking: Booking) => {
     setSelectedBooking(booking);
-    setConfirmedDate(booking.confirmedDate || '');
     setIsManageDialogOpen(true);
   }
 
-  const handleUpdateBooking = async (status: 'Confirmed' | 'Cancelled') => {
+  const handleUpdateBooking = async (status: 'Cancelled') => {
     if (!selectedBooking) return;
-
-    if (status === 'Confirmed' && !confirmedDate) {
-        toast({
-            variant: "destructive",
-            title: "Selection Required",
-            description: "Please select one of the departure dates to confirm.",
-        });
-        return;
-    }
 
     setIsProcessing(prev => ({...prev, [selectedBooking.id]: true}));
     
     try {
-        await updateBookingStatus(selectedBooking.id, status, status === 'Confirmed' ? confirmedDate : undefined);
+        await updateBookingStatus(selectedBooking.id, status);
         toast({
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
@@ -370,7 +299,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Alt. Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -381,7 +310,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
             `"${b.pickup.replace(/"/g, '""')}"`,
             `"${b.destination.replace(/"/g, '""')}"`,
             b.intendedDate,
-            b.alternativeDate,
             `"${b.vehicleType.replace(/"/g, '""')}"`,
             b.luggageCount,
             b.totalFare,
@@ -406,18 +334,46 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     switch (status) {
       case 'Confirmed': return 'default';
       case 'Cancelled': return 'destructive';
-      case 'Pending': return 'secondary';
+      case 'Paid': return 'secondary';
+      case 'Pending': return 'outline';
       default: return 'outline';
+    }
+  };
+  
+  const getStatusIcon = (status: Booking['status']) => {
+    switch (status) {
+        case 'Confirmed': return <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />;
+        case 'Cancelled': return <Ban className="h-5 w-5 text-destructive flex-shrink-0" />;
+        case 'Paid': return <HandCoins className="h-5 w-5 text-blue-500 flex-shrink-0" />;
+        case 'Pending': return <CircleDot className="h-5 w-5 text-amber-500 flex-shrink-0" />;
+        default: return <Check className="h-5 w-5" />;
     }
   };
   
   const VehicleIcon = selectedBooking?.vehicleType.includes('Bus') ? Bus : Car;
 
   const renderTableContent = () => {
+    if (loading) {
+        return [...Array(5)].map((_, i) => (
+             <TableRow key={i}>
+                <TableCell>
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-4 w-40 mt-2" />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-4 w-32 mt-2" />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-28" /></TableCell>
+                <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
+            </TableRow>
+        ));
+    }
     if (error) {
       return (
         <TableRow>
-          <TableCell colSpan={6} className="text-center py-10 text-destructive">
+          <TableCell colSpan={5} className="text-center py-10 text-destructive">
              <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
@@ -451,7 +407,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     ));
   };
   
-  if (loading && allBookings.length === 0) {
+  if (loading && bookings.length === 0) {
     return <DashboardSkeleton />;
   }
 
@@ -588,8 +544,9 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                           <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
-                          <SelectItem value="All">All</SelectItem>
+                          <SelectItem value="All">All Statuses</SelectItem>
                           <SelectItem value="Pending">Pending</SelectItem>
+                          <SelectItem value="Paid">Paid</SelectItem>
                           <SelectItem value="Confirmed">Confirmed</SelectItem>
                           <SelectItem value="Cancelled">Cancelled</SelectItem>
                       </SelectContent>
@@ -645,7 +602,10 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
                         <DialogTitle className="text-xl font-semibold tracking-tight">Manage Booking: {selectedBooking.id.substring(0,8)}</DialogTitle>
-                         <Badge variant={getStatusVariant(selectedBooking.status)} className="self-start">{selectedBooking.status}</Badge>
+                         <div className="flex items-center gap-2">
+                            {getStatusIcon(selectedBooking.status)}
+                            <Badge variant={getStatusVariant(selectedBooking.status)}>{selectedBooking.status}</Badge>
+                         </div>
                     </div>
                      <DialogDescription>
                         Created on {format(selectedBooking.createdAt, 'PPP p')}
@@ -676,20 +636,13 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                             
                             {/* Departure Dates */}
                             <div className="space-y-4 sm:col-span-2">
-                                <h3 className="font-semibold text-lg">Departure Dates</h3>
+                                <h3 className="font-semibold text-lg">Departure Date</h3>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="flex items-start gap-3">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                         <div>
                                             <span className="font-medium text-foreground">Intended:</span>
                                             <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
-                                        </div>
-                                    </div>
-                                     <div className="flex items-start gap-3">
-                                        <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                        <div>
-                                            <span className="font-medium text-foreground">Alternative:</span>
-                                            <p>{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -704,28 +657,6 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                              <PaymentVerificationStatus booking={selectedBooking} />
                             
                             <Separator/>
-
-                                {selectedBooking.status === 'Pending' && (
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-lg">Confirm Departure</h3>
-                                        <RadioGroup onValueChange={setConfirmedDate} value={confirmedDate} className="grid grid-cols-1 gap-2">
-                                            <Label htmlFor="intended-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.intendedDate} id="intended-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Intended</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.intendedDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                            <Label htmlFor="alternative-desktop" className="flex items-center space-x-3 p-3 rounded-md hover:bg-background cursor-pointer border bg-background shadow-sm">
-                                                <RadioGroupItem value={selectedBooking.alternativeDate} id="alternative-desktop"/>
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold">Alternative</span>
-                                                    <span className="text-muted-foreground text-xs">{format(parseISO(selectedBooking.alternativeDate), 'PPP')}</span>
-                                                </div>
-                                            </Label>
-                                        </RadioGroup>
-                                    </div>
-                                )}
 
                             {selectedBooking.status === 'Confirmed' && (
                                 <div className="flex items-center gap-3 text-primary font-semibold p-3 bg-primary/10 rounded-lg">
@@ -758,15 +689,11 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                         </AlertDialog>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
-                        {selectedBooking.status === 'Pending' ? (
+                        {selectedBooking.status !== 'Cancelled' ? (
                             <>
                                 <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                                     Cancel Booking
-                                </Button>
-                                <Button size="lg" className="w-full" onClick={() => handleUpdateBooking('Confirmed')} disabled={isProcessing[selectedBooking.id] || !confirmedDate}>
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Confirm Booking
                                 </Button>
                             </>
                         ) : (
@@ -780,7 +707,3 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
-
-    
-
-    

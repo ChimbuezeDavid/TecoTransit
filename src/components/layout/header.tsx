@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
-import { Route, Menu, Shield } from "lucide-react";
+import { Route, Menu, Shield, MessageSquare, HelpCircle, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 import { Button } from '@/components/ui/button';
@@ -21,14 +21,16 @@ export default function Header() {
   }
 
   const navLinks: { href: string; label: string; icon?: React.ElementType }[] = [
-      { href: "/", label: "Book a Trip" },
-      { href: "/faqs", label: "FAQs" },
+      { href: "/", label: "Home", icon: Home },
+      { href: "/book", label: "Book a Trip" },
+      { href: "/faqs", label: "FAQs", icon: HelpCircle },
+      { href: "/feedback", label: "Feedback", icon: MessageSquare },
   ];
   
   const NavLink = ({ href, label, className = '' }: { href: string; label: string; className?: string }) => (
       <Link href={href} className={cn(
           "font-medium transition-colors hover:text-primary",
-          (pathname === href || (href === "/" && pathname.startsWith("/#"))) ? "text-primary" : "text-muted-foreground",
+          pathname === href ? "text-primary" : "text-muted-foreground",
           className
        )}>
         {label}
@@ -46,7 +48,16 @@ export default function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
-             {navLinks.map(link => <NavLink key={link.href} href={link.href} label={link.label}/>)}
+             {navLinks.map(link => {
+                if (link.href === "/book") {
+                  return (
+                    <Button asChild key={link.href} size="sm">
+                       <Link href={link.href}>{link.label}</Link>
+                    </Button>
+                  )
+                }
+                return <NavLink key={link.href} href={link.href} label={link.label}/>
+             })}
              <ThemeToggle />
           </nav>
 
@@ -61,7 +72,7 @@ export default function Header() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-[240px]">
-                <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8" onClick={() => setIsSheetOpen(false)}>
+                <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                     <Route className="h-6 w-6" />
                     <span className="font-headline">TecoTransit</span>
                 </Link>

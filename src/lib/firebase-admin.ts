@@ -1,44 +1,39 @@
+
 import * as admin from 'firebase-admin';
 
-// Check if the service account credentials are available
-if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-  if (process.env.NODE_ENV === 'production') {
+// This function now handles both getting the existing app and initializing a new one if needed.
+// It's designed to be "lazy" - it only initializes when first called.
+export const getFirebaseAdmin = (): typeof admin | undefined => {
+  // If the app is already initialized, return it.
+  if (admin.apps.length > 0) {
+    return admin;
+  }
+
+  // If not initialized, prepare credentials.
+  const serviceAccount = {
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  };
+
+  // Check that all required environment variables are present before attempting to initialize.
+  if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
     console.warn(
-      'Firebase Admin SDK credentials are not set. Server-side Firebase features will not work.'
+      'Firebase Admin SDK credentials are not fully set in environment variables. Server-side Firebase features will be unavailable.'
     );
-  } else {
-    // In development, it's helpful to have a more explicit error.
-    // In production (like Vercel), these might be set directly in the environment.
-    console.log('Firebase Admin SDK credentials not found in environment variables.');
+    // Return undefined instead of crashing the server.
+    return undefined;
   }
-}
 
-const serviceAccount: admin.ServiceAccount = {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  // The private key is often stored with escaped newlines, so we replace them.
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-};
-
-/**
- * A utility function to get the initialized Firebase Admin SDK instance.
- *
- * This function initializes the app only if it hasn't been initialized yet,
- * preventing "already exists" errors during Next.js hot-reloads in development.
- *
- * @returns The Firebase Admin SDK instance.
- */
-export const getFirebaseAdmin = () => {
-  if (!admin.apps.length) {
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-      console.log('Firebase Admin SDK initialized successfully.');
-    } catch (error: any) {
-      console.error('Firebase admin initialization error:', error.stack);
-      // Re-throw or handle as needed. For now, just logging.
-    }
+  // Initialize the app and return the admin instance.
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    return admin;
+  } catch (error: any) {
+    console.error('Firebase admin initialization error:', error.message);
+    // Return undefined if initialization fails.
+    return undefined;
   }
-  return admin;
 };

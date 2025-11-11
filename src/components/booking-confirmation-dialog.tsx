@@ -20,7 +20,7 @@ export default function BookingConfirmationDialog({ isOpen, onClose }: BookingCo
           <CheckCircle className="h-12 w-12 text-green-500" />
           <DialogTitle className="mt-4 text-2xl font-headline">Booking Submitted!</DialogTitle>
           <DialogDescription>
-            Your request has been successfully submitted and is under review. We will get back to you shortly.
+            Your request has been successfully submitted. It is currently pending review by our team. You will be notified once it's confirmed.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col sm:flex-row justify-center p-6 border-t bg-muted/30">

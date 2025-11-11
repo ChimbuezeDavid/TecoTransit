@@ -17,5 +17,6 @@ declare namespace NodeJS {
     PAYSTACK_SECRET_KEY: string;
     
     NEXT_PUBLIC_BASE_URL: string;
+    VERCEL_URL?: string;
   }
 }
