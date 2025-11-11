@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -83,7 +84,8 @@ function PricingManagerSkeleton() {
 
 export default function PricingManager() {
   const { toast } = useToast();
-  const [priceList, setPriceList] = useState<PriceRuleWithSeats[]>([]);
+  const [priceList, setPriceList] = useState<PriceRule[]>([]);
+  const [priceListWithSeats, setPriceListWithSeats] = useState<PriceRuleWithSeats[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
@@ -110,9 +112,10 @@ export default function PricingManager() {
                 vehicleType: rule.vehicleType,
                 date: today, // Check for today's date as a representative sample
             });
-
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
-            const capacity = vehicleKey ? { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0 : 0;
+            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0 };
+
+            const capacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
             const totalSeats = (rule.vehicleCount || 1) * capacity;
             const bookedSeats = totalSeats - availableSeats;
             
@@ -121,11 +124,11 @@ export default function PricingManager() {
 
         const pricesWithSeats = await Promise.all(seatPromises);
         pricesWithSeats.sort((a,b) => a.pickup.localeCompare(b.pickup) || a.destination.localeCompare(b.destination));
-        setPriceList(pricesWithSeats);
+        setPriceListWithSeats(pricesWithSeats);
       } catch (e) {
           console.error("Failed to fetch seat info for admin", e);
           // Still show price list, just without seat counts
-          setPriceList(prices.map(p => ({...p})));
+          setPriceListWithSeats(prices.map(p => ({...p})));
       } finally {
         setLoading(false);
       }
@@ -138,14 +141,29 @@ export default function PricingManager() {
       querySnapshot.forEach((doc) => {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
-      fetchSeatsInfo(prices);
+      setPriceList(prices); // Store the raw price list
+      fetchSeatsInfo(prices); // Initial fetch
     }, (error) => {
       console.error("Error fetching prices:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not fetch price list. Please ensure Firestore rules are correctly set up." });
       setLoading(false);
     });
-    return () => unsubscribe();
-  }, [toast, fetchSeatsInfo]);
+
+    // Also listen to bookings to trigger a refresh
+    const bookingsQuery = query(collection(db, "bookings"));
+    const unsubscribeBookings = onSnapshot(bookingsQuery, () => {
+        // Re-fetch seat info whenever bookings change
+        // We use the currently stored priceList to avoid another Firestore read
+        if (priceList.length > 0) {
+            fetchSeatsInfo(priceList);
+        }
+    });
+
+    return () => {
+        unsubscribe();
+        unsubscribeBookings();
+    };
+  }, [toast, fetchSeatsInfo, priceList]);
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -356,10 +374,10 @@ export default function PricingManager() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {priceList.length === 0 ? (
+                {priceListWithSeats.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-10">No price rules set yet.</TableCell></TableRow>
                 ) : (
-                  priceList.map((rule) => {
+                  priceListWithSeats.map((rule) => {
                     const { bookedSeats, totalSeats } = rule;
                     return (
                         <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
@@ -525,3 +543,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
