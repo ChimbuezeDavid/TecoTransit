@@ -409,7 +409,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     ));
   };
   
-  if (allBookingsLoading && allBookings.length === 0) {
+  if (allBookingsLoading && bookings.length === 0) {
     return <DashboardSkeleton />;
   }
 
@@ -716,5 +716,3 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
-
-    

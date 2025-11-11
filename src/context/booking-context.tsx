@@ -11,7 +11,6 @@ import { sendBookingStatusEmail } from '@/app/actions/send-email';
 
 interface BookingContextType {
   bookings: Booking[];
-  allBookings: Booking[];
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
@@ -27,7 +26,6 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: React.ReactNode }) => {
   const [bookings, setBookings] = useState<Booking[]>([]); // For filtered dashboard view
-  const [allBookings, setAllBookings] = useState<Booking[]>([]); // For calculations
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +40,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     toast({ variant: 'destructive', title: `Error ${context}`, description: message, duration: 10000 });
   };
 
-  // Fetch prices and ALL bookings for calculations
+  // Fetch prices only
   useEffect(() => {
     const pricesQuery = query(collection(db, "prices"));
     const unsubscribePrices = onSnapshot(pricesQuery, (querySnapshot) => {
@@ -54,30 +52,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       setLoading(false);
     });
 
-    const allBookingsQuery = query(collection(db, "bookings"));
-    const unsubscribeAllBookings = onSnapshot(allBookingsQuery, (querySnapshot) => {
-        const bookingsData = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            const createdAtMillis = data.createdAt instanceof Timestamp 
-                ? data.createdAt.toMillis()
-                : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
-
-            return {
-              id: doc.id,
-              ...data,
-              createdAt: createdAtMillis,
-            } as Booking;
-      });
-      setAllBookings(bookingsData);
-    }, (err) => {
-        // This might fail if rules don't allow general reads, but it's for background calculation
-        console.warn("Could not fetch all bookings for calculation:", err.message);
-    });
-
-
     return () => {
         unsubscribePrices();
-        unsubscribeAllBookings();
     };
   }, [toast]);
 
@@ -139,6 +115,11 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
+      // We fetch the latest version of all bookings when the action happens.
+      // This is less efficient than using a stale `allBookings` state but safer.
+      const allBookingsSnapshot = await getDocs(collection(db, 'bookings'));
+      const allBookings = allBookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+      
       const bookingToUpdate = allBookings.find(b => b.id === bookingId);
       
       if (!bookingToUpdate) {
@@ -170,7 +151,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
         });
       });
       
-  }, [allBookings, toast]);
+  }, [toast]);
 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
@@ -206,7 +187,6 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
 
   const value = {
     bookings,
-    allBookings,
     prices,
     loading,
     error,

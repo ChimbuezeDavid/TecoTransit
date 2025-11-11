@@ -1,16 +1,15 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
 import type { PriceRule, Booking } from "@/lib/types";
-import { useBooking } from "@/context/booking-context";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,11 +78,12 @@ function PricingManagerSkeleton() {
 
 export default function PricingManager() {
   const { toast } = useToast();
-  const { allBookings, loading: bookingsLoading } = useBooking();
   const [priceList, setPriceList] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -114,6 +114,20 @@ export default function PricingManager() {
     return () => unsubscribe();
   }, [toast]);
   
+  useEffect(() => {
+    setBookingsLoading(true);
+    const bookingsQuery = query(collection(db, "bookings"), where('status', 'in', ['Paid', 'Confirmed']));
+    const unsubscribeBookings = onSnapshot(bookingsQuery, (snapshot) => {
+      const bookingsData = snapshot.docs.map(doc => doc.data() as Booking);
+      setBookings(bookingsData);
+      setBookingsLoading(false);
+    }, (error) => {
+      console.error("Error fetching bookings for seat count:", error);
+      toast({ variant: "destructive", title: "Error", description: "Could not fetch booking data for seat counts." });
+      setBookingsLoading(false);
+    });
+    return () => unsubscribeBookings();
+  }, [toast]);
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -247,22 +261,22 @@ export default function PricingManager() {
     }
   }
 
-  const getSeatInfo = (rule: PriceRule) => {
+  const getSeatInfo = useCallback((rule: PriceRule) => {
     const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType);
     if (!vehicleKey) return { booked: 0, total: 0 };
     
     const capacity = (vehicleKey === '4-seater') ? 4 : (vehicleKey === '5-seater') ? 5 : (vehicleKey === '7-seater') ? 7 : 0;
     const totalSeats = (rule.vehicleCount || 1) * capacity;
 
-    const bookedSeats = allBookings.filter(b => 
+    const bookedSeats = bookings.filter(b => 
         b.pickup === rule.pickup &&
         b.destination === rule.destination &&
         b.vehicleType === rule.vehicleType &&
-        b.status !== 'Cancelled'
+        (b.status === 'Paid' || b.status === 'Confirmed')
     ).length;
 
     return { booked: bookedSeats, total: totalSeats };
-  };
+  }, [bookings]);
 
   if (loading || bookingsLoading) {
     return <PricingManagerSkeleton />;
@@ -435,5 +449,3 @@ export default function PricingManager() {
     </Dialog>
   );
 }
-
-    
