@@ -435,44 +435,44 @@ export default function PricingManager() {
         </CardContent>
       </Card>
       
-      <DialogContent className="sm:max-w-md p-0">
+      <DialogContent className="sm:max-w-xl p-0">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>{editMode ? 'Edit Rule' : 'Add New Rule'}</DialogTitle>
           <DialogDescription>Set the fare and vehicle count for a route. A return trip will be created automatically.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 space-y-6">
-            <FormField control={form.control} name="pickup" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Pickup Location</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
-                <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )} />
-            <FormField control={form.control} name="destination" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Destination</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
-                <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )} />
-            <FormField control={form.control} name="vehicleType" render={({ field }) => (
-            <FormItem>
-                <FormLabel>Vehicle Type</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
-                <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="px-6 grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                <FormField control={form.control} name="pickup" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Pickup Location</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger></FormControl>
+                    <SelectContent>{locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <FormField control={form.control} name="destination" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Destination</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger></FormControl>
+                    <SelectContent>{locations.filter(loc => loc !== form.watch('pickup')).map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <FormField control={form.control} name="vehicleType" render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                    <FormLabel>Vehicle Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a vehicle" /></SelectTrigger></FormControl>
+                    <SelectContent>{Object.values(vehicleOptions).map(v => <SelectItem key={v.name} value={v.name}>{v.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
                 <FormField control={form.control} name="price" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Price (NGN)</FormLabel>
@@ -506,7 +506,7 @@ export default function PricingManager() {
                     </FormItem>
                 )} />
             </div>
-            <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between w-full">
+            <DialogFooter className="pt-4 px-6 pb-6 flex-col sm:flex-row sm:justify-between w-full bg-muted/50 rounded-b-lg">
                 {editMode && (
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -532,9 +532,14 @@ export default function PricingManager() {
                         </AlertDialogContent>
                     </AlertDialog>
                 )}
-                <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
-                    {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
-                </Button>
+                 <div className="flex sm:justify-end gap-2 w-full sm:w-auto">
+                    <DialogTrigger asChild>
+                        <Button type="button" variant="ghost">Cancel</Button>
+                    </DialogTrigger>
+                    <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
+                        {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
+                    </Button>
+                 </div>
             </DialogFooter>
           </form>
         </Form>
@@ -542,5 +547,3 @@ export default function PricingManager() {
     </Dialog>
   );
 }
-
-    
