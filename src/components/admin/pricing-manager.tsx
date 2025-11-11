@@ -6,12 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
 import type { PriceRule, Booking } from "@/lib/types";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -19,8 +19,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle, Users } from "lucide-react";
+import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2 } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -84,6 +85,8 @@ export default function PricingManager() {
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -261,6 +264,50 @@ export default function PricingManager() {
     }
   }
 
+  const handleResetSeats = async () => {
+    if (!editMode) return;
+    setIsResetting(true);
+
+    const bookingsQuery = query(
+        collection(db, "bookings"),
+        where('pickup', '==', editMode.pickup),
+        where('destination', '==', editMode.destination),
+        where('vehicleType', '==', editMode.vehicleType),
+        where('status', 'in', ['Paid', 'Confirmed'])
+    );
+
+    try {
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+        if (bookingsSnapshot.empty) {
+            toast({ title: "No seats to reset", description: "There are no 'Paid' or 'Confirmed' bookings for this route." });
+            setIsResetting(false);
+            return;
+        }
+
+        const batch = writeBatch(db);
+        bookingsSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
+        await batch.commit();
+
+        toast({
+            title: "Seats Reset Successfully",
+            description: `${bookingsSnapshot.size} booking(s) for this route have been deleted.`,
+        });
+
+    } catch (e) {
+        console.error("Error resetting seats:", e);
+        toast({
+            variant: "destructive",
+            title: "Reset Failed",
+            description: "Could not reset the seats for this route. Please try again.",
+        });
+    } finally {
+        setIsResetting(false);
+    }
+  };
+
   const getSeatInfo = useCallback((rule: PriceRule) => {
     const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType);
     if (!vehicleKey) return { booked: 0, total: 0 };
@@ -374,7 +421,7 @@ export default function PricingManager() {
           <DialogDescription>Set the fare and vehicle count for a route. A return trip will be created automatically.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 pb-6 space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-6 space-y-6">
             <FormField control={form.control} name="pickup" render={({ field }) => (
             <FormItem>
                 <FormLabel>Pickup Location</FormLabel>
@@ -438,7 +485,32 @@ export default function PricingManager() {
                     </FormItem>
                 )} />
             </div>
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-between w-full">
+                {editMode && (
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button type="button" variant="destructive" className="w-full sm:w-auto sm:mr-auto" disabled={isResetting}>
+                                {isResetting ? <Loader2 className="animate-spin" /> : <RotateCcw />}
+                                Reset Seats
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to reset the seats?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete all 'Paid' and 'Confirmed' bookings for the <strong>{editMode.pickup} to {editMode.destination} ({editMode.vehicleType})</strong> route. This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetSeats} disabled={isResetting} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                     {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Yes, Reset Seats
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
                 <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                     {form.formState.isSubmitting ? (editMode ? "Updating..." : "Saving...") : (editMode ? "Update Rule" : "Save Rule")}
                 </Button>
@@ -449,3 +521,5 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
