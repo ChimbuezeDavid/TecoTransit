@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
@@ -71,7 +72,7 @@ export async function getAvailableSeats({
         }
 
         // Calculate total available seats for this trip based on admin settings
-        const totalSeats = (priceRule.vehicleCount || 1) * vehicleCapacity;
+        const totalSeats = (priceRule.vehicleCount ?? 0) * vehicleCapacity;
         
         // Count the number of seats already booked
         const bookedSeats = bookingsSnapshot.size;
