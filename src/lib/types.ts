@@ -31,6 +31,7 @@ export type PriceRule = {
     vehicleType: string;
     price: number;
     vehicleCount: number; // Number of vehicles for this route
+    bookings?: Booking[];
 }
 
 export type Feedback = {

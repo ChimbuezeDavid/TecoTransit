@@ -6,12 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { db } from "@/lib/firebase";
-import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, deleteDoc, query, where, getDocs, writeBatch, Timestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { locations, vehicleOptions } from "@/lib/constants";
-import type { PriceRule } from "@/lib/types";
+import type { PriceRule, Booking } from "@/lib/types";
 import { getAvailableSeats } from "@/app/actions/get-availability";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,9 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2 } from "lucide-react";
+import { Trash2, Edit, PlusCircle, Users, RotateCcw, Loader2, ChevronDown, ChevronUp, Phone, User } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { Badge } from "../ui/badge";
 
 const formSchema = z.object({
   pickup: z.string({ required_error: 'Please select a pickup location.' }),
@@ -90,6 +92,7 @@ export default function PricingManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState<PriceRule | null>(null);
   const [isResetting, setIsResetting] = useState(false);
+  const [openCollapsible, setOpenCollapsible] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,24 +105,38 @@ export default function PricingManager() {
     }
   });
 
-  const fetchSeatsInfo = useCallback(async (prices: PriceRule[]) => {
+ const fetchSeatsAndBookingsInfo = useCallback(async (prices: PriceRule[]) => {
       try {
-        const today = format(new Date(), 'yyyy-MM-dd');
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        
+        // Fetch all bookings for today
+        const bookingsQuery = query(
+            collection(db, "bookings"),
+            where('intendedDate', '==', todayStr),
+            where('status', 'in', ['Paid', 'Confirmed'])
+        );
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+        const todayBookings = bookingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+        
         const seatPromises = prices.map(async (rule) => {
             const availableSeats = await getAvailableSeats({
                 pickup: rule.pickup,
                 destination: rule.destination,
                 vehicleType: rule.vehicleType,
-                date: today, // Check for today's date as a representative sample
+                date: todayStr,
             });
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === rule.vehicleType) as keyof typeof vehicleOptions | undefined;
-            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0 };
+            if (!vehicleKey) return { ...rule, bookedSeats: 0, totalSeats: 0, bookings: [] };
 
             const capacity = { '4-seater': 4, '5-seater': 5, '7-seater': 7 }[vehicleKey] || 0;
             const totalSeats = (rule.vehicleCount || 1) * capacity;
             const bookedSeats = totalSeats - availableSeats;
             
-            return { ...rule, bookedSeats, totalSeats };
+            const ruleBookings = todayBookings
+                .filter(b => b.pickup === rule.pickup && b.destination === rule.destination && b.vehicleType === rule.vehicleType)
+                .sort((a, b) => (a.status === 'Confirmed' ? -1 : 1) - (b.status === 'Confirmed' ? -1 : 1) || a.name.localeCompare(b.name));
+
+            return { ...rule, bookedSeats, totalSeats, bookings: ruleBookings };
         });
 
         const pricesWithSeats = await Promise.all(seatPromises);
@@ -127,8 +144,7 @@ export default function PricingManager() {
         setPriceListWithSeats(pricesWithSeats);
       } catch (e) {
           console.error("Failed to fetch seat info for admin", e);
-          // Still show price list, just without seat counts
-          setPriceListWithSeats(prices.map(p => ({...p})));
+          setPriceListWithSeats(prices.map(p => ({...p, bookings: [] })));
       } finally {
         setLoading(false);
       }
@@ -136,34 +152,31 @@ export default function PricingManager() {
 
   useEffect(() => {
     const q = query(collection(db, "prices"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const unsubscribePrices = onSnapshot(q, (querySnapshot) => {
       const prices: PriceRule[] = [];
       querySnapshot.forEach((doc) => {
         prices.push({ id: doc.id, ...doc.data() } as PriceRule);
       });
-      setPriceList(prices); // Store the raw price list
-      fetchSeatsInfo(prices); // Initial fetch
+      setPriceList(prices); 
+      fetchSeatsAndBookingsInfo(prices);
     }, (error) => {
       console.error("Error fetching prices:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not fetch price list. Please ensure Firestore rules are correctly set up." });
       setLoading(false);
     });
 
-    // Also listen to bookings to trigger a refresh
     const bookingsQuery = query(collection(db, "bookings"));
     const unsubscribeBookings = onSnapshot(bookingsQuery, () => {
-        // Re-fetch seat info whenever bookings change
-        // We use the currently stored priceList to avoid another Firestore read
         if (priceList.length > 0) {
-            fetchSeatsInfo(priceList);
+            fetchSeatsAndBookingsInfo(priceList);
         }
     });
 
     return () => {
-        unsubscribe();
+        unsubscribePrices();
         unsubscribeBookings();
     };
-  }, [toast, fetchSeatsInfo, priceList]);
+  }, [toast, fetchSeatsAndBookingsInfo, priceList]);
   
   useEffect(() => {
     if (isDialogOpen) {
@@ -341,6 +354,14 @@ export default function PricingManager() {
     }
   };
 
+  const getStatusVariant = (status: Booking['status']) => {
+    switch (status) {
+      case 'Confirmed': return 'default';
+      case 'Paid': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
   if (loading) {
     return <PricingManagerSkeleton />;
   }
@@ -352,7 +373,7 @@ export default function PricingManager() {
             <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 <div>
                     <CardTitle>Route & Pricing Management</CardTitle>
-                    <CardDescription>Manage fares and vehicle availability for all routes.</CardDescription>
+                    <CardDescription>Manage fares, vehicles, and view passenger lists for all routes.</CardDescription>
                 </div>
                  <Button onClick={handleAddNew}>
                     <PlusCircle className="mr-2" />
@@ -360,17 +381,17 @@ export default function PricingManager() {
                  </Button>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Route</TableHead>
-                  <TableHead className="hidden sm:table-cell">Vehicle</TableHead>
-                  <TableHead className="hidden sm:table-cell">Price</TableHead>
-                  <TableHead className="hidden sm:table-cell">Vehicles</TableHead>
-                  <TableHead className="hidden sm:table-cell">Seats</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="pl-4">Route</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Vehicles</TableHead>
+                  <TableHead>Seats Today</TableHead>
+                  <TableHead className="text-right pr-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -379,55 +400,100 @@ export default function PricingManager() {
                 ) : (
                   priceListWithSeats.map((rule) => {
                     const { bookedSeats, totalSeats } = rule;
+                    const isOpen = openCollapsible === rule.id;
                     return (
-                        <TableRow key={rule.id} className={editMode?.id === rule.id ? 'bg-muted/50' : ''}>
-                        <TableCell>
-                            <div className="font-medium">{rule.pickup}</div>
-                            <div className="text-sm text-muted-foreground">to {rule.destination}</div>
-                            <div className="sm:hidden text-sm text-muted-foreground mt-1 space-y-1">
-                                <p>{rule.vehicleType} - ₦{rule.price.toLocaleString()}</p>
-                                <p>Vehicles: {rule.vehicleCount || 1}</p>
-                                {bookedSeats !== undefined && totalSeats !== undefined && <p>Seats: {bookedSeats}/{totalSeats}</p>}
-                            </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">{rule.vehicleType}</TableCell>
-                        <TableCell className="hidden sm:table-cell">₦{rule.price.toLocaleString()}</TableCell>
-                        <TableCell className="hidden sm:table-cell">{rule.vehicleCount || 1}</TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          {bookedSeats !== undefined && totalSeats !== undefined ? (
-                             <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                                <span>{bookedSeats}/{totalSeats}</span>
-                              </div>
-                          ) : (
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin"/>
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex justify-end">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                    This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                            </div>
-                        </TableCell>
-                        </TableRow>
+                        <Collapsible asChild key={rule.id} open={isOpen} onOpenChange={() => setOpenCollapsible(isOpen ? null : rule.id)}>
+                            <>
+                                <TableRow className={cn("hover:bg-muted/50 cursor-pointer", isOpen && "bg-muted/50")}>
+                                    <TableCell className="pl-4 font-medium">
+                                         <CollapsibleTrigger className="flex items-center gap-2 w-full text-left">
+                                            <div>
+                                                <div className="font-medium">{rule.pickup}</div>
+                                                <div className="text-sm text-muted-foreground">to {rule.destination}</div>
+                                            </div>
+                                            <div className="ml-auto sm:hidden">
+                                                {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
+                                            </div>
+                                        </CollapsibleTrigger>
+                                    </TableCell>
+                                    <TableCell>{rule.vehicleType}</TableCell>
+                                    <TableCell>₦{rule.price.toLocaleString()}</TableCell>
+                                    <TableCell>{rule.vehicleCount || 1}</TableCell>
+                                    <TableCell>
+                                      {bookedSeats !== undefined && totalSeats !== undefined ? (
+                                         <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-muted-foreground" />
+                                            <span>{bookedSeats}/{totalSeats}</span>
+                                          </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <Loader2 className="h-4 w-4 animate-spin"/>
+                                        </div>
+                                      )}
+                                    </TableCell>
+                                    <TableCell className="text-right pr-4">
+                                        <div className="flex justify-end items-center">
+                                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(rule); }}><Edit className="h-4 w-4" /></Button>
+                                            <AlertDialog onOpenChange={(open) => !open && (e) => e.stopPropagation()}>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                        This will permanently delete the price rule for this route and its reciprocal. This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(rule)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                            <CollapsibleTrigger asChild className="hidden sm:flex">
+                                                <Button variant="ghost" size="icon">
+                                                     {isOpen ? <ChevronUp className="h-4 w-4"/> : <ChevronDown className="h-4 w-4"/>}
+                                                </Button>
+                                            </CollapsibleTrigger>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                <CollapsibleContent asChild>
+                                    <tr className="bg-muted/20 hover:bg-muted/30">
+                                        <TableCell colSpan={6} className="p-0">
+                                            <div className="p-4">
+                                                <h4 className="font-semibold text-md mb-2">Travel List for Today ({format(new Date(), 'PPP')})</h4>
+                                                {rule.bookings && rule.bookings.length > 0 ? (
+                                                    <div className="max-h-60 overflow-y-auto pr-2">
+                                                        <Table>
+                                                             <TableHeader>
+                                                                <TableRow>
+                                                                    <TableHead>Passenger</TableHead>
+                                                                    <TableHead>Contact</TableHead>
+                                                                    <TableHead>Status</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {rule.bookings.map(booking => (
+                                                                    <TableRow key={booking.id}>
+                                                                        <TableCell>{booking.name}</TableCell>
+                                                                        <TableCell>{booking.phone}</TableCell>
+                                                                        <TableCell><Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge></TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground text-center py-4">No passengers have booked this trip for today.</p>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </tr>
+                                </CollapsibleContent>
+                            </>
+                        </Collapsible>
                     );
                   })
                 )}
@@ -543,5 +609,3 @@ export default function PricingManager() {
     </Dialog>
   );
 }
-
-    
