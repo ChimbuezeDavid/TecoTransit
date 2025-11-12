@@ -15,7 +15,8 @@ service cloud.firestore {
     }
 
     match /prices/{priceId} {
-      allow read, write: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /trips/{tripId} {

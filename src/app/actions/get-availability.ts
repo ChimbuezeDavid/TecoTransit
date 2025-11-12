@@ -1,8 +1,6 @@
 'use server';
 
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
-import { vehicleOptions } from "@/lib/constants";
+import { getFirebaseAdmin } from "@/lib/firebase-admin";
 
 /**
  * Calculates the number of available seats for a specific route, irrespective of date.
@@ -12,46 +10,52 @@ import { vehicleOptions } from "@/lib/constants";
  */
 export const getAvailableSeats = async (priceRuleId: string): Promise<number> => {
     try {
+        const db = getFirebaseAdmin()?.firestore();
+        if (!db) {
+            console.error("Could not connect to the admin database.");
+            return 0;
+        }
+
         if (!priceRuleId) {
             return 0;
         }
 
-        const priceRuleRef = doc(db, 'prices', priceRuleId);
-        const priceRuleSnap = await getDoc(priceRuleRef);
+        const priceRuleRef = db.doc(`prices/${priceRuleId}`);
+        const priceRuleSnap = await priceRuleRef.get();
 
-        if (!priceRuleSnap.exists()) {
+        if (!priceRuleSnap.exists) {
             console.warn(`Price rule ${priceRuleId} does not exist.`);
             return 0;
         }
 
         const priceRule = priceRuleSnap.data();
+        if (!priceRule) {
+             return 0;
+        }
 
         // The total number of seats is pre-calculated and stored in the price rule.
-        const totalSeats = priceRule.seatsAvailable || 0;
+        const totalCapacity = (priceRule.vehicleCount || 0) * (priceRule.seatsPerVehicle || 0);
         
-        if (totalSeats === 0) return 0;
+        if (totalCapacity === 0) return 0;
 
         // Count all bookings for this route that are 'Paid' or 'Confirmed'
-        const bookingsQuery = query(
-            collection(db, 'bookings'),
-            where('pickup', '==', priceRule.pickup),
-            where('destination', '==', priceRule.destination),
-            where('vehicleType', '==', priceRule.vehicleType),
-            where('status', 'in', ['Paid', 'Confirmed'])
-        );
+        const bookingsQuery = db.collection('bookings')
+            .where('pickup', '==', priceRule.pickup)
+            .where('destination', '==', priceRule.destination)
+            .where('vehicleType', '==', priceRule.vehicleType)
+            .where('status', 'in', ['Paid', 'Confirmed']);
         
-        const bookingsSnapshot = await getDocs(bookingsQuery);
+        const bookingsSnapshot = await bookingsQuery.get();
         const bookedSeats = bookingsSnapshot.size;
         
         // Also count temporary reservations for this route
-        const reservationsQuery = query(
-            collection(db, 'reservations'),
-            where('priceRuleId', '==', priceRuleId)
-        );
-        const reservationsSnapshot = await getDocs(reservationsQuery);
+        const reservationsQuery = db.collection('reservations')
+            .where('priceRuleId', '==', priceRuleId);
+
+        const reservationsSnapshot = await reservationsQuery.get();
         const reservedSeats = reservationsSnapshot.size;
 
-        const availableSeats = totalSeats - bookedSeats - reservedSeats;
+        const availableSeats = totalCapacity - bookedSeats - reservedSeats;
 
         return availableSeats > 0 ? availableSeats : 0;
 
