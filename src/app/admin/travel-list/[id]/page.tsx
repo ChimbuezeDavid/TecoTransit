@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import type { PriceRule, Trip } from '@/lib/types';
+import type { PriceRule, Trip, Passenger } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,11 +67,11 @@ export default function TravelListPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch the main price rule
+    // Fetch the main price rule for display purposes
     useEffect(() => {
         if (!priceRuleId) {
             setError("Price rule ID is missing.");
-            setLoading(false);
+            // Don't set loading to false here, let the trips fetcher handle it
             return;
         }
 
@@ -92,13 +92,16 @@ export default function TravelListPage() {
         return () => unsubscribe();
     }, [priceRuleId]);
 
-    // Fetch trips related to this price rule
+    // Fetch trips related to this price rule ID directly from the URL
     useEffect(() => {
-        if (!priceRule) return;
+        if (!priceRuleId) {
+            setLoading(false);
+            return;
+        }
 
         const tripsQuery = query(
             collection(db, "trips"),
-            where('priceRuleId', '==', priceRule.id),
+            where('priceRuleId', '==', priceRuleId),
             orderBy('date', 'asc'),
             orderBy('vehicleIndex', 'asc')
         );
@@ -114,7 +117,7 @@ export default function TravelListPage() {
         });
 
         return () => unsubscribe();
-    }, [priceRule]);
+    }, [priceRuleId]);
 
     const groupedTripsByDate = useMemo(() => {
         return trips.reduce((acc, trip) => {
@@ -197,7 +200,7 @@ export default function TravelListPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {trip.passengers.map(passenger => (
+                                            {trip.passengers.map((passenger: Passenger) => (
                                                 <TableRow key={passenger.bookingId}>
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
