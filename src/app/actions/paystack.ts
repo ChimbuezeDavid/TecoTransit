@@ -2,7 +2,7 @@
 'use server';
 
 import Paystack from 'paystack';
-import type { BookingFormData, PriceRule, Trip } from '@/lib/types';
+import type { BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
@@ -31,11 +31,9 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
       throw new Error("Could not connect to the database.");
     }
     
-    // Use the canonical base URL from environment variables for the callback.
-    // This must be set to your full production domain in your deployment environment.
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     if (!baseUrl) {
-        throw new Error("NEXT_PUBLIC_BASE_URL is not set in environment variables.");
+        throw new Error("NEXT_PUBLIC_BASE_URL is not set in environment variables. It must be your full production domain.");
     }
       
     const callbackUrl = `${baseUrl}/payment/callback`;
@@ -85,7 +83,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error('Booking metadata is missing from transaction.');
         }
         
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number } = JSON.parse(metadata.booking_details);
+        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string } = JSON.parse(metadata.booking_details);
         
         const bookingsRef = db.collection('bookings');
         
@@ -101,7 +99,13 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         await newBookingRef.set(newBookingData);
         const bookingId = newBookingRef.id;
 
-        await assignBookingToTrip(db, bookingId, bookingDetails);
+        const passenger: Passenger = {
+            bookingId: bookingId,
+            name: bookingDetails.name,
+            phone: bookingDetails.phone,
+        };
+
+        await assignBookingToTrip(db, passenger, bookingDetails);
 
         return { success: true, bookingId: bookingId };
 
@@ -113,7 +117,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 
 async function assignBookingToTrip(
     db: FirebaseFirestore.Firestore,
-    bookingId: string,
+    passenger: Passenger,
     bookingDetails: {
         pickup: string;
         destination: string;
@@ -154,9 +158,9 @@ async function assignBookingToTrip(
     for (const doc of tripsSnapshot.docs) {
         const trip = doc.data() as Trip;
         if (!trip.isFull) {
-            const newPassengerCount = trip.passengerIds.length + 1;
-            const updates: { passengerIds: FirebaseFirestore.FieldValue; isFull?: boolean } = {
-                passengerIds: FieldValue.arrayUnion(bookingId),
+            const newPassengerCount = trip.passengers.length + 1;
+            const updates: { passengers: FirebaseFirestore.FieldValue; isFull?: boolean } = {
+                passengers: FieldValue.arrayUnion(passenger),
             };
 
             if (newPassengerCount >= trip.capacity) {
@@ -165,8 +169,7 @@ async function assignBookingToTrip(
 
             await doc.ref.update(updates);
             
-            // Update booking with tripId
-            await db.doc(`bookings/${bookingId}`).update({ tripId: doc.id });
+            await db.doc(`bookings/${passenger.bookingId}`).update({ tripId: doc.id });
             assigned = true;
             assignedTripId = doc.id;
             break;
@@ -187,12 +190,12 @@ async function assignBookingToTrip(
             date: intendedDate,
             vehicleIndex: newVehicleIndex,
             capacity: capacityPerVehicle,
-            passengerIds: [bookingId],
+            passengers: [passenger],
             isFull: capacityPerVehicle <= 1,
         };
 
         await db.collection('trips').doc(newTripId).set(newTrip);
-        await db.doc(`bookings/${bookingId}`).update({ tripId: newTripId });
+        await db.doc(`bookings/${passenger.bookingId}`).update({ tripId: newTripId });
         assigned = true;
         assignedTripId = newTripId;
     }
@@ -257,14 +260,12 @@ async function checkAndConfirmTrip(
         return;
     }
     
-    const passengerIds = trip.passengerIds;
+    const passengerIds = trip.passengers.map(p => p.bookingId);
     if (passengerIds.length === 0) return;
 
-    // Find all passengers for this trip
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-    // Filter for passengers that are 'Paid' and need confirmation
     const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
 
     if (bookingsToConfirm.length === 0) return;
@@ -276,7 +277,6 @@ async function checkAndConfirmTrip(
     
     await batch.commit();
 
-    // Send confirmation emails after the status update is successful
     for (const doc of bookingsToConfirm) {
         const bookingData = doc.data();
         try {
@@ -293,13 +293,6 @@ async function checkAndConfirmTrip(
             });
         } catch (e) {
             console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
-            // Optional: Add to a retry queue or log for manual intervention
         }
     }
 }
-
-
-    
-
-    
-

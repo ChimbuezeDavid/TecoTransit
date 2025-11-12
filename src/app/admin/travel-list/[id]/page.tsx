@@ -4,8 +4,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, onSnapshot, orderBy, documentId } from 'firebase/firestore';
-import type { PriceRule, Booking, Trip } from '@/lib/types';
+import { doc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import type { PriceRule, Trip } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +64,6 @@ export default function TravelListPage() {
 
     const [priceRule, setPriceRule] = useState<PriceRule | null>(null);
     const [trips, setTrips] = useState<Trip[]>([]);
-    const [bookings, setBookings] = useState<Record<string, Booking>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -116,37 +115,6 @@ export default function TravelListPage() {
 
         return () => unsubscribe();
     }, [priceRule]);
-
-    // Fetch all bookings for the loaded trips
-    useEffect(() => {
-        const allPassengerIds = trips.flatMap(trip => trip.passengerIds);
-        if (allPassengerIds.length === 0) {
-            setBookings({});
-            return;
-        }
-        
-        // Firestore 'in' queries are limited to 30 elements.
-        const chunks = [];
-        for (let i = 0; i < allPassengerIds.length; i += 30) {
-            chunks.push(allPassengerIds.slice(i, i + 30));
-        }
-
-        const unsubscribers = chunks.map(chunk => {
-            if (chunk.length === 0) return () => {};
-            const bookingsQuery = query(collection(db, "bookings"), where(documentId(), 'in', chunk));
-            return onSnapshot(bookingsQuery, (snapshot) => {
-                const bookingsData: Record<string, Booking> = {};
-                snapshot.forEach(doc => {
-                    bookingsData[doc.id] = { id: doc.id, ...doc.data() } as Booking;
-                });
-                setBookings(prev => ({ ...prev, ...bookingsData }));
-            });
-        });
-
-        return () => unsubscribers.forEach(unsub => unsub());
-
-    }, [trips]);
-
 
     const groupedTripsByDate = useMemo(() => {
         return trips.reduce((acc, trip) => {
@@ -213,12 +181,12 @@ export default function TravelListPage() {
                                     <CardDescription>
                                         <div className="flex items-center gap-2">
                                             <Users className="h-4 w-4" />
-                                            <span>{trip.passengerIds.length} / {trip.capacity} passengers</span>
+                                            <span>{trip.passengers.length} / {trip.capacity} passengers</span>
                                         </div>
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {trip.passengerIds.length === 0 ? (
+                                    {trip.passengers.length === 0 ? (
                                         <p className="text-sm text-muted-foreground py-4 text-center">No passengers yet.</p>
                                     ) : (
                                     <Table>
@@ -229,29 +197,22 @@ export default function TravelListPage() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {trip.passengerIds.map(passengerId => {
-                                                const booking = bookings[passengerId];
-                                                if (!booking) return (
-                                                    <TableRow key={passengerId}>
-                                                        <TableCell colSpan={2}><Skeleton className="h-5 w-full" /></TableCell>
-                                                    </TableRow>
-                                                );
-                                                return (
-                                                <TableRow key={passengerId}>
+                                            {trip.passengers.map(passenger => (
+                                                <TableRow key={passenger.bookingId}>
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <User className="h-4 w-4 text-muted-foreground" />
-                                                            <span>{booking.name}</span>
+                                                            <span>{passenger.name}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <Phone className="h-4 w-4 text-muted-foreground" />
-                                                            <a href={`tel:${booking.phone}`} className="hover:underline">{booking.phone}</a>
+                                                            <a href={`tel:${passenger.phone}`} className="hover:underline">{passenger.phone}</a>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            )})}
+                                            ))}
                                         </TableBody>
                                     </Table>
                                     )}

@@ -20,6 +20,12 @@ export type Booking = {
   tripId?: string; // ID of the trip this booking is assigned to
 };
 
+export type Passenger = {
+    bookingId: string;
+    name: string;
+    phone: string;
+};
+
 export type Trip = {
     id: string; // e.g. abuad-ajah-lagos_4-seater-sienna_2024-09-21_1
     priceRuleId: string;
@@ -29,7 +35,7 @@ export type Trip = {
     date: string; // 'yyyy-MM-dd'
     vehicleIndex: number; // 1, 2, 3...
     capacity: number;
-    passengerIds: string[];
+    passengers: Passenger[];
     isFull: boolean;
 };
 
