@@ -12,7 +12,6 @@ function PaymentCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment, please wait...');
   
-  // Use a ref to ensure the verification logic runs exactly once.
   const verificationStarted = useRef(false);
 
   useEffect(() => {
@@ -24,7 +23,6 @@ function PaymentCallback() {
       return;
     }
     
-    // Only proceed if verification has not been started.
     if (verificationStarted.current) {
         return;
     }
@@ -50,27 +48,33 @@ function PaymentCallback() {
     verify();
   }, [searchParams]);
 
+  const renderMessage = () => {
+    return message.split('. ').map((sentence, index) => (
+      <p key={index} className="text-muted-foreground mt-2 max-w-md">{sentence}</p>
+    ));
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
       {status === 'loading' && (
         <>
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <h1 className="text-2xl font-bold">Processing Payment</h1>
-          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
+          {renderMessage()}
         </>
       )}
       {status === 'success' && (
         <>
           <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
           <h1 className="text-2xl font-bold">Payment Successful!</h1>
-          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
+          {renderMessage()}
         </>
       )}
       {status === 'error' && (
         <>
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <h1 className="text-2xl font-bold">An Error Occurred</h1>
-          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
+          {renderMessage()}
         </>
       )}
       <Button asChild className="mt-8">
