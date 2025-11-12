@@ -31,9 +31,12 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
       throw new Error("Could not connect to the database.");
     }
     
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_BASE_URL;
+    // Use the canonical base URL from environment variables for the callback.
+    // This must be set to your full production domain in your deployment environment.
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (!baseUrl) {
+        throw new Error("NEXT_PUBLIC_BASE_URL is not set in environment variables.");
+    }
       
     const callbackUrl = `${baseUrl}/payment/callback`;
 
