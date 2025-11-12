@@ -9,18 +9,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Admins can read/write all booking, pricing, and trip data
+    // Admins can read/write all booking and trip data
     match /bookings/{bookingId} {
       allow read, write: if isAdmin();
     }
 
+    match /trips/{tripId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Pricing can be read by anyone but only written by admins.
     match /prices/{priceId} {
       allow read: if true;
       allow write: if isAdmin();
-    }
-
-    match /trips/{tripId} {
-      allow read, write: if isAdmin();
     }
     
     // Reservations can be created by anyone, but only managed by admins (or server logic)
