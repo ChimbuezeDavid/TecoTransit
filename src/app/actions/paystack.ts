@@ -8,13 +8,15 @@ import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail } from './send-email';
 import { Resend } from 'resend';
+import axios from 'axios';
 
 
 if (!process.env.PAYSTACK_SECRET_KEY) {
   throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
 }
 
-const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY);
+const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+const paystack = Paystack(paystackSecret);
 
 interface InitializeTransactionArgs {
   email: string;
@@ -35,16 +37,29 @@ export const initializeTransaction = async ({ email, amount, metadata }: Initial
       
     const callbackUrl = `${baseUrl}/payment/callback`;
 
-    const response = await paystack.transaction.initialize({
+    const paystackData = {
       email,
       amount: Math.round(amount),
       metadata: { ...metadata },
-      callback_url: callbackUrl
-    });
-    return { status: true, data: response.data };
+      callback_url: callbackUrl,
+    };
+    
+    const response = await axios.post(
+      'https://api.paystack.co/transaction/initialize',
+      paystackData,
+      {
+        headers: {
+          Authorization: `Bearer ${paystackSecret}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return { status: true, data: response.data.data };
   } catch (error: any) {
-    console.error('Paystack initialization error:', error.message);
-    return { status: false, message: error.message };
+    console.error('Paystack initialization error:', error.response?.data || error.message);
+    const errorMessage = error.response?.data?.message || 'An error occurred during payment initialization.';
+    return { status: false, message: errorMessage };
   }
 };
 
@@ -280,5 +295,7 @@ async function checkAndConfirmTrip(
     }
 }
 
+
+    
 
     
