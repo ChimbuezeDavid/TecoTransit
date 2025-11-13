@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import Paystack from 'paystack';
@@ -83,7 +84,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error('Booking metadata is missing from transaction.');
         }
         
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string } = JSON.parse(metadata.booking_details);
+        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string, allowReschedule: boolean } = JSON.parse(metadata.booking_details);
         
         const bookingsRef = db.collection('bookings');
         

@@ -40,6 +40,9 @@ const bookingSchema = z.object({
   privacyPolicy: z.literal(true, {
     errorMap: () => ({ message: "You must accept the privacy policy to continue." }),
   }),
+  allowReschedule: z.literal(true, {
+    errorMap: () => ({ message: "You must agree to the reschedule policy to continue." }),
+  }),
 }).refine(data => data.pickup !== data.destination, {
   message: "Pickup and destination cannot be the same.",
   path: ["destination"],
@@ -71,6 +74,7 @@ export default function BookingForm() {
       phone: '',
       luggageCount: 0,
       privacyPolicy: false,
+      allowReschedule: false,
     },
   });
 
@@ -135,6 +139,7 @@ export default function BookingForm() {
               vehicleType: bookingDataWithFare.vehicleType,
               luggageCount: bookingDataWithFare.luggageCount,
               totalFare: bookingDataWithFare.totalFare,
+              allowReschedule: bookingDataWithFare.allowReschedule,
             };
 
             const result = await initializeTransaction({
@@ -352,30 +357,52 @@ export default function BookingForm() {
                     </FormItem>
                 )} />
             </div>
-            <FormField
-              control={form.control}
-              name="privacyPolicy"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I agree to the{" "}
-                      <Link href="/privacy" className="text-primary hover:underline" target="_blank">
-                        Privacy Policy
-                      </Link>
-                      {" "}and consent to my data being processed.
-                    </FormLabel>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="allowReschedule"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I understand that my trip may be rescheduled to the next day if the vehicle is not full.
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="privacyPolicy"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I agree to the{" "}
+                        <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+                          Privacy Policy
+                        </Link>
+                        {" "}and consent to my data being processed.
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">

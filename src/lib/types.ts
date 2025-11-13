@@ -13,6 +13,7 @@ export type Booking = {
   vehicleType: string;
   luggageCount: number;
   totalFare: number;
+  allowReschedule: boolean;
   paymentReference?: string; // Paystack transaction reference
   status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
@@ -42,6 +43,7 @@ export type Trip = {
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate'> & {
     intendedDate: Date;
     privacyPolicy: boolean;
+    allowReschedule: boolean;
 };
 
 export type PriceRule = {

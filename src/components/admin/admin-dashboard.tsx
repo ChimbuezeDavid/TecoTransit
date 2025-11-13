@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -17,7 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, CreditCard, Ban, ShieldAlert, ShieldCheck, Check, CircleDot } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, CreditCard, Ban, ShieldAlert, ShieldCheck, Check, CircleDot, History } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -299,7 +300,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Payment Reference", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -313,6 +314,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
             `"${b.vehicleType.replace(/"/g, '""')}"`,
             b.luggageCount,
             b.totalFare,
+            b.allowReschedule,
             b.paymentReference || "",
             b.status,
             b.confirmedDate || "",
@@ -636,13 +638,20 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                             
                             {/* Departure Dates */}
                             <div className="space-y-4 sm:col-span-2">
-                                <h3 className="font-semibold text-lg">Departure Date</h3>
+                                <h3 className="font-semibold text-lg">Preferences</h3>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div className="flex items-start gap-3">
                                         <CalendarIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                         <div>
-                                            <span className="font-medium text-foreground">Intended:</span>
+                                            <span className="font-medium text-foreground">Intended Date:</span>
                                             <p>{format(parseISO(selectedBooking.intendedDate), 'PPP')}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <History className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <span className="font-medium text-foreground">Reschedule OK:</span>
+                                            <p>{selectedBooking.allowReschedule ? 'Yes' : 'No'}</p>
                                         </div>
                                     </div>
                                 </div>
