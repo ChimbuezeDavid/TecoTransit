@@ -4,7 +4,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, updateDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, doc, updateDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch, deleteDoc } from 'firebase/firestore';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';

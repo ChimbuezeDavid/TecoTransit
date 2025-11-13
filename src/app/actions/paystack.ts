@@ -96,8 +96,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             paymentReference: reference,
             totalFare: bookingDetails.totalFare,
         };
-
-        await newBookingRef.set(newBookingData);
         const bookingId = newBookingRef.id;
         
         // Send post-booking email
@@ -121,8 +119,10 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             name: bookingDetails.name,
             phone: bookingDetails.phone,
         };
-
-        await assignBookingToTrip(passenger, bookingDetails);
+        
+        // This is the crucial step: immediately try to assign the new booking to a trip.
+        // We pass the newBookingRef to be set within the transaction.
+        await assignBookingToTrip(newBookingRef, newBookingData, passenger, bookingDetails);
 
         return { success: true, bookingId: bookingId };
 
@@ -133,6 +133,8 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 };
 
 async function assignBookingToTrip(
+    bookingRef: FirebaseFirestore.DocumentReference,
+    bookingData: any,
     passenger: Passenger,
     bookingDetails: {
         pickup: string;
@@ -225,9 +227,12 @@ async function assignBookingToTrip(
             if (!assigned) {
                 throw new Error("All vehicles for this route and date are full.");
             }
-             // Associate booking with trip within the transaction
+             
+            // Create the booking and associate it with the trip within the same transaction.
             if (assignedTripId) {
-                transaction.update(db.doc(`bookings/${passenger.bookingId}`), { tripId: assignedTripId });
+                transaction.set(bookingRef, { ...bookingData, tripId: assignedTripId });
+            } else {
+                 transaction.set(bookingRef, bookingData);
             }
         });
         

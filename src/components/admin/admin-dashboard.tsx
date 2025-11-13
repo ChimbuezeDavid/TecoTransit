@@ -213,7 +213,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID"];
     const csvContent = [
         headers.join(','),
         ...bookings.map(b => [
@@ -232,6 +232,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
             b.status,
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
+            b.tripId || "",
         ].join(','))
     ].join('\n');
 
@@ -547,7 +548,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                                     <li className="flex items-start gap-3"><VehicleIcon className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.vehicleType}</span></li>
                                     <li className="flex items-start gap-3"><Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" /><span>{selectedBooking.luggageCount} bag(s)</span></li>
                                     {selectedBooking.tripId && (
-                                        <li className="flex items-start gap-3"><Ticket className="h-4 w-4 text-muted-foreground mt-0.5" /><span>Trip ID: <span className="font-mono text-xs">{selectedBooking.tripId}</span></span></li>
+                                        <li className="flex items-start gap-3"><Ticket className="h-4 w-4 text-muted-foreground mt-0.5" /><div><span className="font-medium text-foreground">Trip ID:</span><p className="font-mono text-xs">{selectedBooking.tripId}</p></div></li>
                                     )}
                                 </ul>
                             </div>
@@ -644,5 +645,3 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
-
-    
