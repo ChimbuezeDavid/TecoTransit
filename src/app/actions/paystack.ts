@@ -7,7 +7,7 @@ import type { BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
-import { sendBookingStatusEmail } from './send-email';
+import { sendBookingStatusEmail, sendBookingReceivedEmail } from './send-email';
 import { Resend } from 'resend';
 import axios from 'axios';
 
@@ -99,6 +99,22 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 
         await newBookingRef.set(newBookingData);
         const bookingId = newBookingRef.id;
+        
+        // Send post-booking email
+        try {
+            await sendBookingReceivedEmail({
+                name: bookingDetails.name,
+                email: bookingDetails.email,
+                pickup: bookingDetails.pickup,
+                destination: bookingDetails.destination,
+                intendedDate: bookingDetails.intendedDate,
+                totalFare: bookingDetails.totalFare,
+                bookingId: bookingId,
+            });
+        } catch (e) {
+            console.error(`Failed to send booking received email for booking ${bookingId}:`, e);
+            // We don't want to fail the whole process if the email fails, just log it.
+        }
 
         const passenger: Passenger = {
             bookingId: bookingId,

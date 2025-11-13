@@ -1,4 +1,3 @@
-
 import {
   Body,
   Container,
@@ -14,32 +13,28 @@ import {
 } from '@react-email/components';
 import { format } from 'date-fns';
 
-interface BookingStatusEmailProps {
+interface BookingReceivedEmailProps {
   name: string;
-  status: 'Confirmed' | 'Cancelled';
   bookingId: string;
   pickup: string;
   destination: string;
-  vehicleType: string;
+  intendedDate: string;
   totalFare: number;
-  confirmedDate?: string;
 }
 
 const baseUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : 'http://localhost:3000';
 
-export default function BookingStatusEmail({
+export default function BookingReceivedEmail({
   name,
-  status,
   bookingId,
   pickup,
   destination,
-  vehicleType,
+  intendedDate,
   totalFare,
-  confirmedDate,
-}: BookingStatusEmailProps) {
-  const previewText = `Your TecoTransit booking is ${status}`;
+}: BookingReceivedEmailProps) {
+  const previewText = `Your TecoTransit Reservation for ${format(new Date(intendedDate), 'PPP')} is Received`;
 
   return (
     <Html>
@@ -48,48 +43,36 @@ export default function BookingStatusEmail({
       <Body style={main}>
         <Container style={container}>
           <Section style={logoContainer}>
-            {/* You can replace this with your actual logo */}
             <Text style={logoText}>TecoTransit</Text>
           </Section>
-          <Heading style={h1}>Booking {status}</Heading>
+          <Heading style={h1}>Your Reservation is Received!</Heading>
           <Text style={text}>
             Hello {name},
           </Text>
           <Text style={text}>
-            This email is to inform you that your booking with reference number{' '}
-            <strong>{bookingId.substring(0,8)}</strong> has been{' '}
-            <strong>{status.toLowerCase()}</strong>.
+            Thank you for booking with TecoTransit! We have successfully received your reservation with reference number{' '}
+            <strong>{bookingId.substring(0,8)}</strong>.
           </Text>
 
-          {status === 'Confirmed' && confirmedDate && (
-             <Section style={highlightSection}>
-                <Text style={highlightText}>
-                    Your trip is confirmed for: <strong>{format(new Date(confirmedDate), 'EEEE, MMMM dd, yyyy')}</strong>. Please be at the assembly point on or before 7:00am. The details of your specific vehicle and driver will be sent via a group chat the day before departure.
-                </Text>
-             </Section>
-          )}
-
-           {status === 'Cancelled' && (
-             <Section style={highlightSectionRed}>
-                <Text style={highlightText}>
-                    Unfortunately, your booking has been cancelled. If you have any questions, please contact our support team at <Link href="mailto:tecotransportservices@gmail.com" style={link}>tecotransportservices@gmail.com</Link>.
-                </Text>
-             </Section>
-          )}
+          <Section style={highlightSection}>
+            <Text style={highlightText}>
+                The details of your trip vehicle will be sent to you as soon as the vehicle is filled. Please note that if the vehicle is not filled 16 hours before departure time (2pm before the day of travel) your booking may be rescheduled.
+            </Text>
+          </Section>
 
           <Hr style={hr} />
 
-          <Heading as="h2" style={h2}>Booking Summary</Heading>
+          <Heading as="h2" style={h2}>Reservation Summary</Heading>
           <Section style={detailsContainer}>
+            <Text style={detailItem}><strong>Intended Date:</strong> {format(new Date(intendedDate), 'EEEE, MMMM dd, yyyy')}</Text>
             <Text style={detailItem}><strong>Route:</strong> {pickup} to {destination}</Text>
-            <Text style={detailItem}><strong>Vehicle:</strong> {vehicleType}</Text>
-            <Text style={detailItem}><strong>Total Fare:</strong> ₦{totalFare.toLocaleString()}</Text>
+            <Text style={detailItem}><strong>Total Fare Paid:</strong> ₦{totalFare.toLocaleString()}</Text>
           </Section>
 
           <Hr style={hr} />
 
           <Text style={text}>
-            Thank you for choosing TecoTransit.
+            We'll be in touch soon with your final trip confirmation.
           </Text>
 
           <Text style={footer}>
@@ -159,21 +142,12 @@ const link = {
 }
 
 const highlightSection = {
-    backgroundColor: '#f0fdf4',
-    border: '1px solid #bbf7d0',
+    backgroundColor: '#fffbe6',
+    border: '1px solid #fde047',
     borderRadius: '4px',
     margin: '20px 30px',
     padding: '10px 20px',
 };
-
-const highlightSectionRed = {
-    backgroundColor: '#fff1f2',
-    border: '1px solid #fecdd3',
-    borderRadius: '4px',
-    margin: '20px 30px',
-    padding: '10px 20px',
-};
-
 
 const highlightText = {
     ...text,
