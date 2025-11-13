@@ -5,7 +5,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      // In a real app, this should be a custom claim, but for now we check for any authenticated user.
+      // Allow any authenticated user (including server-side admin)
       return request.auth != null;
     }
 
