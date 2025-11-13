@@ -48,11 +48,6 @@ function PaymentCallback() {
     verify();
   }, [searchParams]);
 
-  const renderMessage = () => {
-    return message.split('. ').map((sentence, index) => (
-      <p key={index} className="text-muted-foreground mt-2 max-w-md">{sentence}</p>
-    ));
-  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
@@ -60,21 +55,21 @@ function PaymentCallback() {
         <>
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <h1 className="text-2xl font-bold">Processing Payment</h1>
-          {renderMessage()}
+          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
         </>
       )}
       {status === 'success' && (
         <>
           <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
           <h1 className="text-2xl font-bold">Payment Successful!</h1>
-          {renderMessage()}
+          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
         </>
       )}
       {status === 'error' && (
         <>
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <h1 className="text-2xl font-bold">An Error Occurred</h1>
-          {renderMessage()}
+          <p className="text-muted-foreground mt-2 max-w-md">{message}</p>
         </>
       )}
       <Button asChild className="mt-8">
