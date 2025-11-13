@@ -12,6 +12,7 @@ function PaymentCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment, please wait...');
   
+  // Use a ref to ensure verification only runs once
   const verificationStarted = useRef(false);
 
   useEffect(() => {
@@ -23,6 +24,7 @@ function PaymentCallback() {
       return;
     }
     
+    // Prevent the effect from running twice
     if (verificationStarted.current) {
         return;
     }
