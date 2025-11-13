@@ -18,13 +18,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, CreditCard, Ban, ShieldAlert, ShieldCheck, Check, CircleDot, History } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Filter, Download, RefreshCw, Trash2, AlertCircle, Loader2, ListX, HandCoins, CreditCard, Ban, ShieldAlert, ShieldCheck, Check, CircleDot, History, Tag } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
-import { verifyPayment } from "@/app/actions/verify-payment";
 
 
 const ITEMS_PER_PAGE = 10;
@@ -86,92 +85,6 @@ function DashboardSkeleton() {
         </div>
     );
 }
-
-type PaymentStatus = 'idle' | 'verifying' | 'verified' | 'failed' | 'error';
-
-function PaymentVerificationStatus({ booking }: { booking: Booking | null }) {
-    const [status, setStatus] = useState<PaymentStatus>('idle');
-    const [message, setMessage] = useState('');
-    const { toast } = useToast();
-
-    const handleVerifyPayment = useCallback(async () => {
-        if (!booking?.paymentReference) {
-            setStatus('error');
-            setMessage('No payment reference found for this booking.');
-            return;
-        }
-
-        setStatus('verifying');
-        try {
-            const result = await verifyPayment(booking.paymentReference);
-            if (result.status === 'success') {
-                setStatus('verified');
-            } else {
-                setStatus('failed');
-            }
-            setMessage(result.message);
-        } catch (error) {
-            setStatus('error');
-            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-            setMessage(errorMessage);
-            toast({
-                variant: 'destructive',
-                title: 'Verification Failed',
-                description: errorMessage,
-            });
-        }
-    }, [booking, toast]);
-
-    // Automatically trigger verification when dialog opens
-    useEffect(() => {
-        handleVerifyPayment();
-    }, [handleVerifyPayment]);
-    
-    if (!booking) return null;
-
-    return (
-        <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Payment</h3>
-            <div>
-                <p className="text-xs text-muted-foreground">Amount Paid</p>
-                <p className="font-bold text-3xl text-primary">₦{booking.totalFare.toLocaleString()}</p>
-            </div>
-            
-            {status === 'idle' && (
-                <Button onClick={handleVerifyPayment} variant="outline" size="sm">
-                    Verify Payment Status
-                </Button>
-            )}
-
-            {status === 'verifying' && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Verifying with Paystack...</span>
-                </div>
-            )}
-            {status === 'verified' && (
-                <div className="flex items-center gap-2 text-sm text-green-600 font-medium p-3 bg-green-500/10 rounded-lg">
-                    <ShieldCheck className="h-4 w-4" />
-                    <span>Payment Verified</span>
-                </div>
-            )}
-            {status === 'failed' && (
-                <div className="flex items-center gap-2 text-sm text-amber-600 font-medium p-3 bg-amber-500/10 rounded-lg">
-                    <ShieldAlert className="h-4 w-4" />
-                    <span>Payment Not Completed</span>
-                </div>
-            )}
-            {status === 'error' && (
-                <div className="flex items-center gap-2 text-sm text-destructive font-medium p-3 bg-destructive/10 rounded-lg">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Verification Error</span>
-                </div>
-            )}
-            {message && <p className="text-xs text-muted-foreground">{message}</p>}
-        </div>
-    )
-}
-
 
 export default function AdminDashboard({ allBookings, loading: allBookingsLoading }: { allBookings: Booking[], loading: boolean }) {
   const { user } = useAuth();
@@ -663,7 +576,19 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
                     <div className="md:col-span-1 bg-muted/30 flex flex-col">
                         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                             {/* Fare Details */}
-                             <PaymentVerificationStatus booking={selectedBooking} />
+                             <div className="space-y-3">
+                                <h3 className="font-semibold text-lg">Payment Details</h3>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Amount Paid</p>
+                                    <p className="font-bold text-3xl text-primary">₦{selectedBooking.totalFare.toLocaleString()}</p>
+                                </div>
+                                {selectedBooking.paymentReference && (
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Payment Reference</p>
+                                        <p className="font-mono text-xs text-muted-foreground break-all">{selectedBooking.paymentReference}</p>
+                                    </div>
+                                )}
+                            </div>
                             
                             <Separator/>
 
@@ -716,3 +641,5 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
+
+    
