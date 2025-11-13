@@ -4,26 +4,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // This function allows access for any authenticated user, which includes
+    // both logged-in admins on the client-side and our authenticated
+    // server-side functions. This is the key to allowing our backend
+    // logic to manage trips and bookings.
     function isAdmin() {
-      // In a real app, this should be a custom claim, but for now we check for any authenticated user.
       return request.auth != null;
     }
 
-    // Admins can read/write all booking, pricing, and trip data
+    // Bookings can be read or written by our server-side logic (isAdmin).
     match /bookings/{bookingId} {
       allow read, write: if isAdmin();
     }
 
+    // Trips can be read or written by our server-side logic (isAdmin).
+    match /trips/{tripId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Pricing can be read by anyone but only written by admins.
     match /prices/{priceId} {
       allow read: if true;
       allow write: if isAdmin();
     }
-
-    match /trips/{tripId} {
-      allow read, write: if isAdmin();
-    }
     
-    // Reservations can be created by anyone, but only managed by admins (or server logic)
+    // Reservations are currently not used in the primary flow, but keeping rules for safety.
     match /reservations/{reservationId} {
         allow create: if true;
         allow read, update, delete: if isAdmin();

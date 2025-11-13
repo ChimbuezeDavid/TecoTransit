@@ -1,136 +1,75 @@
 
-
 'use server';
 
-import Paystack from 'paystack';
-import type { BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
+import type { Booking, BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, FieldPath, Transaction } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail, sendBookingReceivedEmail } from './send-email';
 import { Resend } from 'resend';
-import axios from 'axios';
+import { format } from 'date-fns';
 
-
-if (!process.env.PAYSTACK_SECRET_KEY) {
-  throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
+type CreateBookingResult = {
+    success: boolean;
+    booking?: Booking;
+    error?: string;
 }
 
-const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
-const paystack = Paystack(paystackSecret);
-
-interface InitializeTransactionArgs {
-  email: string;
-  amount: number; // in kobo
-  metadata: Record<string, any>;
-}
-
-export const initializeTransaction = async ({ email, amount, metadata }: InitializeTransactionArgs) => {
-  try {
+// This function now encapsulates creating a pending booking and assigning it to a trip.
+export const createBookingAndAssignTrip = async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }): Promise<CreateBookingResult> => {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
-      throw new Error("Could not connect to the database.");
+        return { success: false, error: "Could not connect to the database." };
     }
     
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-    if (!baseUrl) {
-        throw new Error("NEXT_PUBLIC_BASE_URL is not set in environment variables. It must be your full production domain.");
-    }
-      
-    const callbackUrl = `${baseUrl}/payment/callback`;
-
-    const paystackData = {
-      email,
-      amount: Math.round(amount),
-      metadata: { ...metadata },
-      callback_url: callbackUrl,
+    const firestoreBooking = {
+        ...data,
+        createdAt: FieldValue.serverTimestamp(),
+        status: 'Pending' as const,
+        intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
     };
     
-    const response = await axios.post(
-      'https://api.paystack.co/transaction/initialize',
-      paystackData,
-      {
-        headers: {
-          Authorization: `Bearer ${paystackSecret}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return { status: true, data: response.data.data };
-  } catch (error: any) {
-    console.error('Paystack initialization error:', error.response?.data || error.message);
-    const errorMessage = error.response?.data?.message || 'An error occurred during payment initialization.';
-    return { status: false, message: errorMessage };
-  }
-};
-
-
-export const verifyTransactionAndCreateBooking = async (reference: string) => {
     try {
-        const db = getFirebaseAdmin()?.firestore();
-        if (!db) {
-            throw new Error("Could not connect to the database.");
-        }
-
-        const verificationResponse = await paystack.transaction.verify(reference);
-        const metadata = verificationResponse.data?.metadata;
-
-        if (verificationResponse.data?.status !== 'success') {
-            throw new Error('Payment was not successful.');
-        }
-
-        if (!metadata || !metadata.booking_details) {
-            throw new Error('Booking metadata is missing from transaction.');
-        }
-        
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string, allowReschedule: boolean } = JSON.parse(metadata.booking_details);
-        
-        const bookingsRef = db.collection('bookings');
-        
-        const newBookingRef = bookingsRef.doc();
-        const newBookingData = {
-            ...bookingDetails,
-            createdAt: FieldValue.serverTimestamp(),
-            status: 'Paid' as const,
-            paymentReference: reference,
-            totalFare: bookingDetails.totalFare,
-        };
-
-        await newBookingRef.set(newBookingData);
+        const newBookingRef = db.collection('bookings').doc();
+        await newBookingRef.set(firestoreBooking);
         const bookingId = newBookingRef.id;
-        
-        // Send post-booking email
-        try {
-            await sendBookingReceivedEmail({
-                name: bookingDetails.name,
-                email: bookingDetails.email,
-                pickup: bookingDetails.pickup,
-                destination: bookingDetails.destination,
-                intendedDate: bookingDetails.intendedDate,
-                totalFare: bookingDetails.totalFare,
-                bookingId: bookingId,
-            });
-        } catch (e) {
-            console.error(`Failed to send booking received email for booking ${bookingId}:`, e);
-            // We don't want to fail the whole process if the email fails, just log it.
-        }
 
         const passenger: Passenger = {
             bookingId: bookingId,
-            name: bookingDetails.name,
-            phone: bookingDetails.phone,
+            name: data.name,
+            phone: data.phone,
+        };
+        
+        // This is the crucial step: immediately try to assign the new booking to a trip.
+        await assignBookingToTrip(passenger, {
+            pickup: data.pickup,
+            destination: data.destination,
+            vehicleType: data.vehicleType,
+            intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
+        });
+        
+        const createdBookingDoc = await newBookingRef.get();
+        const createdBookingData = createdBookingDoc.data();
+        
+        if (!createdBookingData) {
+            return { success: false, error: 'Failed to retrieve created booking.' };
+        }
+
+        return { 
+            success: true, 
+            booking: {
+                ...createdBookingData,
+                id: bookingId,
+                createdAt: (createdBookingData.createdAt as FirebaseFirestore.Timestamp).toMillis(),
+            } as Booking
         };
 
-        await assignBookingToTrip(passenger, bookingDetails);
-
-        return { success: true, bookingId: bookingId };
-
     } catch (error: any) {
-        console.error('Verification and booking creation failed:', error);
-        return { success: false, error: error.message };
+        console.error("Error in createBookingAndAssignTrip:", error);
+        return { success: false, error: error.message || 'An unknown error occurred while creating booking.' };
     }
 };
+
 
 async function assignBookingToTrip(
     passenger: Passenger,
@@ -244,6 +183,7 @@ async function assignBookingToTrip(
         await sendOverflowEmail(bookingDetails, error.message);
     }
 }
+
 
 async function sendOverflowEmail(bookingDetails: any, reason: string) {
     const resend = new Resend(process.env.RESEND_API_KEY);

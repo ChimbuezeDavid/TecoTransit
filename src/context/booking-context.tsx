@@ -1,14 +1,16 @@
 
+
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, doc, updateDoc, getDocs, query, where, Timestamp, onSnapshot, orderBy, writeBatch } from 'firebase/firestore';
 import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
 import { useAuth } from './auth-context';
+import { createBookingAndAssignTrip } from '@/app/actions/create-booking-and-assign-trip';
+
 
 interface BookingContextType {
   bookings: Booking[]; 
@@ -100,22 +102,15 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     return unsubscribe;
   }, []);
 
-  const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
-    const firestoreBooking = {
-      ...data,
-      createdAt: Timestamp.now(),
-      status: 'Pending' as const,
-      intendedDate: format(data.intendedDate, 'yyyy-MM-dd'),
-    };
+ const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
+    // This now calls the server action which handles both booking creation AND trip assignment.
+    const result = await createBookingAndAssignTrip(data);
     
-    const docRef = await addDoc(collection(db, 'bookings'), firestoreBooking);
+    if (!result.success || !result.booking) {
+        throw new Error(result.error || 'Failed to create booking and assign trip.');
+    }
 
-    return {
-      ...firestoreBooking,
-      id: docRef.id,
-      createdAt: firestoreBooking.createdAt.toMillis(),
-    } as Booking;
-    
+    return result.booking;
   }, []);
 
   const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {

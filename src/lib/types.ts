@@ -13,11 +13,18 @@ export type Booking = {
   vehicleType: string;
   luggageCount: number;
   totalFare: number;
+  allowReschedule: boolean;
   paymentReference?: string; // Paystack transaction reference
   status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   tripId?: string; // ID of the trip this booking is assigned to
+};
+
+export type Passenger = {
+    bookingId: string;
+    name: string;
+    phone: string;
 };
 
 export type Trip = {
@@ -29,13 +36,14 @@ export type Trip = {
     date: string; // 'yyyy-MM-dd'
     vehicleIndex: number; // 1, 2, 3...
     capacity: number;
-    passengerIds: string[];
+    passengers: Passenger[];
     isFull: boolean;
 };
 
 export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate'> & {
     intendedDate: Date;
     privacyPolicy: boolean;
+    allowReschedule: boolean;
 };
 
 export type PriceRule = {

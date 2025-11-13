@@ -1,8 +1,7 @@
-
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { verifyTransactionAndCreateBooking } from '@/app/actions/paystack';
 import { CheckCircle, AlertCircle, Loader2, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,26 +9,29 @@ import Link from 'next/link';
 
 function PaymentCallback() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment, please wait...');
-  const [hasVerified, setHasVerified] = useState(false);
+  
+  // Use a ref to ensure verification only runs once
+  const verificationStarted = useRef(false);
 
   useEffect(() => {
     const reference = searchParams.get('reference');
-
-    if (hasVerified) {
-        return;
-    }
 
     if (!reference) {
       setStatus('error');
       setMessage('No payment reference found. Your payment may not have been processed correctly.');
       return;
     }
+    
+    // Prevent the effect from running twice
+    if (verificationStarted.current) {
+        return;
+    }
+    
+    verificationStarted.current = true;
 
     const verify = async () => {
-      setHasVerified(true);
       try {
         const result = await verifyTransactionAndCreateBooking(reference);
         if (result.success) {
@@ -46,7 +48,8 @@ function PaymentCallback() {
     };
 
     verify();
-  }, [searchParams, hasVerified]);
+  }, [searchParams]);
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-4">
