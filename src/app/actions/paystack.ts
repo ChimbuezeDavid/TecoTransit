@@ -5,7 +5,7 @@
 import Paystack from 'paystack';
 import type { BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue, FieldPath } from 'firebase-admin/firestore';
+import { FieldValue, FieldPath, Transaction } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail, sendBookingReceivedEmail } from './send-email';
 import { Resend } from 'resend';
@@ -122,7 +122,7 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             phone: bookingDetails.phone,
         };
 
-        await assignBookingToTrip(db, passenger, bookingDetails);
+        await assignBookingToTrip(passenger, bookingDetails);
 
         return { success: true, bookingId: bookingId };
 
@@ -133,7 +133,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
 };
 
 async function assignBookingToTrip(
-    db: FirebaseFirestore.Firestore,
     passenger: Passenger,
     bookingDetails: {
         pickup: string;
@@ -142,93 +141,109 @@ async function assignBookingToTrip(
         intendedDate: string;
     }
 ) {
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+        console.error("Database connection not available in assignBookingToTrip");
+        return;
+    }
+
     const { pickup, destination, vehicleType, intendedDate } = bookingDetails;
     const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
 
     const priceRuleRef = db.doc(`prices/${priceRuleId}`);
-    const priceRuleSnap = await priceRuleRef.get();
-
-    if (!priceRuleSnap.exists) {
-        console.warn(`Assignment failed: Price rule ${priceRuleId} not found.`);
-        await sendOverflowEmail(bookingDetails, "Price rule not found for this route.");
-        return;
-    }
-    const priceRule = priceRuleSnap.data() as PriceRule;
-    const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
-    const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
     
-    if (capacityPerVehicle === 0) {
-        console.warn(`Assignment failed: Vehicle capacity for ${priceRule.vehicleType} is zero.`);
-        await sendOverflowEmail(bookingDetails, "Vehicle capacity is not configured correctly.");
-        return;
-    }
-
-    const tripsQuery = db.collection('trips')
-        .where('priceRuleId', '==', priceRuleId)
-        .where('date', '==', intendedDate);
-
-    const tripsSnapshot = await tripsQuery.get();
-    let assigned = false;
-    let assignedTripId: string | null = null;
-
-    // 1. Try to find a non-full, existing trip
-    for (const doc of tripsSnapshot.docs) {
-        const trip = doc.data() as Trip;
-        if (!trip.isFull) {
-            const newPassengerCount = trip.passengers.length + 1;
-            const updates: { passengers: FirebaseFirestore.FieldValue; isFull?: boolean } = {
-                passengers: FieldValue.arrayUnion(passenger),
-            };
-
-            if (newPassengerCount >= trip.capacity) {
-                updates.isFull = true;
+    try {
+        let assignedTripId: string | null = null;
+        
+        await db.runTransaction(async (transaction) => {
+            const priceRuleSnap = await transaction.get(priceRuleRef);
+            if (!priceRuleSnap.exists) {
+                throw new Error(`Price rule ${priceRuleId} not found.`);
+            }
+            const priceRule = priceRuleSnap.data() as PriceRule;
+            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
+            const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
+            
+            if (capacityPerVehicle === 0) {
+                throw new Error(`Vehicle capacity for ${priceRule.vehicleType} is zero.`);
             }
 
-            await doc.ref.update(updates);
+            const tripsQuery = db.collection('trips')
+                .where('priceRuleId', '==', priceRuleId)
+                .where('date', '==', intendedDate)
+                .orderBy('vehicleIndex');
             
-            await db.doc(`bookings/${passenger.bookingId}`).update({ tripId: doc.id });
-            assigned = true;
-            assignedTripId = doc.id;
-            break;
-        }
-    }
+            const tripsSnapshot = await transaction.get(tripsQuery);
+            let assigned = false;
 
-    // 2. If not assigned, check if we can create a new trip
-    if (!assigned && tripsSnapshot.size < priceRule.vehicleCount) {
-        const newVehicleIndex = tripsSnapshot.size + 1;
-        const newTripId = `${priceRuleId}_${intendedDate}_${newVehicleIndex}`;
+            // 1. Try to find a non-full, existing trip
+            for (const doc of tripsSnapshot.docs) {
+                const trip = doc.data() as Trip;
+                if (!trip.isFull) {
+                    const newPassengerCount = trip.passengers.length + 1;
+                    const updates: { passengers: FirebaseFirestore.FieldValue; isFull?: boolean } = {
+                        passengers: FieldValue.arrayUnion(passenger),
+                    };
+
+                    if (newPassengerCount >= trip.capacity) {
+                        updates.isFull = true;
+                    }
+                    
+                    transaction.update(doc.ref, updates);
+                    
+                    assigned = true;
+                    assignedTripId = doc.id;
+                    break;
+                }
+            }
+
+            // 2. If not assigned, check if we can create a new trip
+            if (!assigned && tripsSnapshot.size < priceRule.vehicleCount) {
+                const newVehicleIndex = tripsSnapshot.size + 1;
+                const newTripId = `${priceRuleId}_${intendedDate}_${newVehicleIndex}`;
+                
+                const newTrip: Trip = {
+                    id: newTripId,
+                    priceRuleId: priceRule.id,
+                    pickup: priceRule.pickup,
+                    destination: priceRule.destination,
+                    vehicleType: priceRule.vehicleType,
+                    date: intendedDate,
+                    vehicleIndex: newVehicleIndex,
+                    capacity: capacityPerVehicle,
+                    passengers: [passenger],
+                    isFull: capacityPerVehicle <= 1,
+                };
+                
+                transaction.set(db.collection('trips').doc(newTripId), newTrip);
+
+                assigned = true;
+                assignedTripId = newTripId;
+            }
+
+            // If still not assigned after trying everything, throw an error to rollback transaction.
+            if (!assigned) {
+                throw new Error("All vehicles for this route and date are full.");
+            }
+             // Associate booking with trip within the transaction
+            if (assignedTripId) {
+                transaction.update(db.doc(`bookings/${passenger.bookingId}`), { tripId: assignedTripId });
+            }
+        });
         
-        const newTrip: Trip = {
-            id: newTripId,
-            priceRuleId: priceRule.id,
-            pickup: priceRule.pickup,
-            destination: priceRule.destination,
-            vehicleType: priceRule.vehicleType,
-            date: intendedDate,
-            vehicleIndex: newVehicleIndex,
-            capacity: capacityPerVehicle,
-            passengers: [passenger],
-            isFull: capacityPerVehicle <= 1,
-        };
-
-        await db.collection('trips').doc(newTripId).set(newTrip);
-        await db.doc(`bookings/${passenger.bookingId}`).update({ tripId: newTripId });
-        assigned = true;
-        assignedTripId = newTripId;
-    }
-
-    // 3. If still not assigned, all vehicles are full. Send alert.
-    if (!assigned) {
-        console.warn(`All vehicles are full for route ${priceRuleId} on ${intendedDate}.`);
-        await sendOverflowEmail(bookingDetails, "All vehicles for this route and date are full.");
-    }
-
-    // After assignment logic, check for trip confirmation
-    if (assignedTripId) {
-        await checkAndConfirmTrip(db, assignedTripId);
+        // After transaction is successful, check for trip confirmation
+        if (assignedTripId) {
+            const tripRef = db.collection('trips').doc(assignedTripId);
+            const tripDoc = await tripRef.get();
+            if(tripDoc.exists && (tripDoc.data() as Trip).isFull) {
+                await checkAndConfirmTrip(db, assignedTripId);
+            }
+        }
+    } catch (error: any) {
+        console.error(`Transaction failed for booking ${passenger.bookingId}:`, error.message);
+        await sendOverflowEmail(bookingDetails, error.message);
     }
 }
-
 
 async function sendOverflowEmail(bookingDetails: any, reason: string) {
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -237,17 +252,17 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
         await resend.emails.send({
             from: 'TecoTransit Alert <alert@tecotransit.org>',
             to: ['tecotransportservices@gmail.com'],
-            subject: 'Urgent: Vehicle Capacity Exceeded',
+            subject: 'Urgent: Vehicle Capacity Exceeded or Booking Assignment Failed',
             html: `
                 <h1>Vehicle Capacity Alert</h1>
-                <p>A new paid booking could not be automatically assigned to a trip because all vehicles are full.</p>
+                <p>A new booking could not be automatically assigned to a trip.</p>
                 <p><strong>Reason:</strong> ${reason}</p>
                 <h3>Booking Details:</h3>
                 <ul>
                     <li><strong>Route:</strong> ${pickup} to ${destination}</li>
                     <li><strong>Vehicle:</strong> ${vehicleType}</li>
                     <li><strong>Date:</strong> ${intendedDate}</li>
-                    <li><strong>Passenger:</strong> ${name} (${email})</li>
+                    ${name ? `<li><strong>Passenger:</strong> ${name} (${email})</li>` : ''}
                 </ul>
                 <p>Please take immediate action to arrange for more vehicle space or contact the customer.</p>
             `,
@@ -283,7 +298,7 @@ async function checkAndConfirmTrip(
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid' || doc.data().status === 'Pending');
 
     if (bookingsToConfirm.length === 0) return;
 
@@ -296,20 +311,23 @@ async function checkAndConfirmTrip(
 
     for (const doc of bookingsToConfirm) {
         const bookingData = doc.data();
-        try {
-            await sendBookingStatusEmail({
-                name: bookingData.name,
-                email: bookingData.email,
-                status: 'Confirmed',
-                bookingId: doc.id,
-                pickup: bookingData.pickup,
-                destination: bookingData.destination,
-                vehicleType: bookingData.vehicleType,
-                totalFare: bookingData.totalFare,
-                confirmedDate: trip.date,
-            });
-        } catch (e) {
-            console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+        // Don't send email for 'Pending' bookings that get auto-confirmed.
+        if (bookingData.status !== 'Pending') {
+            try {
+                await sendBookingStatusEmail({
+                    name: bookingData.name,
+                    email: bookingData.email,
+                    status: 'Confirmed',
+                    bookingId: doc.id,
+                    pickup: bookingData.pickup,
+                    destination: bookingData.destination,
+                    vehicleType: bookingData.vehicleType,
+                    totalFare: bookingData.totalFare,
+                    confirmedDate: trip.date,
+                });
+            } catch (e) {
+                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
+            }
         }
     }
 }
