@@ -137,36 +137,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Destinations Section */}
-      <section className="py-16 sm:py-24 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline">Explore Our Destinations</h2>
-            <p className="mt-3 text-lg text-muted-foreground">
-              We connect you to key locations with ease and comfort.
-            </p>
-          </div>
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-            {destinations.map((dest) => (
-              <div key={dest.name} className="relative rounded-lg overflow-hidden group aspect-w-4 aspect-h-3 shadow-lg">
-                <Image
-                  src={dest.image.src}
-                  alt={`Image of ${dest.name}`}
-                  fill
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  data-ai-hint={dest.image['data-ai-hint']}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-4 sm:p-6">
-                  <h3 className="text-lg sm:text-xl font-bold text-white">{dest.name}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Final CTA Section */}
       <section className="py-16 sm:py-24">
         <div className="container mx-auto px-4 text-center">
