@@ -1,116 +1,19 @@
-"use client";
-
-import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
 import type { PriceRule, Trip, Passenger } from '@/lib/types';
+import { getTravelList } from '@/lib/data';
 import { format, parseISO } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, User, Phone, Car, Bus, MessageSquare, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useMemo } from 'react';
 
-
-function TravelListSkeleton() {
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <Skeleton className="h-8 w-64 mb-2" />
-                    <Skeleton className="h-5 w-48" />
-                </div>
-                <Skeleton className="h-10 w-24" />
-            </div>
-            {[...Array(2)].map((_, i) => (
-                <Card key={i}>
-                    <CardHeader>
-                        <Skeleton className="h-6 w-40" />
-                        <Skeleton className="h-5 w-52 mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead><Skeleton className="h-5 w-32" /></TableHead>
-                                    <TableHead><Skeleton className="h-5 w-24" /></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {[...Array(3)].map((_, j) => (
-                                    <TableRow key={j}>
-                                        <TableCell><Skeleton className="h-5 w-28" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-    );
-}
-
-
-export default function TravelListPage() {
-    const params = useParams();
-    const priceRuleId = params.id as string;
-
-    const [priceRule, setPriceRule] = useState<PriceRule | null>(null);
-    const [trips, setTrips] = useState<Trip[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!priceRuleId) {
-            setError("Price rule ID is missing.");
-            setLoading(false);
-            return;
-        }
-
-        async function fetchTravelList() {
-            setLoading(true);
-            try {
-                const response = await fetch(`/api/travel-list/${priceRuleId}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to fetch travel list.');
-                }
-                const { priceRule: fetchedRule, trips: fetchedTrips } = await response.json();
-                setPriceRule(fetchedRule);
-                setTrips(fetchedTrips);
-            } catch (e: any) {
-                console.error("Error fetching travel list:", e);
-                setError(e.message || "Could not fetch trips for this route.");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchTravelList();
-
-    }, [priceRuleId]);
-    
-
-    const groupedTripsByDate = useMemo(() => {
-        return trips.reduce((acc, trip) => {
-            const date = trip.date;
-            if (!acc[date]) {
-                acc[date] = [];
-            }
-            acc[date].push(trip);
-            return acc;
-        }, {} as Record<string, Trip[]>);
-    }, [trips]);
-    
-    const VehicleIcon = priceRule?.vehicleType.includes('Bus') ? Bus : Car;
-
-    if (loading) {
-        return <TravelListSkeleton />;
-    }
+// This is now a Server Component
+export default async function TravelListPage({ params }: { params: { id: string } }) {
+    const priceRuleId = params.id;
+    const { priceRule, trips, error } = await getTravelList(priceRuleId);
 
     if (error) {
         return (
@@ -123,6 +26,35 @@ export default function TravelListPage() {
             </div>
         )
     }
+
+    if (!priceRule) {
+         return (
+            <div className="text-center py-10 text-destructive">
+                <div className="flex flex-col items-center gap-2">
+                    <AlertCircle className="h-8 w-8" />
+                    <span className="font-semibold">Not Found</span>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">The requested travel route could not be found.</p>
+                     <Button asChild variant="outline" className="mt-4">
+                        <Link href="/admin/pricing">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to Pricing
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+        )
+    }
+
+    const groupedTripsByDate = trips.reduce((acc, trip) => {
+        const date = trip.date;
+        if (!acc[date]) {
+            acc[date] = [];
+        }
+        acc[date].push(trip);
+        return acc;
+    }, {} as Record<string, Trip[]>);
+    
+    const VehicleIcon = priceRule?.vehicleType.includes('Bus') ? Bus : Car;
 
     return (
         <div className="space-y-8">
