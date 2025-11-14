@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { doc, collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import type { PriceRule, Trip, Passenger } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
 
@@ -66,57 +64,36 @@ export default function TravelListPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch the main price rule for display purposes
     useEffect(() => {
         if (!priceRuleId) {
             setError("Price rule ID is missing.");
-            // Don't set loading to false here, let the trips fetcher handle it
+            setLoading(false);
             return;
         }
 
-        const ruleDocRef = doc(db, 'prices', priceRuleId);
-        const unsubscribe = onSnapshot(ruleDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setPriceRule({ id: docSnap.id, ...docSnap.data() } as PriceRule);
-            } else {
-                setError("Price rule not found.");
+        async function fetchTravelList() {
+            setLoading(true);
+            try {
+                const response = await fetch(`/api/travel-list/${priceRuleId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch travel list.');
+                }
+                const { priceRule: fetchedRule, trips: fetchedTrips } = await response.json();
+                setPriceRule(fetchedRule);
+                setTrips(fetchedTrips);
+            } catch (e: any) {
+                console.error("Error fetching travel list:", e);
+                setError(e.message || "Could not fetch trips for this route.");
+            } finally {
                 setLoading(false);
             }
-        }, (e) => {
-            console.error("Error fetching price rule:", e);
-            setError("Failed to fetch price rule details.");
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [priceRuleId]);
-
-    // Fetch trips related to this price rule ID directly from the URL
-    useEffect(() => {
-        if (!priceRuleId) {
-            setLoading(false);
-            return;
         }
 
-        const tripsQuery = query(
-            collection(db, "trips"),
-            where('priceRuleId', '==', priceRuleId),
-            orderBy('date', 'asc'),
-            orderBy('vehicleIndex', 'asc')
-        );
+        fetchTravelList();
 
-        const unsubscribe = onSnapshot(tripsQuery, (querySnapshot) => {
-            const tripsData = querySnapshot.docs.map(doc => doc.data() as Trip);
-            setTrips(tripsData);
-            setLoading(false);
-        }, (err) => {
-            console.error("Error fetching trips:", err);
-            setError("Could not fetch trips for this route. Your security rules might be misconfigured, or you may need to create a composite index in Firestore. Check the browser console for a link to create the required index.");
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
     }, [priceRuleId]);
+    
 
     const groupedTripsByDate = useMemo(() => {
         return trips.reduce((acc, trip) => {
