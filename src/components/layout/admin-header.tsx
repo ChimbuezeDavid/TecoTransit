@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings, MessageSquare } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings, MessageSquare, Car, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
@@ -23,7 +23,9 @@ export default function AdminHeader() {
   };
 
   const navLinks = [
-    { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { href: "/admin/trips", icon: Car, label: "Trips" },
+    { href: "/admin/bookings", icon: BookOpenCheck, label: "Bookings" },
     { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
     { href: "/admin/feedback", icon: MessageSquare, label: "Feedback" },
     { href: "/admin/settings", icon: Settings, label: "Settings" },
@@ -33,7 +35,7 @@ export default function AdminHeader() {
     <header className="bg-card shadow-sm sticky top-0 z-40">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary">
+          <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg text-primary">
             <Route className="h-6 w-6" />
             <span className="font-headline hidden sm:inline">TecoTransit Admin</span>
           </Link>
@@ -43,7 +45,7 @@ export default function AdminHeader() {
              {navLinks.map(({ href, icon: Icon, label }) => (
                 <Link key={href} href={href} className={cn(
                     "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
-                    pathname === href ? "text-primary" : "text-muted-foreground"
+                    pathname.startsWith(href) ? "text-primary" : "text-muted-foreground"
                     )}>
                     <Icon className="h-4 w-4" />
                     <span>{label}</span>
@@ -73,7 +75,7 @@ export default function AdminHeader() {
                     <div className="flex-grow">
                         <SheetTitle className="sr-only">Admin Menu</SheetTitle>
                         <SheetClose asChild>
-                            <Link href="/admin" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
+                            <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                                 <Route className="h-6 w-6" />
                                 <span className="font-headline">TecoTransit Admin</span>
                             </Link>
@@ -83,7 +85,7 @@ export default function AdminHeader() {
                                 <SheetClose asChild key={href}>
                                     <Link href={href} className={cn(
                                         "flex items-center gap-3 text-base font-medium transition-colors hover:text-primary",
-                                        pathname === href ? "text-primary" : "text-muted-foreground"
+                                        pathname.startsWith(href) ? "text-primary" : "text-muted-foreground"
                                     )}>
                                         <Icon className="h-5 w-5" />
                                         <span>{label}</span>
