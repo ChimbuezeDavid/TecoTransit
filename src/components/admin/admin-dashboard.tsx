@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { reSyncBookings } from "@/app/actions/resync-bookings";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
+import { Label } from "../ui/label";
 
 interface DashboardData {
     trips: Trip[];
