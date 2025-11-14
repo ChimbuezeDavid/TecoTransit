@@ -38,28 +38,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "pickup",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "destination",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "vehicleType",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "bookings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "status",
           "order": "ASCENDING"
         },
