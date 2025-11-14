@@ -1,5 +1,4 @@
 
-
 'use server';
 
 import Paystack from 'paystack';
@@ -86,19 +85,22 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string, allowReschedule: boolean } = JSON.parse(metadata.booking_details);
         
-        const bookingsRef = db.collection('bookings');
-        
-        const newBookingRef = bookingsRef.doc();
+        const newBookingRef = db.collection('bookings').doc();
+        const bookingId = newBookingRef.id;
+
         const newBookingData = {
             ...bookingDetails,
+            id: bookingId, // Add id to the booking object itself
             createdAt: FieldValue.serverTimestamp(),
             status: 'Paid' as const,
             paymentReference: reference,
             totalFare: bookingDetails.totalFare,
         };
-        const bookingId = newBookingRef.id;
         
-        // Send post-booking email
+        // Step 1: Create the 'Paid' booking document.
+        await newBookingRef.set(newBookingData);
+        
+        // Send post-booking email immediately after creation
         try {
             await sendBookingReceivedEmail({
                 name: bookingDetails.name,
@@ -113,16 +115,9 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             console.error(`Failed to send booking received email for booking ${bookingId}:`, e);
             // We don't want to fail the whole process if the email fails, just log it.
         }
-
-        const passenger: Passenger = {
-            bookingId: bookingId,
-            name: bookingDetails.name,
-            phone: bookingDetails.phone,
-        };
         
-        // This is the crucial step: immediately try to assign the new booking to a trip.
-        // We pass the newBookingRef to be set within the transaction.
-        await assignBookingToTrip(newBookingRef, newBookingData, passenger, bookingDetails);
+        // Step 2: Now, attempt to assign this new booking to a trip.
+        await assignBookingToTrip(newBookingData);
 
         return { success: true, bookingId: bookingId };
 
@@ -132,26 +127,16 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
     }
 };
 
-async function assignBookingToTrip(
-    bookingRef: FirebaseFirestore.DocumentReference,
-    bookingData: any,
-    passenger: Passenger,
-    bookingDetails: {
-        pickup: string;
-        destination: string;
-        vehicleType: string;
-        intendedDate: string;
-    }
+export async function assignBookingToTrip(
+    bookingData: Omit<Booking, 'createdAt'> & { createdAt: any }
 ) {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
-        console.error("Database connection not available in assignBookingToTrip");
-        return;
+        throw new Error("Database connection not available in assignBookingToTrip");
     }
 
-    const { pickup, destination, vehicleType, intendedDate } = bookingDetails;
+    const { id: bookingId, name, phone, pickup, destination, vehicleType, intendedDate } = bookingData;
     const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-
     const priceRuleRef = db.doc(`prices/${priceRuleId}`);
     
     try {
@@ -163,6 +148,7 @@ async function assignBookingToTrip(
                 throw new Error(`Price rule ${priceRuleId} not found.`);
             }
             const priceRule = priceRuleSnap.data() as PriceRule;
+            
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
             const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
             
@@ -177,6 +163,8 @@ async function assignBookingToTrip(
             
             const tripsSnapshot = await transaction.get(tripsQuery);
             let assigned = false;
+            
+            const passenger: Passenger = { bookingId, name, phone };
 
             // 1. Try to find a non-full, existing trip
             for (const doc of tripsSnapshot.docs) {
@@ -228,25 +216,19 @@ async function assignBookingToTrip(
                 throw new Error("All vehicles for this route and date are full.");
             }
              
-            // Create the booking and associate it with the trip within the same transaction.
+            // Associate the booking with the trip ID.
             if (assignedTripId) {
-                transaction.set(bookingRef, { ...bookingData, tripId: assignedTripId });
-            } else {
-                 // This case should ideally not happen if the logic is correct, but as a fallback:
-                 transaction.set(bookingRef, bookingData);
+                const bookingRef = db.collection('bookings').doc(bookingId);
+                transaction.update(bookingRef, { tripId: assignedTripId });
             }
         });
         
         // After transaction is successful, check for trip confirmation
         if (assignedTripId) {
-            const tripRef = db.collection('trips').doc(assignedTripId);
-            const tripDoc = await tripRef.get();
-            if(tripDoc.exists && (tripDoc.data() as Trip).isFull) {
-                await checkAndConfirmTrip(db, assignedTripId);
-            }
+            await checkAndConfirmTrip(db, assignedTripId);
         }
     } catch (error: any) {
-        console.error(`Transaction failed for booking ${passenger.bookingId}:`, error.message);
+        console.error(`Transaction failed for booking ${bookingId}:`, error.message);
         // Only send overflow email if the specific error is capacity exceeded
         if (error.message.includes("All vehicles for this route and date are full")) {
              await sendOverflowEmail(bookingData, error.message);
@@ -263,19 +245,20 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
         await resend.emails.send({
             from: 'TecoTransit Alert <alert@tecotransit.org>',
             to: ['tecotransportservices@gmail.com'],
-            subject: 'Urgent: Vehicle Capacity Exceeded or Booking Assignment Failed',
+            subject: 'Urgent: Vehicle Capacity Exceeded, Manual Action Required',
             html: `
                 <h1>Vehicle Capacity Alert</h1>
-                <p>A new booking could not be automatically assigned to a trip.</p>
+                <p>A new booking was created but could not be automatically assigned to a trip.</p>
                 <p><strong>Reason:</strong> ${reason}</p>
                 <h3>Booking Details:</h3>
                 <ul>
+                    <li><strong>Booking ID:</strong> ${bookingDetails.id}</li>
                     <li><strong>Route:</strong> ${pickup} to ${destination}</li>
                     <li><strong>Vehicle:</strong> ${vehicleType}</li>
                     <li><strong>Date:</strong> ${intendedDate}</li>
                     ${name ? `<li><strong>Passenger:</strong> ${name} (${email})</li>` : ''}
                 </ul>
-                <p>Please take immediate action to arrange for more vehicle space or contact the customer.</p>
+                <p>The booking has been created but does not have a tripId. Please take immediate action to arrange for more vehicle space or contact the customer, and manually update the booking record.</p>
             `,
         });
     } catch(e) {
@@ -309,44 +292,35 @@ async function checkAndConfirmTrip(
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-     // Only confirm bookings that are not already cancelled
-    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status !== 'Cancelled');
+     // Only confirm bookings that are not already 'Cancelled' or 'Confirmed'
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => !['Cancelled', 'Confirmed'].includes(doc.data().status));
 
     if (bookingsToConfirm.length === 0) return;
 
     const batch = db.batch();
     bookingsToConfirm.forEach(doc => {
-         // Only update if the status is not already confirmed
-        if (doc.data().status !== 'Confirmed') {
-             batch.update(doc.ref, { status: 'Confirmed', confirmedDate: trip.date });
-        }
+        batch.update(doc.ref, { status: 'Confirmed', confirmedDate: trip.date });
     });
     
     await batch.commit();
 
+    // After committing the batch, send the notification emails
     for (const doc of bookingsToConfirm) {
         const bookingData = doc.data();
-        // Send email only for bookings that were just moved to Confirmed state
-        // and were not already in a terminal state like 'Cancelled'.
-        // We also check its previous state to avoid re-sending emails if it was already confirmed.
-        if (bookingData.status !== 'Confirmed') {
-            try {
-                await sendBookingStatusEmail({
-                    name: bookingData.name,
-                    email: bookingData.email,
-                    status: 'Confirmed',
-                    bookingId: doc.id,
-                    pickup: bookingData.pickup,
-                    destination: bookingData.destination,
-                    vehicleType: bookingData.vehicleType,
-                    totalFare: bookingData.totalFare,
-                    confirmedDate: trip.date,
-                });
-            } catch (e) {
-                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
-            }
+        try {
+            await sendBookingStatusEmail({
+                name: bookingData.name,
+                email: bookingData.email,
+                status: 'Confirmed',
+                bookingId: doc.id,
+                pickup: bookingData.pickup,
+                destination: bookingData.destination,
+                vehicleType: bookingData.vehicleType,
+                totalFare: bookingData.totalFare,
+                confirmedDate: trip.date,
+            });
+        } catch (e) {
+            console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
         }
     }
 }
-
-    

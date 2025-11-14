@@ -9,7 +9,7 @@ import type { Booking, BookingFormData, PriceRule } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
 import { useAuth } from './auth-context';
-import { createBookingAndAssignTrip } from '@/app/actions/create-booking-and-assign-trip';
+import { createPendingBooking } from '@/app/actions/create-booking-and-assign-trip';
 
 
 interface BookingContextType {
@@ -104,11 +104,10 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
  const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
-    // This now calls the server action which handles both booking creation AND trip assignment.
-    const result = await createBookingAndAssignTrip(data);
+    const result = await createPendingBooking(data);
     
     if (!result.success || !result.booking) {
-        throw new Error(result.error || 'Failed to create booking and assign trip.');
+        throw new Error(result.error || 'Failed to create booking.');
     }
 
     return result.booking;
@@ -207,5 +206,3 @@ export const useBooking = () => {
   }
   return context;
 };
-
-    

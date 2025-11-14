@@ -26,6 +26,7 @@ import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
 import { useBooking } from '@/context/booking-context';
 import { useSettings } from '@/context/settings-context';
+import { createPendingBooking } from '@/app/actions/create-booking-and-assign-trip';
 
 
 const bookingSchema = z.object({
@@ -57,7 +58,7 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading, createBooking } = useBooking();
+  const { prices, loading: pricesLoading } = useBooking();
   const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
@@ -162,7 +163,7 @@ export default function BookingForm() {
             }
         } else {
             // Test Mode: Bypass Paystack and create a pending booking
-            await createBooking({ ...formData, totalFare });
+            await createPendingBooking({ ...formData, totalFare });
             setIsConfirmationOpen(true);
             form.reset();
         }
