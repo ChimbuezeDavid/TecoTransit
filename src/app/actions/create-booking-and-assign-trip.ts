@@ -171,6 +171,7 @@ async function assignBookingToTrip(
             if (assignedTripId) {
                 transaction.set(bookingRef, { ...bookingData, tripId: assignedTripId });
             } else {
+                 // This case should ideally not happen if the logic is correct, but as a fallback:
                  transaction.set(bookingRef, bookingData);
             }
         });
@@ -185,7 +186,12 @@ async function assignBookingToTrip(
         }
     } catch (error: any) {
         console.error(`Transaction failed for booking ${passenger.bookingId}:`, error.message);
-        await sendOverflowEmail(bookingDetails, error.message);
+        // Only send overflow email if the specific error is capacity exceeded
+        if (error.message.includes("All vehicles for this route and date are full")) {
+             await sendOverflowEmail(bookingData, error.message);
+        }
+        // Re-throw the error to ensure the calling function knows the transaction failed.
+        throw error;
     }
 }
 
@@ -243,21 +249,27 @@ async function checkAndConfirmTrip(
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid' || doc.data().status === 'Pending');
+    // Only confirm bookings that are not already cancelled
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status !== 'Cancelled');
 
     if (bookingsToConfirm.length === 0) return;
 
     const batch = db.batch();
     bookingsToConfirm.forEach(doc => {
-        batch.update(doc.ref, { status: 'Confirmed', confirmedDate: trip.date });
+        // Only update if the status is not already confirmed
+        if (doc.data().status !== 'Confirmed') {
+             batch.update(doc.ref, { status: 'Confirmed', confirmedDate: trip.date });
+        }
     });
     
     await batch.commit();
 
     for (const doc of bookingsToConfirm) {
         const bookingData = doc.data();
-        // Don't send email for 'Pending' bookings that get auto-confirmed.
-        if (bookingData.status !== 'Pending') {
+        // Send email only for bookings that were just moved to Confirmed state
+        // and were not already in a terminal state like 'Cancelled'.
+        // We also check its previous state to avoid re-sending emails if it was already confirmed.
+        if (bookingData.status !== 'Confirmed') {
             try {
                 await sendBookingStatusEmail({
                     name: bookingData.name,
@@ -276,3 +288,5 @@ async function checkAndConfirmTrip(
         }
     }
 }
+
+    
