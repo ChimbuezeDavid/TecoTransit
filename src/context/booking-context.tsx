@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendBookingStatusEmail } from '@/app/actions/send-email';
 import { useAuth } from './auth-context';
 import { createPendingBooking } from '@/app/actions/create-booking-and-assign-trip';
+import { cleanupTrips } from '@/app/actions/cleanup-trips';
 
 
 interface BookingContextType {
@@ -154,6 +155,8 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   const deleteBooking = useCallback(async (id: string) => {
       const bookingDocRef = doc(db, 'bookings', id);
       await deleteDoc(bookingDocRef);
+      // After deleting, trigger a cleanup of trips.
+      await cleanupTrips([id]);
   }, []);
 
   const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
@@ -169,12 +172,24 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     );
     
     const snapshot = await getDocs(bookingsQuery);
+    if (snapshot.empty) {
+        return 0;
+    }
+    
+    const deletedBookingIds: string[] = [];
     const batch = writeBatch(db);
     snapshot.docs.forEach(doc => {
+      deletedBookingIds.push(doc.id);
       batch.delete(doc.ref);
     });
 
     await batch.commit();
+
+    // Trigger trip cleanup after successful deletion
+    if (deletedBookingIds.length > 0) {
+      await cleanupTrips(deletedBookingIds);
+    }
+    
     return snapshot.size;
   }, []);
   
@@ -210,3 +225,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    

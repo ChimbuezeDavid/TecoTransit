@@ -48,14 +48,16 @@
       ]
     },
     {
-        "collectionGroup": "bookings",
-        "queryScope": "COLLECTION",
-        "fields": [
-            {
-                "fieldPath": "tripId",
-                "order": "ASCENDING"
-            }
-        ]
+      "collectionGroup": "bookings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ]
 }
+
+    

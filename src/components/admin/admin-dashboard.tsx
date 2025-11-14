@@ -2,14 +2,15 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfMonth } from "date-fns";
 import type { Booking, Trip, Passenger } from "@/lib/types";
+import { DateRange } from "react-day-picker";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,8 @@ import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { reSyncBookings } from "@/app/actions/resync-bookings";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
 
 interface DashboardData {
     trips: Trip[];
@@ -105,7 +108,7 @@ const getStatusIcon = (status: Booking['status']) => {
 
 export default function AdminDashboard({ allBookings: initialBookings, loading: allBookingsLoading }: { allBookings: Booking[], loading: boolean }) {
   const { user, loading: authLoading } = useAuth();
-  const { updateBookingStatus, deleteBooking } = useBooking();
+  const { updateBookingStatus, deleteBooking, deleteBookingsInRange } = useBooking();
 
   const [dashboardData, setDashboardData] = useState<DashboardData>({ trips: [], bookings: [] });
   const [loading, setLoading] = useState(true);
@@ -115,12 +118,18 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isResyncing, setIsResyncing] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<Booking['status'] | 'All'>('All');
+  
+  const [deleteDateRange, setDeleteDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: new Date(),
+  });
 
 
   const fetchDashboardData = useCallback(async () => {
@@ -224,6 +233,26 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
     }
   };
   
+  const handleBulkDelete = async () => {
+    if (!deleteDateRange?.from || !deleteDateRange?.to) {
+        toast({ variant: "destructive", title: "Invalid Date Range" });
+        return;
+    }
+    setIsBulkDeleting(true);
+    try {
+        const count = await deleteBookingsInRange(deleteDateRange.from, deleteDateRange.to);
+        toast({
+            title: "Bulk Delete Successful",
+            description: `${count} booking(s) from ${format(deleteDateRange.from, 'PPP')} to ${format(deleteDateRange.to, 'PPP')} have been deleted.`,
+        });
+        fetchDashboardData();
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Bulk Delete Failed", description: e.message });
+    } finally {
+        setIsBulkDeleting(false);
+    }
+  };
+  
   const downloadCSV = () => {
     if (filteredBookings.length === 0) {
         toast({ title: "No data to export" });
@@ -313,10 +342,69 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                 <h1 className="text-3xl font-bold font-headline">Dashboard</h1>
                 <p className="text-muted-foreground">Manage trips, view passenger lists, and oversee all bookings.</p>
             </div>
-            <div className="flex items-center gap-2 self-start sm:self-center">
+             <div className="flex items-center gap-2 self-start sm:self-center">
                 <Button variant="outline" size="icon" onClick={fetchDashboardData} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" ><Trash2 className="h-4 w-4" /></Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Bookings in Date Range</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete all bookings created within the selected date range. This action cannot be undone.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className="grid gap-2 py-4">
+                            <Label>Select Date Range</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                    "justify-start text-left font-normal",
+                                    !deleteDateRange && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {deleteDateRange?.from ? (
+                                    deleteDateRange.to ? (
+                                        <>
+                                        {format(deleteDateRange.from, "LLL dd, y")} -{" "}
+                                        {format(deleteDateRange.to, "LLL dd, y")}
+                                        </>
+                                    ) : (
+                                        format(deleteDateRange.from, "LLL dd, y")
+                                    )
+                                    ) : (
+                                    <span>Pick a date</span>
+                                    )}
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={deleteDateRange?.from}
+                                    selected={deleteDateRange}
+                                    onSelect={setDeleteDateRange}
+                                    numberOfMonths={2}
+                                />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBulkDelete} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>
+                                {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Delete
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
       
