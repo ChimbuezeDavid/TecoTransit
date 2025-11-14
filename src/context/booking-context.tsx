@@ -66,6 +66,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
+    // This function can be kept for other potential uses, but the new dashboard fetches all data via API.
     setLoading(true);
     setError(null);
     
@@ -95,7 +96,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
       setBookings(bookingsData);
       setLoading(false);
     }, (err) => {
-      handleFirestoreError(err, 'fetching dashboard bookings');
+      handleFirestoreError(err, 'fetching bookings');
       setLoading(false);
     });
 
@@ -206,3 +207,5 @@ export const useBooking = () => {
   }
   return context;
 };
+
+    

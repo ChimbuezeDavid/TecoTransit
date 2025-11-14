@@ -291,11 +291,6 @@ export default function PricingManager() {
                             <TableCell>{rule.vehicleCount}</TableCell>
                             <TableCell className="text-right pr-4">
                                 <div className="flex justify-end items-center gap-1">
-                                    <Button asChild variant="ghost" size="icon">
-                                      <Link href={`/admin/travel-list/${rule.id}`}>
-                                          <List className="h-4 w-4" />
-                                      </Link>
-                                    </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleEdit(rule)}><Edit className="h-4 w-4" /></Button>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
@@ -411,5 +406,7 @@ export default function PricingManager() {
     </Dialog>
   );
 }
+
+    
 
     
