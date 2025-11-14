@@ -149,8 +149,13 @@ export async function assignBookingToTrip(
             }
             const priceRule = priceRuleSnap.data() as PriceRule;
             
-            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
-            const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
+            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
+            
+            if (!vehicleKey) {
+                throw new Error(`Vehicle type '${priceRule.vehicleType}' not found in vehicleOptions.`);
+            }
+
+            const capacityPerVehicle = vehicleOptions[vehicleKey].capacity;
             
             if (capacityPerVehicle === 0) {
                 throw new Error(`Vehicle capacity for ${priceRule.vehicleType} is zero.`);
@@ -228,11 +233,13 @@ export async function assignBookingToTrip(
             await checkAndConfirmTrip(db, assignedTripId);
         }
     } catch (error: any) {
-        console.error(`Transaction failed for booking ${bookingId}:`, error.message);
-        // Only send overflow email if the specific error is capacity exceeded
-        if (error.message.includes("All vehicles for this route and date are full")) {
-             await sendOverflowEmail(bookingData, error.message);
-        }
+        console.error(`Transaction failed for booking ${bookingId}:`, error);
+        
+        // Now, we can reliably send an overflow email if the error message contains the specific string
+        // or for any other transaction failure.
+        const reason = error.message || "An unknown error occurred during trip assignment.";
+        await sendOverflowEmail(bookingData, reason);
+
         // Re-throw the error to ensure the calling function knows the transaction failed.
         throw error;
     }
@@ -245,10 +252,10 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
         await resend.emails.send({
             from: 'TecoTransit Alert <alert@tecotransit.org>',
             to: ['tecotransportservices@gmail.com'],
-            subject: 'Urgent: Vehicle Capacity Exceeded, Manual Action Required',
+            subject: 'Urgent: Vehicle Capacity Exceeded or Booking Assignment Failed',
             html: `
                 <h1>Vehicle Capacity Alert</h1>
-                <p>A new booking was created but could not be automatically assigned to a trip.</p>
+                <p>A new booking could not be automatically assigned to a trip.</p>
                 <p><strong>Reason:</strong> ${reason}</p>
                 <h3>Booking Details:</h3>
                 <ul>
@@ -324,3 +331,5 @@ async function checkAndConfirmTrip(
         }
     }
 }
+
+    
