@@ -12,21 +12,28 @@ export async function reSyncBookings() {
     }
 
     try {
-        const bookingsToSyncQuery = db.collection('bookings').where('tripId', '==', null);
-        const snapshot = await bookingsToSyncQuery.get();
+        // Correctly query for documents where the 'tripId' field does NOT exist.
+        // In Firestore, you can't query for `null` values in this way.
+        // A better approach is to get all bookings and filter, but for a moderate scale,
+        // we can try to get all bookings and check for tripId's existence.
+        // A more scalable solution would need an 'isAssigned' boolean field.
+        // For now, let's fetch all and filter in memory as it's safer.
+        const allBookingsSnapshot = await db.collection('bookings').get();
+        
+        const bookingsToSync = allBookingsSnapshot.docs.filter(doc => !doc.data().tripId);
 
-        if (snapshot.empty) {
-            return { successCount: 0, errorCount: 0, message: "No bookings to sync." };
+        if (bookingsToSync.length === 0) {
+            return { successCount: 0, errorCount: 0, message: "No unassigned bookings found to sync." };
         }
 
         let successCount = 0;
         let errorCount = 0;
 
-        const assignmentPromises = snapshot.docs.map(async (doc) => {
+        const assignmentPromises = bookingsToSync.map(async (doc) => {
             const bookingData = { id: doc.id, ...doc.data() } as Omit<Booking, 'createdAt'> & { createdAt: FirebaseFirestore.Timestamp };
-
-             // Convert Timestamp to a format assignBookingToTrip can handle if needed,
-            // but our function is robust enough. We just need to satisfy the type.
+            
+            // The assignBookingToTrip function is robust enough to handle the data as-is
+            // We just need to ensure the types are satisfied.
             const bookingForAssignment = {
                 ...bookingData,
                  createdAt: bookingData.createdAt.toMillis()
