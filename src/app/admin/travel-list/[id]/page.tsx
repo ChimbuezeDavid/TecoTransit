@@ -1,20 +1,58 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
 import type { PriceRule, Trip, Passenger } from '@/lib/types';
-import { getTravelList } from '@/lib/data';
 import { format, parseISO } from 'date-fns';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, User, Phone, Car, Bus, MessageSquare, Users } from 'lucide-react';
+import { AlertCircle, User, Phone, Car, Bus, MessageSquare, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo } from 'react';
 
-// This is now a Server Component
-export default async function TravelListPage({ params }: { params: { id: string } }) {
+// This is now a Client Component that fetches data from our API route.
+export default function TravelListPage({ params }: { params: { id: string } }) {
     const priceRuleId = params.id;
-    const { priceRule, trips, error } = await getTravelList(priceRuleId);
+    const [data, setData] = useState<{ priceRule: PriceRule | null; trips: Trip[] }>({ priceRule: null, trips: [] });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
+    useEffect(() => {
+        if (!priceRuleId) {
+            setError("Price rule ID is missing.");
+            setLoading(false);
+            return;
+        }
+
+        const fetchTravelList = async () => {
+            try {
+                const response = await fetch(`/api/travel-list/${priceRuleId}`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch travel list');
+                }
+                const result = await response.json();
+                setData(result);
+            } catch (e: any) {
+                setError(e.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTravelList();
+    }, [priceRuleId]);
+
+    if (loading) {
+         return (
+            <div className="flex items-center justify-center h-[50vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
     if (error) {
         return (
             <div className="text-center py-10 text-destructive">
@@ -22,12 +60,18 @@ export default async function TravelListPage({ params }: { params: { id: string 
                     <AlertCircle className="h-8 w-8" />
                     <span className="font-semibold">An Error Occurred</span>
                     <p className="text-sm text-muted-foreground max-w-md mx-auto">{error}</p>
+                     <Button asChild variant="outline" className="mt-4">
+                        <Link href="/admin/pricing">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back to Pricing
+                        </Link>
+                    </Button>
                 </div>
             </div>
-        )
+        );
     }
 
-    if (!priceRule) {
+    if (!data.priceRule) {
          return (
             <div className="text-center py-10 text-destructive">
                 <div className="flex flex-col items-center gap-2">
@@ -42,8 +86,10 @@ export default async function TravelListPage({ params }: { params: { id: string 
                     </Button>
                 </div>
             </div>
-        )
+        );
     }
+    
+    const { priceRule, trips } = data;
 
     const groupedTripsByDate = trips.reduce((acc, trip) => {
         const date = trip.date;

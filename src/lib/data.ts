@@ -1,5 +1,4 @@
 
-import 'server-only';
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { PriceRule, Trip } from '@/lib/types';
 
