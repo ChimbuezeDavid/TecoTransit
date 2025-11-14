@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, MessageSquare, Ticket, Users, Ban, HandCoins, CircleDot, Check, History, Search, GitSync } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, MessageSquare, Ticket, Users, Ban, HandCoins, CircleDot, Check, History, Search } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -413,7 +413,7 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                             </div>
                              <div className="flex gap-2">
                                 <Button variant="outline" size="sm" onClick={handleResync} disabled={isResyncing}>
-                                    {isResyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GitSync className="mr-2 h-4 w-4"/>}
+                                    {isResyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
                                     Re-Sync Bookings
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export Filtered</Button>
@@ -627,3 +627,5 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
     </div>
   );
 }
+
+    
