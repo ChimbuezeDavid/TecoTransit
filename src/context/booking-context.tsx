@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
@@ -66,7 +65,12 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
-    // This function can be kept for other potential uses, but the new dashboard fetches all data via API.
+    if (!user) {
+        setBookings([]);
+        setLoading(false);
+        return () => {};
+    };
+
     setLoading(true);
     setError(null);
     
@@ -101,7 +105,7 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return unsubscribe;
-  }, []);
+  }, [user]);
 
  const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
     const result = await createPendingBooking(data);

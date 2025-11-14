@@ -46,6 +46,16 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+        "collectionGroup": "bookings",
+        "queryScope": "COLLECTION",
+        "fields": [
+            {
+                "fieldPath": "tripId",
+                "order": "ASCENDING"
+            }
+        ]
     }
   ]
 }

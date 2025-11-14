@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, MessageSquare, Ticket, Users, Ban, HandCoins, CircleDot, Check, History, Search } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, MessageSquare, Ticket, Users, Ban, HandCoins, CircleDot, Check, History, Search, GitSync } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ import { useAuth } from "@/context/auth-context";
 import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { reSyncBookings } from "@/app/actions/resync-bookings";
 
 interface DashboardData {
     trips: Trip[];
@@ -114,6 +115,7 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResyncing, setIsResyncing] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
@@ -145,6 +147,28 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
         fetchDashboardData();
     }
   }, [user, fetchDashboardData]);
+
+  const handleResync = async () => {
+    setIsResyncing(true);
+    toast({ title: "Re-sync Started", description: "Processing all unassigned bookings..." });
+    try {
+        const result = await reSyncBookings();
+        toast({
+            title: "Re-sync Complete",
+            description: `${result.successCount} bookings successfully assigned. ${result.errorCount} failed.`,
+        });
+        fetchDashboardData();
+    } catch (e: any) {
+         toast({
+            variant: "destructive",
+            title: "Re-sync Failed",
+            description: e.message || "An unknown error occurred during re-sync.",
+        });
+    } finally {
+        setIsResyncing(false);
+    }
+  };
+
 
   const openDialog = (bookingId: string) => {
     const booking = dashboardData.bookings.find(b => b.id === bookingId);
@@ -309,7 +333,7 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                         <p className="mt-1 text-sm text-muted-foreground">As soon as bookings are made, trips will be automatically created here.</p>
                     </Card>
                 ) : (
-                    Object.entries(groupedTripsByDate).map(([date, tripsForDate]) => (
+                    Object.entries(groupedTripsByDate).sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime()).map(([date, tripsForDate]) => (
                         <div key={date} className="mb-8">
                             <h2 className="text-xl font-semibold mb-4 pl-1">{format(parseISO(date), 'EEEE, MMMM dd, yyyy')}</h2>
                             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -385,9 +409,15 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                             <div>
                                 <CardTitle>All Bookings</CardTitle>
-                                <CardDescription>Search and manage all customer bookings.</CardDescription>
+                                <CardDescription>Search and manage all customer bookings. Use Re-Sync to assign existing bookings to trips.</CardDescription>
                             </div>
-                            <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export Filtered</Button>
+                             <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={handleResync} disabled={isResyncing}>
+                                    {isResyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GitSync className="mr-2 h-4 w-4"/>}
+                                    Re-Sync Bookings
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export Filtered</Button>
+                             </div>
                         </div>
                         <div className="mt-4 flex flex-col sm:flex-row items-center gap-2">
                             <div className="relative w-full sm:max-w-xs">
