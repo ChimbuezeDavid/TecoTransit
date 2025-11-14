@@ -22,6 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "../ui/button";
 import { useBooking } from "@/context/booking-context";
+import { useAuth } from "@/context/auth-context";
 
 interface DashboardData {
     trips: Trip[];
@@ -494,5 +495,7 @@ export default function AdminDashboard({ allBookings, loading: allBookingsLoadin
     </div>
   );
 }
+
+    
 
     
