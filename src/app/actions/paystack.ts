@@ -147,7 +147,7 @@ export async function assignBookingToTrip(
             if (!priceRuleSnap.exists) {
                 throw new Error(`Price rule ${priceRuleId} not found.`);
             }
-            const priceRule = priceRuleSnap.data() as PriceRule;
+            const priceRule = { id: priceRuleSnap.id, ...priceRuleSnap.data() } as PriceRule;
             
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
             
