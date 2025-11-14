@@ -439,7 +439,7 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                                                         <Users className="h-4 w-4" />
                                                     </Button>
                                                 </div>
-                                                 <CardDescription className="flex items-center gap-4 mt-2">
+                                                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                                                     <div className="flex items-center gap-2">
                                                         <VehicleIcon className="h-4 w-4" />
                                                         <span>{trip.vehicleType} (Car {trip.vehicleIndex})</span>
@@ -448,7 +448,7 @@ export default function AdminDashboard({ allBookings: initialBookings, loading: 
                                                         <Users className="h-4 w-4" />
                                                         <span>{trip.passengers.length} / {trip.capacity}</span>
                                                     </div>
-                                                </CardDescription>
+                                                </div>
                                             </div>
                                         </CollapsibleTrigger>
                                         <CollapsibleContent>
