@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
@@ -7,7 +8,6 @@ import { BookingProvider } from '@/context/booking-context';
 import { SettingsProvider } from '@/context/settings-context';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { PT_Sans, Playfair_Display } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
