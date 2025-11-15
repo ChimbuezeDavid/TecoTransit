@@ -112,12 +112,12 @@ interface SendRefundRequestEmailProps {
 
 export const sendRefundRequestEmail = async (props: SendRefundRequestEmailProps) => {
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const refundEmail = 'refunds@tecotransit.org';
+  const refundEmail = 'tecotransportservices@gmail.com';
 
   try {
     const { data, error } = await resend.emails.send({
         from: 'TecoTransit Alert <alert@tecotransit.org>',
-        to: ['tecotransportservices@gmail.com', refundEmail], // Send to admin and dedicated refund address
+        to: [refundEmail], // Send to dedicated refund address
         subject: `New Refund Request for Booking: ${props.bookingId.substring(0,8)}`,
         html: `
             <h1>Refund Request Initiated</h1>
