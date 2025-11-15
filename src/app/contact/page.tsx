@@ -1,14 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle, RefreshCcw } from "lucide-react";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 import Link from "next/link";
-import { bankAccountDetails, customerService } from "@/lib/constants";
-
-const contactOptions = [
-    { name: 'Tolu', link: 'https://wa.me/qr/VNXLPTJVCSHQF1' },
-    { name: 'Esther', link: 'https://wa.me/message/OD5WZAO2CUCIF1' },
-    { name: 'Abraham', link: 'https://wa.me/+2348104050628' },
-];
+import { customerService } from "@/lib/constants";
 
 export default function ContactPage() {
   return (
@@ -26,21 +20,26 @@ export default function ContactPage() {
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Chat with Us on WhatsApp</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {contactOptions.map(contact => (
-                            <Button asChild key={contact.name} className="w-full" size="lg" variant="outline">
-                                <Link href={contact.link} target="_blank">
-                                    <MessageCircle className="mr-2 h-5 w-5" />
-                                    Chat with {contact.name}
-                                </Link>
-                            </Button>
-                        ))}
+                    <h3 className="font-semibold text-lg">Get Immediate Help</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                         <Button asChild className="w-full" size="lg">
+                            <Link href={`https://wa.me/${customerService.phone}`} target="_blank">
+                                <MessageCircle className="mr-2 h-5 w-5" />
+                                Chat on WhatsApp
+                            </Link>
+                        </Button>
+                         <Button asChild className="w-full" size="lg" variant="outline">
+                            <Link href={`tel:${customerService.phone}`} target="_blank">
+                                <Phone className="mr-2 h-5 w-5" />
+                                Call Us
+                            </Link>
+                        </Button>
                     </div>
                 </div>
 
-                 <div className="space-y-4">
+                 <div className="space-y-4 pt-4 border-t">
                     <h3 className="font-semibold text-lg">Send Us an Email</h3>
+                     <p className="text-sm text-muted-foreground">For less urgent matters or detailed inquiries, you can send us an email. We typically respond within 24 hours.</p>
                      <Button asChild key="email" className="w-full sm:w-auto" size="lg" variant="outline">
                         <Link href={`mailto:${customerService.email}`} target="_blank">
                             <Mail className="mr-2 h-5 w-5" />
@@ -49,16 +48,6 @@ export default function ContactPage() {
                     </Button>
                 </div>
                 
-                <div className="space-y-4 pt-4 border-t">
-                    <h3 className="font-semibold text-lg">Cancellations & Refunds</h3>
-                     <p className="text-sm text-muted-foreground">For refund requests, please cancel your booking first from your confirmation email, then contact us via WhatsApp for the quickest resolution.</p>
-                     <Button asChild className="w-full sm:w-auto" size="lg">
-                        <Link href={contactOptions[0].link} target="_blank">
-                            <RefreshCcw className="mr-2 h-5 w-5" />
-                            Request a Refund via WhatsApp
-                        </Link>
-                    </Button>
-                </div>
             </CardContent>
         </Card>
       </div>
