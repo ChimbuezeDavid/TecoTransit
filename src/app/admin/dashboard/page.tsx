@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Booking, Trip } from "@/lib/types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
