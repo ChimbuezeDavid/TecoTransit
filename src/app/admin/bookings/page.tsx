@@ -19,7 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { reSyncBookings } from "@/app/actions/resync-bookings";
 import { rescheduleUnderfilledTrips } from "@/app/actions/reschedule-bookings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -102,7 +101,6 @@ export default function AdminBookingsPage() {
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [isResyncing, setIsResyncing] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
@@ -134,27 +132,6 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookingsData();
   }, [fetchBookingsData]);
-
-  const handleResync = async () => {
-    setIsResyncing(true);
-    toast({ title: "Re-sync Started", description: "Processing all unassigned bookings..." });
-    try {
-        const result = await reSyncBookings();
-        toast({
-            title: "Re-sync Complete",
-            description: `${result.successCount} bookings successfully assigned. ${result.errorCount} failed.`,
-        });
-        fetchBookingsData();
-    } catch (e: any) {
-         toast({
-            variant: "destructive",
-            title: "Re-sync Failed",
-            description: e.message || "An unknown error occurred during re-sync.",
-        });
-    } finally {
-        setIsResyncing(false);
-    }
-  };
   
   const handleReschedule = async () => {
     setIsRescheduling(true);
@@ -435,14 +412,10 @@ export default function AdminBookingsPage() {
                         <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full sm:w-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
                         <Button variant="outline" className="w-full" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
                             {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
                             Reschedule
-                        </Button>
-                        <Button variant="outline" className="w-full" size="sm" onClick={handleResync} disabled={isResyncing}>
-                            {isResyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
-                            Re-Sync
                         </Button>
                         <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export</Button>
                     </div>
@@ -668,4 +641,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-

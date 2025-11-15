@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
@@ -42,58 +43,65 @@ export async function rescheduleUnderfilledTrips() {
             for (const passenger of trip.passengers) {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
                 
-                // Use a transaction to ensure atomicity
-                await db.runTransaction(async (transaction) => {
-                    const bookingDoc = await transaction.get(bookingRef);
-                    if (!bookingDoc.exists) {
-                        throw new Error(`Booking ${passenger.bookingId} not found.`);
-                    }
-                    const bookingData = bookingDoc.data() as Booking;
+                try {
+                    // Use a transaction to ensure atomicity
+                    const updatedBookingForAssignment = await db.runTransaction(async (transaction) => {
+                        const bookingDoc = await transaction.get(bookingRef);
+                        if (!bookingDoc.exists) {
+                            throw new Error(`Booking ${passenger.bookingId} not found.`);
+                        }
+                        const bookingData = bookingDoc.data() as Booking;
 
-                    // 1. Update the booking's intended date
-                    transaction.update(bookingRef, { 
-                        intendedDate: newDate,
-                        // Clear the old tripId so assignBookingToTrip can work correctly
-                        tripId: null 
+                        // Don't reschedule if user opted out
+                        if (!bookingData.allowReschedule) {
+                            // Returning null will skip this passenger
+                            return null;
+                        }
+
+                        // 1. Update the booking's intended date and clear old tripId
+                        transaction.update(bookingRef, { 
+                            intendedDate: newDate,
+                            tripId: FieldValue.delete() // Use FieldValue.delete() to remove the field
+                        });
+
+                        // 2. Return the data needed for the next step.
+                        // We must reconstruct the object with the new date for the assignment function.
+                        return {
+                            ...bookingData,
+                            id: bookingDoc.id,
+                            intendedDate: newDate,
+                            tripId: undefined, // ensure it's not present for assignBookingToTrip
+                            createdAt: (bookingData.createdAt as any).toMillis(), // Convert timestamp if needed
+                        };
                     });
 
-                    // We need to pass the full booking data to assignBookingToTrip
-                    // This data includes the modification we just made in the transaction
-                    const updatedBookingForAssignment = {
-                        ...bookingData,
-                        id: bookingDoc.id,
-                        intendedDate: newDate,
-                        tripId: undefined, // ensure it's not present
-                        createdAt: (bookingData.createdAt as any).toMillis(), // Convert timestamp if needed
-                    };
-                    
-                    // The actual re-assignment logic will be handled here after the transaction commits.
-                    return updatedBookingForAssignment;
-                }).then(async (updatedBookingForAssignment) => {
-                     try {
-                        // 2. Re-assign to a new trip for the new date
-                        await assignBookingToTrip(updatedBookingForAssignment);
-                        
-                        // 3. Send notification email
-                        await sendBookingRescheduledEmail({
-                            name: updatedBookingForAssignment.name,
-                            email: updatedBookingForAssignment.email,
-                            bookingId: updatedBookingForAssignment.id,
-                            oldDate: yesterdayStr,
-                            newDate: newDate,
-                        });
-                        rescheduledCount++;
-                    } catch (assignmentError: any) {
-                        errorCount++;
-                        errors.push(`Failed to re-assign booking ${passenger.bookingId}: ${assignmentError.message}`);
-                        console.error(`Failed to re-assign booking ${passenger.bookingId}:`, assignmentError);
-                        // Optionally, revert intendedDate change or flag for manual review
+                    // If the transaction returned null (e.g., user opted out), skip to next passenger
+                    if (!updatedBookingForAssignment) {
+                        continue;
                     }
-                }).catch((transactionError: any) => {
+                    
+                    // 3. Re-assign to a new trip for the new date
+                    await assignBookingToTrip(updatedBookingForAssignment);
+                    
+                    // 4. Send notification email
+                    await sendBookingRescheduledEmail({
+                        name: updatedBookingForAssignment.name,
+                        email: updatedBookingForAssignment.email,
+                        bookingId: updatedBookingForAssignment.id,
+                        oldDate: yesterdayStr,
+                        newDate: newDate,
+                    });
+
+                    rescheduledCount++;
+
+                } catch (e: any) {
                     errorCount++;
-                    errors.push(`Transaction failed for booking ${passenger.bookingId}: ${transactionError.message}`);
-                    console.error(`Transaction failed for booking ${passenger.bookingId}:`, transactionError);
-                });
+                    const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
+                    errors.push(errorMessage);
+                    console.error(errorMessage, e);
+                    // The transaction will have rolled back, so the booking is safe.
+                    // An overflow/error email would have been sent by assignBookingToTrip if that's where it failed.
+                }
             }
         }
         

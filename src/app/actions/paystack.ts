@@ -127,6 +127,13 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
     }
 };
 
+/**
+ * Assigns a booking to an available trip. This is the core logic for trip assignment.
+ * It will try to find an existing trip with space, or create a new one if possible.
+ * If no space is available, it sends an alert email to the admin.
+ * This function is designed to be run within a transaction for data consistency.
+ * @param bookingData - The full booking object.
+ */
 export async function assignBookingToTrip(
     bookingData: Omit<Booking, 'createdAt'> & { createdAt: any }
 ) {
@@ -260,10 +267,10 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
                 <h3>Booking Details:</h3>
                 <ul>
                     <li><strong>Booking ID:</strong> ${bookingDetails.id}</li>
+                    <li><strong>Passenger:</strong> ${name} (${email})</li>
                     <li><strong>Route:</strong> ${pickup} to ${destination}</li>
                     <li><strong>Vehicle:</strong> ${vehicleType}</li>
                     <li><strong>Date:</strong> ${intendedDate}</li>
-                    ${name ? `<li><strong>Passenger:</strong> ${name} (${email})</li>` : ''}
                 </ul>
                 <p>The booking has been created but does not have a tripId. Please take immediate action to arrange for more vehicle space or contact the customer, and manually update the booking record.</p>
             `,
@@ -331,9 +338,3 @@ async function checkAndConfirmTrip(
         }
     }
 }
-
-    
-
-    
-
-    

@@ -22,6 +22,7 @@ export const createPendingBooking = async (data: Omit<BookingFormData, 'privacyP
     const newBookingRef = db.collection('bookings').doc();
     const bookingId = newBookingRef.id;
 
+    // This is now a more complete Booking object from the start
     const firestoreBooking = {
         ...data,
         id: bookingId,
@@ -46,17 +47,21 @@ export const createPendingBooking = async (data: Omit<BookingFormData, 'privacyP
             return { success: false, error: 'Failed to retrieve created booking.' };
         }
 
+        // Convert Firestore Timestamp to millis for client-side compatibility
+        const finalBooking = {
+            ...createdBookingData,
+            createdAt: (createdBookingData.createdAt as FirebaseFirestore.Timestamp).toMillis(),
+        } as Booking;
+
         return { 
             success: true, 
-            booking: {
-                ...createdBookingData,
-                createdAt: (createdBookingData.createdAt as FirebaseFirestore.Timestamp).toMillis(),
-            } as Booking
+            booking: finalBooking
         };
 
     } catch (error: any) {
         console.error("Error in createPendingBooking:", error);
-        // If trip assignment fails, the booking will still exist as 'Pending' and can be handled manually.
+        // The booking will still exist as 'Pending' and an overflow email will have been sent
+        // by `assignBookingToTrip` if that was the cause of the failure.
         return { success: false, error: error.message || 'An unknown error occurred while creating booking.' };
     }
 };
