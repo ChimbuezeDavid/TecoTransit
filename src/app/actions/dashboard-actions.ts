@@ -1,14 +1,13 @@
+'use server';
 
-import { NextResponse } from 'next/server';
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Booking, Trip } from '@/lib/types';
-import { startOfToday } from 'date-fns';
-import { format } from 'date-fns';
+import { startOfToday, format } from 'date-fns';
 
-export async function GET(request: Request) {
+export async function getDashboardSummary() {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
-        return NextResponse.json({ error: 'Database connection failed.' }, { status: 500 });
+        return { stats: null, recentActivity: null, error: 'Database connection failed.' };
     }
 
     try {
@@ -62,12 +61,10 @@ export async function GET(request: Request) {
             bookings: recentBookings,
         };
         
-        return NextResponse.json({ stats, recentActivity });
+        return { stats, recentActivity, error: null };
 
     } catch (error: any) {
         console.error("API Error fetching dashboard summary:", error);
-        return NextResponse.json({ error: 'An internal server error occurred while fetching dashboard summary.' }, { status: 500 });
+        return { stats: null, recentActivity: null, error: 'An internal server error occurred while fetching dashboard summary.' };
     }
 }
-
-    

@@ -154,12 +154,12 @@ export async function assignBookingToTrip(
 
     const { id: bookingId, name, phone, pickup, destination, vehicleType, intendedDate } = bookingData;
     const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-    const priceRuleRef = db.doc(`prices/${priceRuleId}`);
     
     try {
         let assignedTripId: string | null = null;
         
         await db.runTransaction(async (transaction) => {
+            const priceRuleRef = db.doc(`prices/${priceRuleId}`);
             const priceRuleSnap = await transaction.get(priceRuleRef);
             if (!priceRuleSnap.exists) {
                 throw new Error(`Price rule ${priceRuleId} not found.`);
