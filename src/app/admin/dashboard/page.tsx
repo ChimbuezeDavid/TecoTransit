@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Booking, Trip } from "@/lib/types";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, ArrowRight, BookOpenCheck, Car, ListOrdered, Loader2, RefreshCw, Users } from "lucide-react";
 import Link from "next/link";
 import { getStatusVariant } from "@/lib/utils";
+import { getDashboardSummary } from "@/app/actions/dashboard-actions";
+
 
 interface DashboardStats {
   upcomingTrips: number;
@@ -104,14 +106,12 @@ export default function AdminDashboardPage() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/dashboard');
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to fetch dashboard data.');
+            const { stats, recentActivity, error } = await getDashboardSummary();
+            if (error) {
+                throw new Error(error);
             }
-            const data: { stats: DashboardStats; recentActivity: RecentActivity } = await response.json();
-            setStats(data.stats);
-            setRecentActivity(data.recentActivity);
+            setStats(stats);
+            setRecentActivity(recentActivity);
         } catch (e: any) {
             setError(e.message);
             toast({ variant: "destructive", title: "Error", description: e.message });
