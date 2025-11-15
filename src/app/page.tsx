@@ -105,9 +105,39 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Our Destinations Section */}
+      <section className="py-16 sm:py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold font-headline">Our Destinations</h2>
+            <p className="mt-3 text-lg text-muted-foreground">
+              We offer comfortable rides to several key locations.
+            </p>
+          </div>
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+            {destinations.map((destination) => (
+              <Link key={destination.name} href="/book" className="group relative block aspect-[4/3] overflow-hidden rounded-lg">
+                <Image
+                  src={destination.image.src}
+                  alt={`A scene from ${destination.name}`}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  data-ai-hint={destination.image['data-ai-hint']}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-4">
+                  <h3 className="font-semibold text-white text-lg">{destination.name}</h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
       
       {/* How It Works Section */}
-       <section className="py-16 sm:py-24">
+       <section className="py-16 sm:py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Your Journey in 3 Easy Steps</h2>
@@ -124,7 +154,7 @@ export default function LandingPage() {
                    </svg>
                 </div>
                  {howItWorks.map((step, index) => (
-                  <div key={step.title} className="flex flex-col items-center relative bg-background px-4">
+                  <div key={step.title} className="flex flex-col items-center relative bg-muted/30 px-4">
                       <div className="flex items-center justify-center h-24 w-24 rounded-full bg-primary/10 mb-6 border-2 border-primary">
                           {step.icon}
                       </div>
