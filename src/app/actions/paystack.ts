@@ -2,7 +2,7 @@
 'use server';
 
 import Paystack from 'paystack';
-import type { Booking, BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
+import type { Booking, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
@@ -83,18 +83,17 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error('Booking metadata is missing from transaction.');
         }
         
-        const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string, allowReschedule: boolean } = JSON.parse(metadata.booking_details);
+        const bookingDetails: Omit<Booking, 'id' | 'createdAt' | 'status' | 'paymentReference'> = JSON.parse(metadata.booking_details);
         
         const newBookingRef = db.collection('bookings').doc();
         const bookingId = newBookingRef.id;
 
         const newBookingData = {
             ...bookingDetails,
-            id: bookingId, // Add id to the booking object itself
+            id: bookingId, 
             createdAt: FieldValue.serverTimestamp(),
             status: 'Paid' as const,
             paymentReference: reference,
-            totalFare: bookingDetails.totalFare,
         };
         
         // Step 1: Create the 'Paid' booking document.

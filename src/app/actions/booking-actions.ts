@@ -101,3 +101,5 @@ export async function deleteBookingsInRange(startDate: Date, endDate: Date): Pro
     
     return snapshot.size;
 }
+
+export { rescheduleUnderfilledTrips } from './reschedule-bookings';

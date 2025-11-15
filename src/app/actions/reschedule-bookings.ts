@@ -6,6 +6,7 @@ import { format, subDays, startOfDay, parseISO } from 'date-fns';
 import { assignBookingToTrip } from "./paystack";
 import type { Booking, Trip } from "@/lib/types";
 import { sendBookingRescheduledEmail } from "./send-email";
+import { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Finds all trips from the previous day that were not full and attempts to reschedule
@@ -39,8 +40,9 @@ export async function rescheduleUnderfilledTrips() {
 
         for (const tripDoc of snapshot.docs) {
             const trip = tripDoc.data() as Trip;
+            const originalPassengers = [...trip.passengers]; // Create a copy to iterate over
 
-            for (const passenger of trip.passengers) {
+            for (const passenger of originalPassengers) {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
                 
                 try {
@@ -63,8 +65,14 @@ export async function rescheduleUnderfilledTrips() {
                             intendedDate: newDate,
                             tripId: FieldValue.delete() // Use FieldValue.delete() to remove the field
                         });
+                        
+                        // 2. Remove passenger from the old trip
+                        const oldTripRef = db.collection('trips').doc(trip.id);
+                        transaction.update(oldTripRef, {
+                            passengers: FieldValue.arrayRemove(passenger)
+                        });
 
-                        // 2. Return the data needed for the next step.
+                        // 3. Return the data needed for the next step.
                         // We must reconstruct the object with the new date for the assignment function.
                         return {
                             ...bookingData,
@@ -80,10 +88,10 @@ export async function rescheduleUnderfilledTrips() {
                         continue;
                     }
                     
-                    // 3. Re-assign to a new trip for the new date
+                    // 4. Re-assign to a new trip for the new date
                     await assignBookingToTrip(updatedBookingForAssignment);
                     
-                    // 4. Send notification email
+                    // 5. Send notification email
                     await sendBookingRescheduledEmail({
                         name: updatedBookingForAssignment.name,
                         email: updatedBookingForAssignment.email,
@@ -99,7 +107,7 @@ export async function rescheduleUnderfilledTrips() {
                     const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
                     errors.push(errorMessage);
                     console.error(errorMessage, e);
-                    // The transaction will have rolled back, so the booking is safe.
+                    // The transaction will have rolled back, so the booking and old trip are safe.
                     // An overflow/error email would have been sent by assignBookingToTrip if that's where it failed.
                 }
             }
