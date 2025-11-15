@@ -1,11 +1,10 @@
 
-
 'use server';
 
 import Paystack from 'paystack';
-import type { BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
+import type { Booking, BookingFormData, Passenger, PriceRule, Trip } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { FieldValue, FieldPath, Transaction } from 'firebase-admin/firestore';
+import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { vehicleOptions } from '@/lib/constants';
 import { sendBookingStatusEmail, sendBookingReceivedEmail } from './send-email';
 import { Resend } from 'resend';
@@ -86,21 +85,22 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         
         const bookingDetails: Omit<BookingFormData, 'intendedDate' | 'privacyPolicy'> & { intendedDate: string, totalFare: number, name: string, phone: string, allowReschedule: boolean } = JSON.parse(metadata.booking_details);
         
-        const bookingsRef = db.collection('bookings');
-        
-        const newBookingRef = bookingsRef.doc();
+        const newBookingRef = db.collection('bookings').doc();
+        const bookingId = newBookingRef.id;
+
         const newBookingData = {
             ...bookingDetails,
+            id: bookingId, // Add id to the booking object itself
             createdAt: FieldValue.serverTimestamp(),
             status: 'Paid' as const,
             paymentReference: reference,
             totalFare: bookingDetails.totalFare,
         };
-
-        await newBookingRef.set(newBookingData);
-        const bookingId = newBookingRef.id;
         
-        // Send post-booking email
+        // Step 1: Create the 'Paid' booking document.
+        await newBookingRef.set(newBookingData);
+        
+        // Send post-booking email immediately after creation
         try {
             await sendBookingReceivedEmail({
                 name: bookingDetails.name,
@@ -115,14 +115,9 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             console.error(`Failed to send booking received email for booking ${bookingId}:`, e);
             // We don't want to fail the whole process if the email fails, just log it.
         }
-
-        const passenger: Passenger = {
-            bookingId: bookingId,
-            name: bookingDetails.name,
-            phone: bookingDetails.phone,
-        };
-
-        await assignBookingToTrip(passenger, bookingDetails);
+        
+        // Step 2: Now, attempt to assign this new booking to a trip.
+        await assignBookingToTrip(newBookingData);
 
         return { success: true, bookingId: bookingId };
 
@@ -132,24 +127,16 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
     }
 };
 
-async function assignBookingToTrip(
-    passenger: Passenger,
-    bookingDetails: {
-        pickup: string;
-        destination: string;
-        vehicleType: string;
-        intendedDate: string;
-    }
+export async function assignBookingToTrip(
+    bookingData: Omit<Booking, 'createdAt'> & { createdAt: any }
 ) {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
-        console.error("Database connection not available in assignBookingToTrip");
-        return;
+        throw new Error("Database connection not available in assignBookingToTrip");
     }
 
-    const { pickup, destination, vehicleType, intendedDate } = bookingDetails;
+    const { id: bookingId, name, phone, pickup, destination, vehicleType, intendedDate } = bookingData;
     const priceRuleId = `${pickup}_${destination}_${vehicleType}`.toLowerCase().replace(/\s+/g, '-');
-
     const priceRuleRef = db.doc(`prices/${priceRuleId}`);
     
     try {
@@ -160,9 +147,15 @@ async function assignBookingToTrip(
             if (!priceRuleSnap.exists) {
                 throw new Error(`Price rule ${priceRuleId} not found.`);
             }
-            const priceRule = priceRuleSnap.data() as PriceRule;
-            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType);
-            const capacityPerVehicle = vehicleKey ? vehicleOptions[key as keyof typeof vehicleOptions].capacity : 0;
+            const priceRule = { id: priceRuleSnap.id, ...priceRuleSnap.data() } as PriceRule;
+            
+            const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
+            
+            if (!vehicleKey) {
+                throw new Error(`Vehicle type '${priceRule.vehicleType}' not found in vehicleOptions.`);
+            }
+
+            const capacityPerVehicle = vehicleOptions[vehicleKey].capacity;
             
             if (capacityPerVehicle === 0) {
                 throw new Error(`Vehicle capacity for ${priceRule.vehicleType} is zero.`);
@@ -175,6 +168,8 @@ async function assignBookingToTrip(
             
             const tripsSnapshot = await transaction.get(tripsQuery);
             let assigned = false;
+            
+            const passenger: Passenger = { bookingId, name, phone };
 
             // 1. Try to find a non-full, existing trip
             for (const doc of tripsSnapshot.docs) {
@@ -225,23 +220,28 @@ async function assignBookingToTrip(
             if (!assigned) {
                 throw new Error("All vehicles for this route and date are full.");
             }
-             // Associate booking with trip within the transaction
+             
+            // Associate the booking with the trip ID.
             if (assignedTripId) {
-                transaction.update(db.doc(`bookings/${passenger.bookingId}`), { tripId: assignedTripId });
+                const bookingRef = db.collection('bookings').doc(bookingId);
+                transaction.update(bookingRef, { tripId: assignedTripId });
             }
         });
         
         // After transaction is successful, check for trip confirmation
         if (assignedTripId) {
-            const tripRef = db.collection('trips').doc(assignedTripId);
-            const tripDoc = await tripRef.get();
-            if(tripDoc.exists && (tripDoc.data() as Trip).isFull) {
-                await checkAndConfirmTrip(db, assignedTripId);
-            }
+            await checkAndConfirmTrip(db, assignedTripId);
         }
     } catch (error: any) {
-        console.error(`Transaction failed for booking ${passenger.bookingId}:`, error.message);
-        await sendOverflowEmail(bookingDetails, error.message);
+        console.error(`Transaction failed for booking ${bookingId}:`, error);
+        
+        // Now, we can reliably send an overflow email if the error message contains the specific string
+        // or for any other transaction failure.
+        const reason = error.message || "An unknown error occurred during trip assignment.";
+        await sendOverflowEmail(bookingData, reason);
+
+        // Re-throw the error to ensure the calling function knows the transaction failed.
+        throw error;
     }
 }
 
@@ -259,12 +259,13 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
                 <p><strong>Reason:</strong> ${reason}</p>
                 <h3>Booking Details:</h3>
                 <ul>
+                    <li><strong>Booking ID:</strong> ${bookingDetails.id}</li>
                     <li><strong>Route:</strong> ${pickup} to ${destination}</li>
                     <li><strong>Vehicle:</strong> ${vehicleType}</li>
                     <li><strong>Date:</strong> ${intendedDate}</li>
                     ${name ? `<li><strong>Passenger:</strong> ${name} (${email})</li>` : ''}
                 </ul>
-                <p>Please take immediate action to arrange for more vehicle space or contact the customer.</p>
+                <p>The booking has been created but does not have a tripId. Please take immediate action to arrange for more vehicle space or contact the customer, and manually update the booking record.</p>
             `,
         });
     } catch(e) {
@@ -298,7 +299,8 @@ async function checkAndConfirmTrip(
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid' || doc.data().status === 'Pending');
+    // Only confirm bookings that are 'Paid' and not already 'Cancelled' or 'Confirmed'
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
 
     if (bookingsToConfirm.length === 0) return;
 
@@ -309,25 +311,29 @@ async function checkAndConfirmTrip(
     
     await batch.commit();
 
+    // After committing the batch, send the notification emails
     for (const doc of bookingsToConfirm) {
         const bookingData = doc.data();
-        // Don't send email for 'Pending' bookings that get auto-confirmed.
-        if (bookingData.status !== 'Pending') {
-            try {
-                await sendBookingStatusEmail({
-                    name: bookingData.name,
-                    email: bookingData.email,
-                    status: 'Confirmed',
-                    bookingId: doc.id,
-                    pickup: bookingData.pickup,
-                    destination: bookingData.destination,
-                    vehicleType: bookingData.vehicleType,
-                    totalFare: bookingData.totalFare,
-                    confirmedDate: trip.date,
-                });
-            } catch (e) {
-                console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
-            }
+        try {
+            await sendBookingStatusEmail({
+                name: bookingData.name,
+                email: bookingData.email,
+                status: 'Confirmed',
+                bookingId: doc.id,
+                pickup: bookingData.pickup,
+                destination: bookingData.destination,
+                vehicleType: bookingData.vehicleType,
+                totalFare: bookingData.totalFare,
+                confirmedDate: trip.date,
+            });
+        } catch (e) {
+            console.error(`Failed to send confirmation email for booking ${doc.id}:`, e);
         }
     }
 }
+
+    
+
+    
+
+    

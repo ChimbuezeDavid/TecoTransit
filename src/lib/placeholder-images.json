@@ -4,27 +4,27 @@
     "data-ai-hint": "road trip"
   },
   "destinationAbeokuta": {
-    "src": "https://picsum.photos/seed/abeokuta/600/400",
+    "src": "https://images.unsplash.com/photo-1722442746061-054e1cb47540?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjaXR5JTIwbmlnZXJpYXxlbnwwfHx8fDE3NjMwNTU4Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "city nigeria"
   },
   "destinationAjah": {
-    "src": "https://picsum.photos/seed/ajah/600/400",
+    "src": "https://images.unsplash.com/photo-1745725427532-4c52cdc6d4ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxsYWdvcyUyMGJyaWRnZXxlbnwwfHx8fDE3NjMwNTU4Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "lagos bridge"
   },
   "destinationFestac": {
-    "src": "https://picsum.photos/seed/festac/600/400",
+    "src": "https://images.unsplash.com/photo-1649502913092-fb7f0e8fc632?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxsYWdvcyUyMG5pZ2VyaWF8ZW58MHx8fHwxNzYzMDU1ODI3fDA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "lagos nigeria"
   },
   "destinationIbadan": {
-    "src": "https://picsum.photos/seed/ibadan/600/400",
+    "src": "https://images.unsplash.com/photo-1629365191429-e360f90f9329?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxoaXN0b3JpYyUyMGNpdHl8ZW58MHx8fHwxNzYyOTgwODc3fDA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "historic city"
   },
   "destinationIyanaPaja": {
-    "src": "https://picsum.photos/seed/iyanapaja/600/400",
+    "src": "https://images.unsplash.com/photo-1697376372218-924061ffe9d5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxidXMlMjB0ZXJtaW5hbHxlbnwwfHx8fDE3NjMwNTU4Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "bus terminal"
   },
   "destinationOjota": {
-    "src": "https://picsum.photos/seed/ojota/600/400",
+    "src": "https://images.unsplash.com/photo-1542792194-9208ef5958c4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2l0eSUyMG1hcmtldHxlbnwwfHx8fDE3NjMwMDczNjV8MA&ixlib=rb-4.1.0&q=80&w=1080",
     "data-ai-hint": "city market"
   }
 }

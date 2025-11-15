@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Suspense, useEffect, useState, useRef } from 'react';
@@ -24,7 +25,7 @@ function PaymentCallback() {
       return;
     }
     
-    // Prevent the effect from running twice
+    // Prevent the effect from running twice in React Strict Mode (development)
     if (verificationStarted.current) {
         return;
     }

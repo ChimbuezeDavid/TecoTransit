@@ -12,9 +12,9 @@ export const locations = [
 ];
 
 export const vehicleOptions = {
-    '4-seater': { name: '4-Seater Sienna', icon: Car, maxLuggages: 4, capacity: 4 },
-    '5-seater': { name: '5-Seater Sienna', icon: Car, maxLuggages: 2, capacity: 5 },
-    '7-seater': { name: '7-Seater Bus', icon: Bus, maxLuggages: 2, capacity: 7 },
+    '4-seater-sienna': { name: '4-Seater Sienna', icon: Car, maxLuggages: 4, capacity: 4 },
+    '5-seater-sienna': { name: '5-Seater Sienna', icon: Car, maxLuggages: 2, capacity: 5 },
+    '7-seater-bus': { name: '7-Seater Bus', icon: Bus, maxLuggages: 2, capacity: 7 },
 };
 
 export const customerService = {
