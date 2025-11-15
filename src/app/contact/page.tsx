@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, MessageCircle } from "lucide-react";
+import { Mail, MessageCircle, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { bankAccountDetails, customerService } from "@/lib/constants";
 
@@ -22,7 +22,7 @@ export default function ContactPage() {
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle>Contact Customer Service</CardTitle>
-                <CardDescription>For booking assistance, questions, or feedback, please get in touch with our team through any of the channels below.</CardDescription>
+                <CardDescription>For booking assistance, questions, or general inquiries, please get in touch with our team through any of the channels below.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -45,6 +45,17 @@ export default function ContactPage() {
                         <Link href={`mailto:${customerService.email}`} target="_blank">
                             <Mail className="mr-2 h-5 w-5" />
                             {customerService.email}
+                        </Link>
+                    </Button>
+                </div>
+                
+                <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-semibold text-lg">Cancellations & Refunds</h3>
+                     <p className="text-sm text-muted-foreground">For refund requests, please cancel your booking first from your confirmation email, then contact us via WhatsApp for the quickest resolution.</p>
+                     <Button asChild className="w-full sm:w-auto" size="lg">
+                        <Link href={contactOptions[0].link} target="_blank">
+                            <RefreshCcw className="mr-2 h-5 w-5" />
+                            Request a Refund via WhatsApp
                         </Link>
                     </Button>
                 </div>
