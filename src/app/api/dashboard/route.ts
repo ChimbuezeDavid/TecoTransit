@@ -12,13 +12,12 @@ export async function GET(request: Request) {
     }
 
     try {
-        // Stats queries
         const todayStr = format(startOfToday(), 'yyyy-MM-dd');
+
+        // Queries
         const upcomingTripsQuery = db.collection('trips').where('date', '>=', todayStr).get();
-        const pendingBookingsQuery = db.collection('bookings').where('status', '==', 'Pending').count().get();
-        const confirmedBookingsQuery = db.collection('bookings').where('status', '==', 'Confirmed').count().get();
-        
-        // Recent activity queries
+        const pendingBookingsQuery = db.collection('bookings').where('status', '==', 'Pending').get();
+        const confirmedBookingsQuery = db.collection('bookings').where('status', '==', 'Confirmed').get();
         const recentTripsQuery = db.collection('trips').where('date', '>=', todayStr).orderBy('date', 'asc').orderBy('vehicleIndex', 'asc').limit(5).get();
         const recentBookingsQuery = db.collection('bookings').orderBy('createdAt', 'desc').limit(5).get();
 
@@ -43,8 +42,8 @@ export async function GET(request: Request) {
         const stats = {
             upcomingTrips: upcomingTripsSnapshot.size,
             totalPassengers: totalPassengers,
-            pendingBookings: pendingBookingsSnapshot.data().count,
-            confirmedBookings: confirmedBookingsSnapshot.data().count,
+            pendingBookings: pendingBookingsSnapshot.size,
+            confirmedBookings: confirmedBookingsSnapshot.size,
         };
 
         // Format recent activity

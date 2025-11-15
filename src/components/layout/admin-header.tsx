@@ -4,13 +4,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings, MessageSquare, Car, BookOpenCheck } from "lucide-react";
+import { LogOut, Route, LayoutDashboard, Menu, HandCoins, Settings, MessageSquare, Car, BookOpenCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "../ui/sheet";
 import { ThemeToggle } from "../theme-toggle";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -22,14 +23,19 @@ export default function AdminHeader() {
     router.push("/admin/login");
   };
 
-  const navLinks = [
+  const mainNavLinks = [
     { href: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/admin/trips", icon: Car, label: "Trips" },
     { href: "/admin/bookings", icon: BookOpenCheck, label: "Bookings" },
+  ];
+  
+  const settingsNavLinks = [
     { href: "/admin/pricing", icon: HandCoins, label: "Pricing" },
     { href: "/admin/feedback", icon: MessageSquare, label: "Feedback" },
     { href: "/admin/settings", icon: Settings, label: "Settings" },
   ];
+
+  const allNavLinks = [...mainNavLinks, ...settingsNavLinks];
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
@@ -42,7 +48,7 @@ export default function AdminHeader() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-             {navLinks.map(({ href, icon: Icon, label }) => (
+             {mainNavLinks.map(({ href, icon: Icon, label }) => (
                 <Link key={href} href={href} className={cn(
                     "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
                     pathname.startsWith(href) ? "text-primary" : "text-muted-foreground"
@@ -51,6 +57,28 @@ export default function AdminHeader() {
                     <span>{label}</span>
                 </Link>
              ))}
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                   <Button variant="ghost" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
+                        <Settings className="h-4 w-4" />
+                        <span>Manage</span>
+                        <ChevronDown className="h-4 w-4" />
+                   </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                    {settingsNavLinks.map(({ href, icon: Icon, label }) => (
+                         <DropdownMenuItem key={href} asChild>
+                            <Link href={href} className={cn(
+                                "flex items-center gap-2",
+                                pathname.startsWith(href) ? "text-primary" : ""
+                                )}>
+                                <Icon className="h-4 w-4" />
+                                <span>{label}</span>
+                            </Link>
+                         </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+             </DropdownMenu>
           </nav>
            <div className="hidden md:flex items-center gap-2">
              <ThemeToggle />
@@ -73,7 +101,6 @@ export default function AdminHeader() {
               <SheetContent side="right" className="w-[240px]">
                  <div className="flex flex-col h-full">
                     <div className="flex-grow">
-                        <SheetTitle className="sr-only">Admin Menu</SheetTitle>
                         <SheetClose asChild>
                             <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
                                 <Route className="h-6 w-6" />
@@ -81,7 +108,7 @@ export default function AdminHeader() {
                             </Link>
                         </SheetClose>
                         <nav className="flex flex-col gap-6">
-                            {navLinks.map(({ href, icon: Icon, label }) => (
+                            {allNavLinks.map(({ href, icon: Icon, label }) => (
                                 <SheetClose asChild key={href}>
                                     <Link href={href} className={cn(
                                         "flex items-center gap-3 text-base font-medium transition-colors hover:text-primary",
