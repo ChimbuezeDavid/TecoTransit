@@ -1,6 +1,7 @@
 
 'use client';
 
+import './globals.css';
 import { usePathname } from 'next/navigation';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
