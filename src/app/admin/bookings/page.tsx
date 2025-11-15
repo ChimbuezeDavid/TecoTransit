@@ -14,18 +14,17 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { reSyncBookings } from "@/app/actions/resync-bookings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
-import { updateBookingStatus, deleteBooking, deleteBookingsInRange } from "@/app/actions/booking-actions";
+import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, rescheduleUnderfilledTrips } from "@/app/actions/booking-actions";
 
 
 function BookingsPageSkeleton() {
@@ -101,7 +100,7 @@ export default function AdminBookingsPage() {
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [isResyncing, setIsResyncing] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
@@ -132,25 +131,28 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookingsData();
   }, [fetchBookingsData]);
-
-  const handleResync = async () => {
-    setIsResyncing(true);
-    toast({ title: "Re-sync Started", description: "Processing all unassigned bookings..." });
+  
+  const handleReschedule = async () => {
+    setIsRescheduling(true);
+    toast({ title: "Reschedule Started", description: "Checking for under-filled trips from yesterday..." });
     try {
-        const result = await reSyncBookings();
+        const result = await rescheduleUnderfilledTrips();
         toast({
-            title: "Re-sync Complete",
-            description: `${result.successCount} bookings successfully assigned. ${result.errorCount} failed.`,
+            title: "Reschedule Complete",
+            description: `${result.rescheduledCount} bookings successfully rescheduled. ${result.errorCount} failed.`,
         });
+        if (result.errorCount > 0) {
+            console.error("Reschedule errors:", result.errors);
+        }
         fetchBookingsData();
     } catch (e: any) {
          toast({
             variant: "destructive",
-            title: "Re-sync Failed",
-            description: e.message || "An unknown error occurred during re-sync.",
+            title: "Reschedule Failed",
+            description: e.message || "An unknown error occurred during reschedule.",
         });
     } finally {
-        setIsResyncing(false);
+        setIsRescheduling(false);
     }
   };
 
@@ -174,8 +176,15 @@ export default function AdminBookingsPage() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        setIsManageDialogOpen(false);
-        fetchBookingsData(); // Refresh data
+        // Important: Re-fetch the individual booking to get the updated status
+        // so the UI can show the refund button if applicable.
+        const updatedBooking = bookings.find(b => b.id === selectedBooking.id);
+        if (updatedBooking) {
+            setSelectedBooking({...updatedBooking, status: 'Cancelled'});
+        } else {
+            setIsManageDialogOpen(false);
+        }
+        fetchBookingsData(); // Refresh data table in background
     } catch (error) {
         toast({
             variant: "destructive",
@@ -186,6 +195,28 @@ export default function AdminBookingsPage() {
         setIsProcessing(prev => ({...prev, [selectedBooking.id]: false}));
     }
   };
+  
+  const handleRequestRefund = async () => {
+    if (!selectedBooking) return;
+
+    setIsProcessing(prev => ({ ...prev, refund: true }));
+    try {
+        await requestRefund(selectedBooking.id);
+        toast({
+            title: "Refund Requested",
+            description: "An email has been sent to the finance team to process the refund.",
+        });
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Refund Request Failed",
+            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+        });
+    } finally {
+        setIsProcessing(prev => ({ ...prev, refund: false }));
+    }
+  };
+
 
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
@@ -378,15 +409,15 @@ export default function AdminBookingsPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
                         <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
-                        <CardDescription>Use Re-Sync to assign any unassigned bookings to a trip.</CardDescription>
+                        <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                        <Button variant="outline" className="w-full" size="sm" onClick={handleResync} disabled={isResyncing}>
-                            {isResyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
-                            Re-Sync Bookings
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+                        <Button variant="outline" className="w-full" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
+                            {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
+                            Reschedule
                         </Button>
                         <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export</Button>
-                        </div>
+                    </div>
                 </div>
                 <div className="mt-4 flex flex-col sm:flex-row items-center gap-2">
                     <div className="relative w-full sm:max-w-xs">
@@ -570,14 +601,35 @@ export default function AdminBookingsPage() {
                         </AlertDialog>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
-                        {selectedBooking.status !== 'Cancelled' ? (
-                            <>
-                                <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
-                                    {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
-                                    Cancel Booking
-                                </Button>
-                            </>
-                        ) : (
+                        {selectedBooking.status !== 'Cancelled' && (
+                            <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
+                                {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
+                                Cancel Booking
+                            </Button>
+                        )}
+                         {selectedBooking.status === 'Cancelled' && selectedBooking.paymentReference && (
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="outline" className="w-full" size="lg" disabled={isProcessing['refund']}>
+                                        {isProcessing['refund'] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+                                        Request Refund
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Confirm Refund Request</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This will send an email to the finance team to process a refund for this booking. Are you sure you want to proceed?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleRequestRefund}>Confirm</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                        {selectedBooking.status === 'Cancelled' && !selectedBooking.paymentReference && (
                             <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>
@@ -588,5 +640,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-    
