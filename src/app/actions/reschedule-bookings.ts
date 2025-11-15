@@ -6,12 +6,26 @@ import { assignBookingToTrip } from "./paystack";
 import type { Booking, Trip, Passenger } from "@/lib/types";
 import { sendBookingRescheduledEmail } from "./send-email";
 import { FieldValue } from 'firebase-admin/firestore';
+import { vehicleOptions } from "@/lib/constants";
+
+type RescheduleResult = {
+    totalTripsScanned: number;
+    totalPassengersToProcess: number;
+    rescheduledCount: number;
+    skippedCount: number;
+    failedCount: number;
+    errors: string[];
+};
 
 /**
  * Finds all trips from the previous day that were not full and attempts to reschedule
  * the passengers to a trip on the current day.
+ * 
+ * This action is designed to be run as an automated daily job (cron job).
+ * It ensures that the process of moving a passenger from an old trip to a new one
+ * is atomic and fails safely, preventing data inconsistency.
  */
-export async function rescheduleUnderfilledTrips() {
+export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
         throw new Error("Database connection failed.");
@@ -19,10 +33,16 @@ export async function rescheduleUnderfilledTrips() {
 
     const yesterday = subDays(startOfDay(new Date()), 1);
     const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     
-    let rescheduledCount = 0;
-    let errorCount = 0;
-    const errors: string[] = [];
+    const result: RescheduleResult = {
+        totalTripsScanned: 0,
+        totalPassengersToProcess: 0,
+        rescheduledCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        errors: [],
+    };
 
     try {
         const underfilledTripsQuery = db.collection('trips')
@@ -30,103 +50,130 @@ export async function rescheduleUnderfilledTrips() {
             .where('isFull', '==', false);
         
         const snapshot = await underfilledTripsQuery.get();
+        result.totalTripsScanned = snapshot.size;
 
         if (snapshot.empty) {
-            return { message: "No under-filled trips from yesterday to reschedule.", rescheduledCount, errorCount, errors };
+            return result;
         }
-        
-        const newDate = format(new Date(), 'yyyy-MM-dd');
 
         for (const tripDoc of snapshot.docs) {
             const trip = tripDoc.data() as Trip;
-            // Create a copy to iterate over, as we might be modifying the trip's passenger list
-            const originalPassengers = [...trip.passengers]; 
+            const passengersToProcess = [...trip.passengers];
+            result.totalPassengersToProcess += passengersToProcess.length;
 
-            for (const passenger of originalPassengers) {
+            for (const passenger of passengersToProcess) {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
-                const oldTripRef = db.collection('trips').doc(trip.id);
+                const oldTripRef = tripDoc.ref;
 
                 try {
-                    // This transaction will either fully succeed or fully fail.
-                    const bookingForAssignment = await db.runTransaction(async (transaction) => {
+                    await db.runTransaction(async (transaction) => {
                         const bookingDoc = await transaction.get(bookingRef);
                         if (!bookingDoc.exists) {
-                            throw new Error(`Booking ${passenger.bookingId} not found.`);
+                            throw new Error(`Booking ${passenger.bookingId} not found during transaction.`);
                         }
                         const bookingData = bookingDoc.data() as Booking;
 
-                        // Don't reschedule if user opted out or booking was cancelled
+                        // 1. Skip if user opted out or booking was cancelled
                         if (!bookingData.allowReschedule || bookingData.status === 'Cancelled') {
-                            return null;
+                            result.skippedCount++;
+                            return; // Exit transaction for this passenger
                         }
 
-                        // We must fetch the passenger object from the old trip *inside* the transaction
-                        // to ensure we have the most up-to-date version before removing it.
-                        const oldTripDoc = await transaction.get(oldTripRef);
-                        const oldTripData = oldTripDoc.data() as Trip;
-                        const passengerInOldTrip = oldTripData.passengers.find(p => p.bookingId === passenger.bookingId);
+                        // --- Start of New, Perfected Logic ---
+
+                        // 2. Find a new trip for today
+                        const priceRuleId = `${bookingData.pickup}_${bookingData.destination}_${bookingData.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
+                        const vehicleKey = Object.keys(vehicleOptions).find(k => vehicleOptions[k as keyof typeof vehicleOptions].name === bookingData.vehicleType) as keyof typeof vehicleOptions | undefined;
+                        if (!vehicleKey) throw new Error(`Invalid vehicle type: ${bookingData.vehicleType}`);
+                        const capacity = vehicleOptions[vehicleKey].capacity;
                         
-                        if (!passengerInOldTrip) {
-                            // Passenger is already gone, maybe handled by another process. Skip.
-                            return null;
+                        const newTripsQuery = db.collection('trips')
+                            .where('priceRuleId', '==', priceRuleId)
+                            .where('date', '==', todayStr);
+                        
+                        const newTripsSnapshot = await transaction.get(newTripsQuery);
+
+                        let newTripRef: FirebaseFirestore.DocumentReference | null = null;
+                        let newTripData: Trip | null = null;
+
+                        // a. Look for an existing trip with space
+                        for (const doc of newTripsSnapshot.docs) {
+                            const trip = doc.data() as Trip;
+                            if (trip.passengers.length < trip.capacity) {
+                                newTripRef = doc.ref;
+                                newTripData = trip;
+                                break;
+                            }
                         }
+
+                        // b. If no existing trip, check if a new one can be created
+                        if (!newTripRef) {
+                            const priceRuleSnap = await transaction.get(db.doc(`prices/${priceRuleId}`));
+                            if (priceRuleSnap.exists && newTripsSnapshot.size < (priceRuleSnap.data()?.vehicleCount || 0)) {
+                                const newVehicleIndex = newTripsSnapshot.size + 1;
+                                const newTripId = `${priceRuleId}_${todayStr}_${newVehicleIndex}`;
+                                newTripRef = db.collection('trips').doc(newTripId);
+                                newTripData = {
+                                    id: newTripId,
+                                    priceRuleId,
+                                    pickup: bookingData.pickup,
+                                    destination: bookingData.destination,
+                                    vehicleType: bookingData.vehicleType,
+                                    date: todayStr,
+                                    vehicleIndex: newVehicleIndex,
+                                    capacity: capacity,
+                                    passengers: [], // Will add the passenger later in this transaction
+                                    isFull: false,
+                                };
+                            }
+                        }
+
+                        // c. If no new trip could be found or created, abort the transaction
+                        if (!newTripRef || !newTripData) {
+                            throw new Error(`No available trip slot found for booking ${bookingData.id} on ${todayStr}.`);
+                        }
+
+                        const newPassenger: Passenger = { bookingId: bookingData.id, name: bookingData.name, phone: bookingData.phone };
+                        const updatedPassengers = [...newTripData.passengers, newPassenger];
+
+                        // 3. Atomically perform all writes
+                        // Remove from old trip
+                        transaction.update(oldTripRef, { passengers: FieldValue.arrayRemove(passenger) });
+                        // Add to new trip
+                        transaction.set(newTripRef, { 
+                            ...newTripData,
+                            passengers: updatedPassengers,
+                            isFull: updatedPassengers.length >= newTripData.capacity
+                        }, { merge: true });
+                        // Update booking
+                        transaction.update(bookingRef, { intendedDate: todayStr, tripId: newTripRef.id });
+
+                        // --- End of Perfected Logic ---
                         
-                        // 1. Remove passenger from the old trip
-                        transaction.update(oldTripRef, {
-                            passengers: FieldValue.arrayRemove(passengerInOldTrip)
+                        // 4. Send email notification *after* transaction commits successfully
+                        await sendBookingRescheduledEmail({
+                            name: bookingData.name,
+                            email: bookingData.email,
+                            bookingId: bookingData.id,
+                            oldDate: yesterdayStr,
+                            newDate: todayStr,
                         });
 
-                        // 2. Update the booking's intended date and clear the old tripId
-                        transaction.update(bookingRef, { 
-                            intendedDate: newDate,
-                            tripId: FieldValue.delete()
-                        });
-                        
-                        // 3. Return the fresh booking data needed for the next step.
-                        return {
-                            ...bookingData,
-                            id: bookingDoc.id, // Ensure ID is present
-                            intendedDate: newDate, // Use the new date for assignment
-                            tripId: undefined, // Ensure tripId is not carried over
-                            createdAt: (bookingData.createdAt as any).toMillis(),
-                        };
+                        result.rescheduledCount++;
                     });
-
-                    // If transaction returned null (e.g., user opted out), skip to next passenger
-                    if (!bookingForAssignment) {
-                        continue;
-                    }
-                    
-                    // 4. Re-assign to a new trip for the new date. This is now outside the first transaction.
-                    // assignBookingToTrip has its own transaction, ensuring this step is also atomic.
-                    await assignBookingToTrip(bookingForAssignment);
-                    
-                    // 5. Send notification email *after* successful reassignment
-                    await sendBookingRescheduledEmail({
-                        name: bookingForAssignment.name,
-                        email: bookingForAssignment.email,
-                        bookingId: bookingForAssignment.id,
-                        oldDate: yesterdayStr,
-                        newDate: newDate,
-                    });
-
-                    rescheduledCount++;
-
                 } catch (e: any) {
-                    errorCount++;
+                    result.failedCount++;
                     const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
-                    errors.push(errorMessage);
+                    result.errors.push(errorMessage);
                     console.error(errorMessage, e);
-                    // If assignBookingToTrip fails, an overflow email is sent, and the original transaction rolls back.
-                    // The booking and old trip remain in their original state, which is safe.
                 }
             }
         }
         
-        return { message: `Rescheduling process completed.`, rescheduledCount, errorCount, errors };
+        return result;
 
     } catch (error: any) {
-        console.error("An error occurred during the rescheduling process:", error);
-        throw new Error("Failed to reschedule trips due to a server error.");
+        console.error("A critical error occurred during the rescheduling process:", error);
+        throw new Error("Failed to execute reschedule job due to a server error.");
     }
 }
