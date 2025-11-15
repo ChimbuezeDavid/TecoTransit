@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
@@ -39,6 +38,7 @@ export async function getAllBookings(): Promise<{ bookings: Booking[]; error: st
             return {
                 id: doc.id,
                 ...data,
+                // Ensure timestamp is consistently handled as milliseconds for the client
                 createdAt: (data.createdAt as FirebaseFirestore.Timestamp).toMillis(),
             } as Booking;
         });

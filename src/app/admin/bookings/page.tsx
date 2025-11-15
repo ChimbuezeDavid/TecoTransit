@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -24,7 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
-import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, rescheduleUnderfilledTrips } from "@/app/actions/booking-actions";
+import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund } from "@/app/actions/booking-actions";
 
 
 function BookingsPageSkeleton() {
@@ -100,7 +99,6 @@ export default function AdminBookingsPage() {
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [isRescheduling, setIsRescheduling] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
@@ -131,30 +129,6 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     fetchBookingsData();
   }, [fetchBookingsData]);
-  
-  const handleReschedule = async () => {
-    setIsRescheduling(true);
-    toast({ title: "Reschedule Started", description: "Checking for under-filled trips from yesterday..." });
-    try {
-        const result = await rescheduleUnderfilledTrips();
-        toast({
-            title: "Reschedule Complete",
-            description: `${result.rescheduledCount} bookings successfully rescheduled. ${result.errorCount} failed.`,
-        });
-        if (result.errorCount > 0) {
-            console.error("Reschedule errors:", result.errors);
-        }
-        fetchBookingsData();
-    } catch (e: any) {
-         toast({
-            variant: "destructive",
-            title: "Reschedule Failed",
-            description: e.message || "An unknown error occurred during reschedule.",
-        });
-    } finally {
-        setIsRescheduling(false);
-    }
-  };
 
 
   const openDialog = (bookingId: string) => {
@@ -412,11 +386,7 @@ export default function AdminBookingsPage() {
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
-                        <Button variant="outline" className="w-full" size="sm" onClick={handleReschedule} disabled={isRescheduling}>
-                            {isRescheduling ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <History className="mr-2 h-4 w-4"/>}
-                            Reschedule
-                        </Button>
-                        <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export</Button>
+                        <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export CSV</Button>
                     </div>
                 </div>
                 <div className="mt-4 flex flex-col sm:flex-row items-center gap-2">

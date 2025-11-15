@@ -1,10 +1,9 @@
-
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
-import { format, subDays, startOfDay, parseISO } from 'date-fns';
+import { format, subDays, startOfDay } from 'date-fns';
 import { assignBookingToTrip } from "./paystack";
-import type { Booking, Trip } from "@/lib/types";
+import type { Booking, Trip, Passenger } from "@/lib/types";
 import { sendBookingRescheduledEmail } from "./send-email";
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -40,62 +39,73 @@ export async function rescheduleUnderfilledTrips() {
 
         for (const tripDoc of snapshot.docs) {
             const trip = tripDoc.data() as Trip;
-            const originalPassengers = [...trip.passengers]; // Create a copy to iterate over
+            // Create a copy to iterate over, as we might be modifying the trip's passenger list
+            const originalPassengers = [...trip.passengers]; 
 
             for (const passenger of originalPassengers) {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
-                
+                const oldTripRef = db.collection('trips').doc(trip.id);
+
                 try {
-                    // Use a transaction to ensure atomicity
-                    const updatedBookingForAssignment = await db.runTransaction(async (transaction) => {
+                    // This transaction will either fully succeed or fully fail.
+                    const bookingForAssignment = await db.runTransaction(async (transaction) => {
                         const bookingDoc = await transaction.get(bookingRef);
                         if (!bookingDoc.exists) {
                             throw new Error(`Booking ${passenger.bookingId} not found.`);
                         }
                         const bookingData = bookingDoc.data() as Booking;
 
-                        // Don't reschedule if user opted out
-                        if (!bookingData.allowReschedule) {
-                            // Returning null will skip this passenger
+                        // Don't reschedule if user opted out or booking was cancelled
+                        if (!bookingData.allowReschedule || bookingData.status === 'Cancelled') {
                             return null;
                         }
 
-                        // 1. Update the booking's intended date and clear old tripId
-                        transaction.update(bookingRef, { 
-                            intendedDate: newDate,
-                            tripId: FieldValue.delete() // Use FieldValue.delete() to remove the field
-                        });
+                        // We must fetch the passenger object from the old trip *inside* the transaction
+                        // to ensure we have the most up-to-date version before removing it.
+                        const oldTripDoc = await transaction.get(oldTripRef);
+                        const oldTripData = oldTripDoc.data() as Trip;
+                        const passengerInOldTrip = oldTripData.passengers.find(p => p.bookingId === passenger.bookingId);
                         
-                        // 2. Remove passenger from the old trip
-                        const oldTripRef = db.collection('trips').doc(trip.id);
+                        if (!passengerInOldTrip) {
+                            // Passenger is already gone, maybe handled by another process. Skip.
+                            return null;
+                        }
+                        
+                        // 1. Remove passenger from the old trip
                         transaction.update(oldTripRef, {
-                            passengers: FieldValue.arrayRemove(passenger)
+                            passengers: FieldValue.arrayRemove(passengerInOldTrip)
                         });
 
-                        // 3. Return the data needed for the next step.
-                        // We must reconstruct the object with the new date for the assignment function.
+                        // 2. Update the booking's intended date and clear the old tripId
+                        transaction.update(bookingRef, { 
+                            intendedDate: newDate,
+                            tripId: FieldValue.delete()
+                        });
+                        
+                        // 3. Return the fresh booking data needed for the next step.
                         return {
                             ...bookingData,
-                            id: bookingDoc.id,
-                            intendedDate: newDate,
-                            tripId: undefined, // ensure it's not present for assignBookingToTrip
-                            createdAt: (bookingData.createdAt as any).toMillis(), // Convert timestamp if needed
+                            id: bookingDoc.id, // Ensure ID is present
+                            intendedDate: newDate, // Use the new date for assignment
+                            tripId: undefined, // Ensure tripId is not carried over
+                            createdAt: (bookingData.createdAt as any).toMillis(),
                         };
                     });
 
-                    // If the transaction returned null (e.g., user opted out), skip to next passenger
-                    if (!updatedBookingForAssignment) {
+                    // If transaction returned null (e.g., user opted out), skip to next passenger
+                    if (!bookingForAssignment) {
                         continue;
                     }
                     
-                    // 4. Re-assign to a new trip for the new date
-                    await assignBookingToTrip(updatedBookingForAssignment);
+                    // 4. Re-assign to a new trip for the new date. This is now outside the first transaction.
+                    // assignBookingToTrip has its own transaction, ensuring this step is also atomic.
+                    await assignBookingToTrip(bookingForAssignment);
                     
-                    // 5. Send notification email
+                    // 5. Send notification email *after* successful reassignment
                     await sendBookingRescheduledEmail({
-                        name: updatedBookingForAssignment.name,
-                        email: updatedBookingForAssignment.email,
-                        bookingId: updatedBookingForAssignment.id,
+                        name: bookingForAssignment.name,
+                        email: bookingForAssignment.email,
+                        bookingId: bookingForAssignment.id,
                         oldDate: yesterdayStr,
                         newDate: newDate,
                     });
@@ -107,8 +117,8 @@ export async function rescheduleUnderfilledTrips() {
                     const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
                     errors.push(errorMessage);
                     console.error(errorMessage, e);
-                    // The transaction will have rolled back, so the booking and old trip are safe.
-                    // An overflow/error email would have been sent by assignBookingToTrip if that's where it failed.
+                    // If assignBookingToTrip fails, an overflow email is sent, and the original transaction rolls back.
+                    // The booking and old trip remain in their original state, which is safe.
                 }
             }
         }
