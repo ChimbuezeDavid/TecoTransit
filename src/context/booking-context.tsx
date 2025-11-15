@@ -13,23 +13,15 @@ import { cleanupTrips } from '@/app/actions/cleanup-trips';
 
 
 interface BookingContextType {
-  bookings: Booking[]; 
   prices: PriceRule[];
   loading: boolean;
   error: string | null;
-  fetchBookings: (status: Booking['status'] | 'All') => () => void;
-  createBooking: (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => Promise<Booking>;
-  updateBookingStatus: (bookingId: string, status: 'Cancelled') => Promise<void>;
-  deleteBooking: (id: string) => Promise<void>;
-  deleteBookingsInRange: (startDate: Date, endDate: Date) => Promise<number>;
-  clearBookings: () => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,156 +55,17 @@ export const BookingProvider = ({ children }: { children: React.ReactNode }) => 
     });
 
     return () => unsubscribePrices();
-  }, []);
-
-  const fetchBookings = useCallback((status: Booking['status'] | 'All' = 'All') => {
-    if (!user) {
-        setBookings([]);
-        setLoading(false);
-        return () => {};
-    };
-
-    setLoading(true);
-    setError(null);
-    
-    const bookingsCollection = collection(db, "bookings");
-    const queryConstraints = [];
-
-    if (status !== 'All') {
-        queryConstraints.push(where("status", "==", status));
-    }
-    queryConstraints.push(orderBy("createdAt", "desc"));
-    
-    const bookingsQuery = query(bookingsCollection, ...queryConstraints);
-
-    const unsubscribe = onSnapshot(bookingsQuery, (querySnapshot) => {
-      const bookingsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        const createdAtMillis = data.createdAt instanceof Timestamp 
-            ? data.createdAt.toMillis()
-            : (typeof data.createdAt === 'number' ? data.createdAt : Date.now());
-
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: createdAtMillis,
-        } as Booking;
-      });
-      setBookings(bookingsData);
-      setLoading(false);
-    }, (err) => {
-      handleFirestoreError(err, 'fetching bookings');
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, [user]);
-
- const createBooking = useCallback(async (data: Omit<BookingFormData, 'privacyPolicy'> & { totalFare: number }) => {
-    const result = await createPendingBooking(data);
-    
-    if (!result.success || !result.booking) {
-        throw new Error(result.error || 'Failed to create booking.');
-    }
-
-    return result.booking;
-  }, []);
-
-  const updateBookingStatus = useCallback(async (bookingId: string, status: 'Cancelled') => {
-      const bookingDocRef = doc(db, 'bookings', bookingId);
-      const allBookingsSnapshot = await getDocs(query(collection(db, 'bookings')));
-      const bookingToUpdate = allBookingsSnapshot.docs.map(d => ({id: d.id, ...d.data()})).find(b => b.id === bookingId) as Booking | undefined;
-
-      if (!bookingToUpdate) {
-        throw new Error("Booking not found");
-      }
-      
-      const updateData: any = { status };
-      
-      await updateDoc(bookingDocRef, updateData);
-
-      sendBookingStatusEmail({
-          name: bookingToUpdate.name,
-          email: bookingToUpdate.email,
-          status: status,
-          bookingId: bookingToUpdate.id,
-          pickup: bookingToUpdate.pickup,
-          destination: bookingToUpdate.destination,
-          vehicleType: bookingToUpdate.vehicleType,
-          totalFare: bookingToUpdate.totalFare,
-      }).catch(emailError => {
-        console.error("Failed to send status update email:", emailError);
-        toast({
-          variant: "destructive",
-          title: "Email Failed to Send",
-          description: "The booking status was updated, but the email notification could not be sent. Please notify the customer manually.",
-          duration: 10000,
-        });
-      });
-      
-  }, [toast]);
-
-  const deleteBooking = useCallback(async (id: string) => {
-      const bookingDocRef = doc(db, 'bookings', id);
-      await deleteDoc(bookingDocRef);
-      // After deleting, trigger a cleanup of trips.
-      await cleanupTrips([id]);
-  }, []);
-
-  const deleteBookingsInRange = useCallback(async (startDate: Date, endDate: Date) => {
-    const startTimestamp = Timestamp.fromDate(startDate);
-    const endOfDay = new Date(endDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    const endTimestamp = Timestamp.fromDate(endOfDay);
-    
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('createdAt', '>=', startTimestamp),
-      where('createdAt', '<=', endTimestamp)
-    );
-    
-    const snapshot = await getDocs(bookingsQuery);
-    if (snapshot.empty) {
-        return 0;
-    }
-    
-    const deletedBookingIds: string[] = [];
-    const batch = writeBatch(db);
-    snapshot.docs.forEach(doc => {
-      deletedBookingIds.push(doc.id);
-      batch.delete(doc.ref);
-    });
-
-    await batch.commit();
-
-    // Trigger trip cleanup after successful deletion
-    if (deletedBookingIds.length > 0) {
-      await cleanupTrips(deletedBookingIds);
-    }
-    
-    return snapshot.size;
-  }, []);
+  }, [user, toast]);
   
-  const clearBookings = useCallback(() => {
-    setBookings([]);
-    setLoading(true);
-  }, []);
 
   const value = {
-    bookings,
     prices,
     loading,
     error,
-    fetchBookings,
-    createBooking,
-    updateBookingStatus,
-    deleteBooking,
-    deleteBookingsInRange,
-    clearBookings,
   };
 
   return (
-    <BookingContext.Provider value={value as any}>
+    <BookingContext.Provider value={value}>
       {children}
     </BookingContext.Provider>
   );

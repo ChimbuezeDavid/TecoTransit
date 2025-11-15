@@ -14,10 +14,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, CircleDot, Check, Ban } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useBooking } from "@/context/booking-context";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { reSyncBookings } from "@/app/actions/resync-bookings";
@@ -26,6 +25,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
+import { updateBookingStatus, deleteBooking, deleteBookingsInRange } from "@/app/actions/booking-actions";
 
 
 function BookingsPageSkeleton() {
@@ -92,8 +92,6 @@ const getStatusIcon = (status: Booking['status']) => {
 };
 
 export default function AdminBookingsPage() {
-  const { updateBookingStatus, deleteBooking, deleteBookingsInRange } = useBooking();
-
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -590,3 +588,5 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
+
+    

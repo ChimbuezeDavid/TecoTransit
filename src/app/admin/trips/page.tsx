@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User as UserIcon, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Ticket, History } from "lucide-react";
@@ -49,16 +49,6 @@ function TripsPageSkeleton() {
         </div>
     );
 }
-
-const getStatusIcon = (status: Booking['status']) => {
-    switch (status) {
-        case 'Confirmed': return <UserIcon className="h-4 w-4 text-green-500" />;
-        case 'Cancelled': return <UserIcon className="h-4 w-4 text-destructive" />;
-        case 'Paid': return <UserIcon className="h-4 w-4 text-blue-500" />;
-        case 'Pending': return <UserIcon className="h-4 w-4 text-amber-500" />;
-        default: return <UserIcon className="h-4 w-4" />;
-    }
-};
 
 export default function AdminTripsPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
@@ -300,3 +290,7 @@ export default function AdminTripsPage() {
         </div>
     );
 }
+
+    
+
+    

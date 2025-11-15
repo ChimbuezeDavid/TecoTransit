@@ -299,8 +299,8 @@ async function checkAndConfirmTrip(
     const bookingsQuery = db.collection('bookings').where(FieldPath.documentId(), 'in', passengerIds);
     const bookingsSnapshot = await bookingsQuery.get();
 
-     // Only confirm bookings that are not already 'Cancelled' or 'Confirmed'
-    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => !['Cancelled', 'Confirmed'].includes(doc.data().status));
+    // Only confirm bookings that are 'Paid' and not already 'Cancelled' or 'Confirmed'
+    const bookingsToConfirm = bookingsSnapshot.docs.filter(doc => doc.data().status === 'Paid');
 
     if (bookingsToConfirm.length === 0) return;
 
@@ -331,5 +331,9 @@ async function checkAndConfirmTrip(
         }
     }
 }
+
+    
+
+    
 
     

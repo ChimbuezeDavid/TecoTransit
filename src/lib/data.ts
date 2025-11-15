@@ -1,7 +1,8 @@
 
+'use server';
+
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
-import type { PriceRule, Trip, Booking } from '@/lib/types';
-import { format, startOfToday } from 'date-fns';
+import type { Trip, Booking } from '@/lib/types';
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
     const db = getFirebaseAdmin()?.firestore();
