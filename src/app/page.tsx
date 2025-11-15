@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Car, CheckCircle, MapPin, Smile, Star, Ticket } from "lucide-react";
@@ -39,15 +40,6 @@ const howItWorks = [
         title: "Travel with Ease",
         description: "Arrive at the departure point on your travel date and enjoy a smooth ride to your destination."
     }
-];
-
-const destinations = [
-  { name: "Abeokuta", image: placeholderImages.destinationAbeokuta },
-  { name: "Ajah, Lagos", image: placeholderImages.destinationAjah },
-  { name: "FESTAC, Lagos", image: placeholderImages.destinationFestac },
-  { name: "Ibadan", image: placeholderImages.destinationIbadan },
-  { name: "Iyana Paja, Lagos", image: placeholderImages.destinationIyanaPaja },
-  { name: "Ojota, Lagos", image: placeholderImages.destinationOjota },
 ];
 
 export default function LandingPage() {
@@ -100,36 +92,6 @@ export default function LandingPage() {
                   <p className="text-muted-foreground">{feature.description}</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Our Destinations Section */}
-      <section className="py-16 sm:py-24">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline">Our Destinations</h2>
-            <p className="mt-3 text-lg text-muted-foreground">
-              We offer comfortable rides to several key locations.
-            </p>
-          </div>
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {destinations.map((destination) => (
-              <Link key={destination.name} href="/book" className="group relative block aspect-[4/3] overflow-hidden rounded-lg">
-                <Image
-                  src={destination.image.src}
-                  alt={`A scene from ${destination.name}`}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  data-ai-hint={destination.image['data-ai-hint']}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-4">
-                  <h3 className="font-semibold text-white text-lg">{destination.name}</h3>
-                </div>
-              </Link>
             ))}
           </div>
         </div>
