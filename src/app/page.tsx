@@ -42,15 +42,6 @@ const howItWorks = [
     }
 ];
 
-const destinations = [
-  { name: "Abeokuta", image: placeholderImages.destinationAbeokuta },
-  { name: "Ajah, Lagos", image: placeholderImages.destinationAjah },
-  { name: "FESTAC, Lagos", image: placeholderImages.destinationFestac },
-  { name: "Ibadan", image: placeholderImages.destinationIbadan },
-  { name: "Iyana Paja, Lagos", image: placeholderImages.destinationIyanaPaja },
-  { name: "Ojota, Lagos", image: placeholderImages.destinationOjota },
-];
-
 export default function LandingPage() {
   return (
     <div className="bg-background text-foreground">
@@ -107,7 +98,7 @@ export default function LandingPage() {
       </section>
       
       {/* How It Works Section */}
-       <section className="py-16 sm:py-24">
+       <section className="py-16 sm:py-24 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Your Journey in 3 Easy Steps</h2>
@@ -124,7 +115,7 @@ export default function LandingPage() {
                    </svg>
                 </div>
                  {howItWorks.map((step, index) => (
-                  <div key={step.title} className="flex flex-col items-center relative bg-background px-4">
+                  <div key={step.title} className="flex flex-col items-center relative bg-muted/30 px-4">
                       <div className="flex items-center justify-center h-24 w-24 rounded-full bg-primary/10 mb-6 border-2 border-primary">
                           {step.icon}
                       </div>
@@ -154,5 +145,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    

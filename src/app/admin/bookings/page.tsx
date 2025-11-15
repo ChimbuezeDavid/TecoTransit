@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { format, parseISO, startOfMonth } from "date-fns";
+import { format, parseISO, startOfMonth, subDays } from "date-fns";
 import type { Booking } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 
@@ -11,9 +11,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,8 @@ import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund } from "@/app/actions/booking-actions";
+
+type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
 
 function BookingsPageSkeleton() {
     return (
@@ -108,6 +111,7 @@ export default function AdminBookingsPage() {
     from: startOfMonth(new Date()),
     to: new Date(),
   });
+  const [isCustomDeleteOpen, setIsCustomDeleteOpen] = useState(false);
 
 
   const fetchBookingsData = useCallback(async () => {
@@ -213,23 +217,49 @@ export default function AdminBookingsPage() {
     }
   };
   
-  const handleBulkDelete = async () => {
-    if (!deleteDateRange?.from || !deleteDateRange?.to) {
-        toast({ variant: "destructive", title: "Invalid Date Range" });
-        return;
+  const handleBulkDelete = async (mode: BulkDeleteMode) => {
+    let from: Date | null = null;
+    let to: Date | null = new Date();
+    let description = '';
+
+    switch (mode) {
+        case 'all':
+            from = null;
+            to = null;
+            description = 'all bookings';
+            break;
+        case '7d':
+            from = subDays(to, 7);
+            description = `bookings from the last 7 days`;
+            break;
+        case '30d':
+            from = subDays(to, 30);
+            description = `bookings from the last 30 days`;
+            break;
+        case 'custom':
+            if (!deleteDateRange?.from || !deleteDateRange?.to) {
+                toast({ variant: "destructive", title: "Invalid Date Range" });
+                return;
+            }
+            from = deleteDateRange.from;
+            to = deleteDateRange.to;
+            description = `bookings from ${format(from, 'PPP')} to ${format(to, 'PPP')}`;
+            break;
     }
+
     setIsBulkDeleting(true);
     try {
-        const count = await deleteBookingsInRange(deleteDateRange.from, deleteDateRange.to);
+        const count = await deleteBookingsInRange(from, to);
         toast({
             title: "Bulk Delete Successful",
-            description: `${count} booking(s) from ${format(deleteDateRange.from, 'PPP')} to ${format(deleteDateRange.to, 'PPP')} have been deleted.`,
+            description: `${count} ${description} have been deleted.`,
         });
         fetchBookingsData();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Bulk Delete Failed", description: e.message });
     } finally {
         setIsBulkDeleting(false);
+        setIsCustomDeleteOpen(false);
     }
   };
   
@@ -315,11 +345,60 @@ export default function AdminBookingsPage() {
                 <Button variant="outline" size="icon" onClick={fetchBookingsData} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" ><Trash2 className="h-4 w-4" /></Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
+                 
+                <AlertDialog open={isCustomDeleteOpen} onOpenChange={setIsCustomDeleteOpen}>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Delete All</DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>This will permanently delete ALL booking records. This action cannot be undone.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleBulkDelete('all')} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>
+                                            {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                            Delete All Bookings
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+
+                            <DropdownMenuSeparator />
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Last 7 Days</DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently delete all bookings from the last 7 days. Are you sure?</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleBulkDelete('7d')} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>{isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Delete</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                             </AlertDialog>
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Last 30 Days</DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Confirm Deletion</AlertDialogTitle><AlertDialogDescription>This will permanently delete all bookings from the last 30 days. Are you sure?</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleBulkDelete('30d')} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>{isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Delete</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+
+                            <DropdownMenuSeparator />
+                            <AlertDialogTrigger asChild>
+                               <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Custom Range...</DropdownMenuItem>
+                            </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                     <AlertDialogContent>
                         <AlertDialogHeader>
                             <AlertDialogTitle>Delete Bookings in Date Range</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -367,13 +446,14 @@ export default function AdminBookingsPage() {
                         </div>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleBulkDelete} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>
+                            <AlertDialogAction onClick={() => handleBulkDelete('custom')} disabled={isBulkDeleting} className={cn(buttonVariants({variant: 'destructive'}))}>
                                 {isBulkDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                 Delete
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
+
             </div>
         </div>
       

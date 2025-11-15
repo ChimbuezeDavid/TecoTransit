@@ -68,17 +68,23 @@ export async function deleteBooking(id: string): Promise<void> {
   await cleanupTrips([id]);
 }
 
-export async function deleteBookingsInRange(startDate: Date, endDate: Date): Promise<number> {
-    const startTimestamp = Timestamp.fromDate(startDate);
-    const endOfDay = new Date(endDate);
-    endOfDay.setHours(23, 59, 59, 999);
-    const endTimestamp = Timestamp.fromDate(endOfDay);
+export async function deleteBookingsInRange(startDate: Date | null, endDate: Date | null): Promise<number> {
     
-    const bookingsQuery = query(
-      collection(db, 'bookings'),
-      where('createdAt', '>=', startTimestamp),
-      where('createdAt', '<=', endTimestamp)
-    );
+    let bookingsQuery = query(collection(db, 'bookings'));
+
+    // If dates are provided, add where clauses. Otherwise, it will query all bookings.
+    if (startDate && endDate) {
+        const startTimestamp = Timestamp.fromDate(startDate);
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        const endTimestamp = Timestamp.fromDate(endOfDay);
+        
+        bookingsQuery = query(
+          collection(db, 'bookings'),
+          where('createdAt', '>=', startTimestamp),
+          where('createdAt', '<=', endTimestamp)
+        );
+    }
     
     const snapshot = await getDocs(bookingsQuery);
     if (snapshot.empty) {
@@ -86,16 +92,41 @@ export async function deleteBookingsInRange(startDate: Date, endDate: Date): Pro
     }
     
     const deletedBookingIds: string[] = [];
-    const batch = writeBatch(db);
-    snapshot.docs.forEach(doc => {
-      deletedBookingIds.push(doc.id);
-      batch.delete(doc.ref);
-    });
+    
+    // Firestore allows a maximum of 500 writes in a single batch.
+    // We'll process the deletions in chunks if there are more than 500.
+    const batches = [];
+    let currentBatch = writeBatch(db);
+    let currentBatchSize = 0;
 
-    await batch.commit();
+    for (const doc of snapshot.docs) {
+        deletedBookingIds.push(doc.id);
+        currentBatch.delete(doc.ref);
+        currentBatchSize++;
+
+        if (currentBatchSize === 500) {
+            batches.push(currentBatch);
+            currentBatch = writeBatch(db);
+            currentBatchSize = 0;
+        }
+    }
+
+    // Add the last batch if it's not empty
+    if (currentBatchSize > 0) {
+        batches.push(currentBatch);
+    }
+
+    // Commit all batches
+    await Promise.all(batches.map(batch => batch.commit()));
+
 
     if (deletedBookingIds.length > 0) {
-      await cleanupTrips(deletedBookingIds);
+      // Cleanup trips in smaller chunks to avoid overwhelming the function
+      const chunkSize = 100;
+      for (let i = 0; i < deletedBookingIds.length; i += chunkSize) {
+        const chunk = deletedBookingIds.slice(i, i + chunkSize);
+        await cleanupTrips(chunk);
+      }
     }
     
     return snapshot.size;
