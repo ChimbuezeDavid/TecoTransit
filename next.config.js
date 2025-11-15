@@ -39,8 +39,23 @@ const nextConfig = {
       },
     ]
   },
-  webpack(config) {
+  webpack(config, { isServer }) {
+    // Enable async WebAssembly
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
+
+    // Add a rule to handle .wasm files
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: "webassembly/async",
+    });
+
+    // For server-side builds, ensure wasm files are handled correctly
+    if (isServer) {
+      config.output.webassemblyModuleFilename = './../static/wasm/[modulehash].wasm';
+    } else {
+      config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
+    }
+
     return config;
   },
 };
