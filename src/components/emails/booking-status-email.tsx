@@ -1,4 +1,3 @@
-
 import {
   Body,
   Container,
@@ -6,7 +5,6 @@ import {
   Heading,
   Hr,
   Html,
-  Img,
   Preview,
   Section,
   Text,
@@ -24,10 +22,6 @@ interface BookingStatusEmailProps {
   totalFare: number;
   confirmedDate?: string;
 }
-
-const baseUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
 
 export default function BookingStatusEmail({
   name,
@@ -48,7 +42,6 @@ export default function BookingStatusEmail({
       <Body style={main}>
         <Container style={container}>
           <Section style={logoContainer}>
-            {/* You can replace this with your actual logo */}
             <Text style={logoText}>TecoTransit</Text>
           </Section>
           <Heading style={h1}>Booking {status}</Heading>
@@ -72,7 +65,7 @@ export default function BookingStatusEmail({
            {status === 'Cancelled' && (
              <Section style={highlightSectionRed}>
                 <Text style={highlightText}>
-                    Unfortunately, your booking has been cancelled. If you have any questions, please contact our support team at <Link href="mailto:tecotransportservices@gmail.com" style={link}>tecotransportservices@gmail.com</Link>.
+                    Unfortunately, your booking has been cancelled. To request a refund, please contact our support team via WhatsApp for the quickest resolution. If you have any questions, you can also reach us at <Link href="mailto:tecotransportservices@gmail.com" style={link}>tecotransportservices@gmail.com</Link>.
                 </Text>
              </Section>
           )}

@@ -72,6 +72,17 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error("Could not connect to the database.");
         }
 
+        // --- IDEMPOTENCY CHECK ---
+        // Check if a booking with this payment reference already exists.
+        const existingBookingQuery = db.collection('bookings').where('paymentReference', '==', reference).limit(1);
+        const existingBookingSnapshot = await existingBookingQuery.get();
+        if (!existingBookingSnapshot.empty) {
+            const existingBookingId = existingBookingSnapshot.docs[0].id;
+            console.log(`Duplicate booking prevented for reference: ${reference}. Existing booking ID: ${existingBookingId}`);
+            return { success: true, bookingId: existingBookingId };
+        }
+        // --- END IDEMPOTENCY CHECK ---
+
         const verificationResponse = await paystack.transaction.verify(reference);
         const metadata = verificationResponse.data?.metadata;
 

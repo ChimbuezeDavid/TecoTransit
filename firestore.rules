@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -7,25 +6,22 @@ service cloud.firestore {
     // This function is no longer used for broad access, but can be kept for future,
     // more specific admin-only rules (e.g., based on custom claims).
     function isAdmin() {
-      // For now, this is kept simple. In a production app, this should check
-      // for a custom claim: `request.auth.token.admin == true`.
+      // In a production app, this should check for a custom claim: `request.auth.token.admin == true`.
+      // For now, this is kept simple.
       return request.auth != null;
     }
 
-    // Bookings are managed via server-side actions. Client-side writes are disallowed for security.
+    // Bookings are managed via server-side actions. Client-side access is disallowed for security.
     match /bookings/{bookingId} {
-      allow read: if request.auth != null; // Admins can read all bookings
-      allow write: if false; // Disallow client-side creates, updates, deletes
+      allow read, write: if false; 
     }
 
-    // Trips are managed entirely by the backend.
+    // Trips are managed entirely by the backend. Client-side access is disallowed.
     match /trips/{tripId} {
-      allow read: if request.auth != null; // Admins can read all trips
-      allow write: if false; // Disallow all client-side writes
+      allow read, write: if false;
     }
 
     // Pricing can be read by anyone (for the booking form) but only written by admins.
-    // We trust server-side logic for writes.
     match /prices/{priceId} {
       allow read: if true;
       allow write: if request.auth != null; // Admin page updates prices directly
