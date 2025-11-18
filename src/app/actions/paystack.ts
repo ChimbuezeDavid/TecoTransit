@@ -291,7 +291,7 @@ async function sendOverflowEmail(bookingDetails: any, reason: string) {
 }
 
 
-async function checkAndConfirmTrip(
+export async function checkAndConfirmTrip(
     db: FirebaseFirestore.Firestore,
     tripId: string,
 ) {
