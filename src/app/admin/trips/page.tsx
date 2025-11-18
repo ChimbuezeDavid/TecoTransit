@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -12,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users } from "lucide-react";
+import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -81,7 +80,7 @@ export default function AdminTripsPage() {
     useEffect(() => {
         fetchPageData();
     }, [fetchPageData]);
-
+    
     const openDialog = (bookingId: string) => {
         const booking = bookings.find(b => b.id === bookingId);
         if (booking) {
@@ -130,10 +129,12 @@ export default function AdminTripsPage() {
                     <h1 className="text-3xl font-bold font-headline">Trip Manifests</h1>
                     <p className="text-muted-foreground">View passenger lists for all scheduled trips.</p>
                 </div>
-                <Button variant="outline" onClick={fetchPageData} disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2" />}
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={fetchPageData} disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                        Refresh
+                    </Button>
+                </div>
             </div>
 
             {Object.keys(groupedTripsByDate).length === 0 ? (
@@ -290,7 +291,3 @@ export default function AdminTripsPage() {
         </div>
     );
 }
-
-    
-
-    

@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund } from "@/app/actions/booking-actions";
+import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
 
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
 
@@ -101,6 +102,7 @@ export default function AdminBookingsPage() {
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
@@ -262,6 +264,35 @@ export default function AdminBookingsPage() {
         setIsCustomDeleteOpen(false);
     }
   };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+        const result = await synchronizeAndCreateTrips();
+        if (result.failed > 0) {
+             toast({
+                variant: "destructive",
+                title: `Synchronization Partially Failed`,
+                description: `${result.succeeded} succeeded, but ${result.failed} failed. Check console for errors.`,
+            });
+        } else if (result.succeeded > 0) {
+             toast({
+                title: "Synchronization Complete",
+                description: `${result.succeeded} booking(s) successfully processed and assigned to trips.`,
+            });
+        } else {
+             toast({
+                title: "Nothing to Synchronize",
+                description: "All relevant bookings are already assigned to trips.",
+            });
+        }
+        fetchBookingsData();
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Synchronization Error", description: e.message });
+    } finally {
+        setIsSyncing(false);
+    }
+  }
   
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
@@ -465,6 +496,10 @@ export default function AdminBookingsPage() {
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+                        <Button variant="outline" className="w-full" size="sm" onClick={handleSync} disabled={isSyncing}>
+                            {isSyncing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Synchronize
+                        </Button>
                         <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export CSV</Button>
                     </div>
                 </div>
