@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
@@ -64,6 +65,7 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
             for (const passenger of passengersToProcess) {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
                 const oldTripRef = tripDoc.ref;
+                let emailProps: any = null; // Variable to hold email data
 
                 try {
                     await db.runTransaction(async (transaction) => {
@@ -150,17 +152,22 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
 
                         // --- End of Perfected Logic ---
                         
-                        // 4. Send email notification *after* transaction commits successfully
-                        await sendBookingRescheduledEmail({
+                        // 4. Prepare email props for sending *after* transaction commits
+                        emailProps = {
                             name: bookingData.name,
                             email: bookingData.email,
                             bookingId: bookingData.id,
                             oldDate: yesterdayStr,
                             newDate: todayStr,
-                        });
-
-                        result.rescheduledCount++;
+                        };
                     });
+
+                    // If transaction was successful, emailProps will be set. Send email now.
+                    if (emailProps) {
+                        await sendBookingRescheduledEmail(emailProps);
+                        result.rescheduledCount++;
+                    }
+
                 } catch (e: any) {
                     result.failedCount++;
                     const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
