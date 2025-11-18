@@ -6,7 +6,6 @@ import type { Booking, Trip, Passenger } from "@/lib/types";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { getAllTrips, getAllBookings } from "@/lib/data";
-import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,7 +54,6 @@ export default function AdminTripsPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
@@ -84,37 +82,6 @@ export default function AdminTripsPage() {
         fetchPageData();
     }, [fetchPageData]);
     
-    const handleSync = async () => {
-        setIsSyncing(true);
-        try {
-            const result = await synchronizeAndCreateTrips();
-            if (result.failed > 0) {
-                 toast({
-                    variant: "destructive",
-                    title: `Synchronization Partially Failed`,
-                    description: `${result.failed} out of ${result.processed} bookings could not be assigned.`,
-                });
-            } else if (result.succeeded > 0) {
-                 toast({
-                    title: "Synchronization Complete",
-                    description: `${result.succeeded} booking(s) successfully processed and assigned to trips.`,
-                });
-            } else {
-                 toast({
-                    title: "Nothing to Synchronize",
-                    description: "All bookings are already assigned to trips.",
-                });
-            }
-            // Refresh data after sync
-            fetchPageData();
-        } catch (e: any) {
-            toast({ variant: "destructive", title: "Synchronization Error", description: e.message });
-        } finally {
-            setIsSyncing(false);
-        }
-    }
-
-
     const openDialog = (bookingId: string) => {
         const booking = bookings.find(b => b.id === bookingId);
         if (booking) {
@@ -164,13 +131,9 @@ export default function AdminTripsPage() {
                     <p className="text-muted-foreground">View passenger lists for all scheduled trips.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={fetchPageData} disabled={loading || isSyncing}>
+                    <Button variant="outline" onClick={fetchPageData} disabled={loading}>
                         {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Refresh
-                    </Button>
-                     <Button onClick={handleSync} disabled={isSyncing || loading}>
-                        {isSyncing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Synchronize
                     </Button>
                 </div>
             </div>

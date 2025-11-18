@@ -29,18 +29,22 @@ export async function synchronizeAndCreateTrips(): Promise<SyncResult> {
     // These are bookings that were created but something went wrong during assignment,
     // or the pricing rules were incomplete at the time of booking.
     const unassignedBookingsQuery = db.collection('bookings')
-        .where('status', 'in', ['Paid', 'Pending'])
         .where('tripId', '==', null);
 
     try {
         const snapshot = await unassignedBookingsQuery.get();
-        if (snapshot.empty) {
+        const relevantDocs = snapshot.docs.filter(doc => {
+            const status = doc.data().status;
+            return status === 'Paid' || status === 'Pending';
+        });
+
+        if (relevantDocs.length === 0) {
             return result;
         }
         
-        result.processed = snapshot.size;
+        result.processed = relevantDocs.length;
         
-        const bookingPromises = snapshot.docs.map(async (doc) => {
+        const bookingPromises = relevantDocs.map(async (doc) => {
             const booking = {
                 id: doc.id,
                 ...doc.data(),
