@@ -1,9 +1,8 @@
-
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Booking } from "@/lib/types";
-import { assignBookingToTrip } from "./paystack";
+import { assignBookingToTrip } from "./create-booking-and-assign-trip";
 
 type SyncResult = {
     processed: number;
@@ -26,40 +25,35 @@ export async function synchronizeAndCreateTrips(): Promise<SyncResult> {
     };
 
     // Find all 'Paid' or 'Pending' bookings that are missing a tripId.
-    // These are bookings that were created but something went wrong during assignment,
-    // or the pricing rules were incomplete at the time of booking.
-    const unassignedBookingsQuery = db.collection('bookings')
-        .where('tripId', '==', null);
+    // Firestore queries for non-existent fields are not direct.
+    // Instead, we get all relevant bookings and filter in memory.
+    // This is less efficient for very large datasets, but more reliable.
+    const bookingsQuery = db.collection('bookings')
+        .where('status', 'in', ['Paid', 'Pending']);
+        
 
     try {
-        const snapshot = await unassignedBookingsQuery.get();
-        const relevantDocs = snapshot.docs.filter(doc => {
-            const status = doc.data().status;
-            return status === 'Paid' || status === 'Pending';
-        });
+        const snapshot = await bookingsQuery.get();
+        
+        // Filter for documents that do NOT have the tripId field.
+        const unassignedDocs = snapshot.docs.filter(doc => !doc.data().tripId);
 
-        if (relevantDocs.length === 0) {
-            return result;
+        if (unassignedDocs.length === 0) {
+            return { ...result, processed: 0, succeeded: 0 };
         }
         
-        result.processed = relevantDocs.length;
+        result.processed = unassignedDocs.length;
         
-        const bookingPromises = relevantDocs.map(async (doc) => {
+        const bookingPromises = unassignedDocs.map(async (doc) => {
             const booking = {
                 id: doc.id,
                 ...doc.data(),
-                 // Convert Firestore timestamp to a JS Date object then back to string for consistency with type
-                createdAt: doc.data().createdAt.toDate(),
-            } as Booking;
+                 // `assignBookingToTrip` expects createdAt to be a Timestamp or compatible object
+                createdAt: doc.data().createdAt,
+            } as any;
 
             try {
-                // We use a temporary object for assignment, because the original `createdAt` is a Timestamp
-                const tempBookingForAssignment = {
-                    ...booking,
-                    createdAt: doc.data().createdAt,
-                }
-                
-                await assignBookingToTrip(tempBookingForAssignment);
+                await assignBookingToTrip(booking);
                 return { success: true, bookingId: booking.id };
             } catch (error: any) {
                 console.error(`Failed to assign trip for booking ${booking.id}:`, error.message);

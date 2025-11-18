@@ -273,7 +273,7 @@ export default function AdminBookingsPage() {
              toast({
                 variant: "destructive",
                 title: `Synchronization Partially Failed`,
-                description: `${result.succeeded} succeeded, but ${result.failed} failed.`,
+                description: `${result.succeeded} succeeded, but ${result.failed} failed. Check console for errors.`,
             });
         } else if (result.succeeded > 0) {
              toast({
