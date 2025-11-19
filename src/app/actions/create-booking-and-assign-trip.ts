@@ -98,6 +98,12 @@ export async function assignBookingToTrip(
             }
             const priceRule = { id: priceRuleSnap.id, ...priceRuleSnap.data() } as PriceRule;
             
+            // --- SERVER-SIDE CHECK FOR VEHICLE COUNT ---
+            if (priceRule.vehicleCount <= 0) {
+                throw new Error("This route is currently disabled as no vehicles are assigned.");
+            }
+            // --- END CHECK ---
+
             const vehicleKey = Object.keys(vehicleOptions).find(key => vehicleOptions[key as keyof typeof vehicleOptions].name === priceRule.vehicleType) as keyof typeof vehicleOptions | undefined;
             
             if (!vehicleKey) {

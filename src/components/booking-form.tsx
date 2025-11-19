@@ -87,8 +87,9 @@ export default function BookingForm() {
 
   const availableVehicles = useMemo(() => {
     if (pickup && destination && prices) {
+      // Filter for price rules that match the route AND have at least one vehicle assigned.
       const priceRule = prices.filter(
-        (p) => p.pickup === pickup && p.destination === destination
+        (p) => p.pickup === pickup && p.destination === destination && p.vehicleCount > 0
       );
        if (priceRule.length > 0) {
         return priceRule;

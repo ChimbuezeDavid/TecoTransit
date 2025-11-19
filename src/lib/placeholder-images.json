@@ -2,5 +2,9 @@
   "hero": {
     "src": "https://picsum.photos/seed/roadtrip/1600/900",
     "data-ai-hint": "road trip"
+  },
+  "cta": {
+    "src": "https://picsum.photos/seed/traveler/1600/600",
+    "data-ai-hint": "happy traveler"
   }
 }
