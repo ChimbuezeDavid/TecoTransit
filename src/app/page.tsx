@@ -110,9 +110,6 @@ export default function LandingPage() {
              <div className="grid md:grid-cols-3 gap-8 text-center relative">
                 {/* Dashed lines for larger screens */}
                 <div className="hidden md:block absolute top-1/2 left-0 w-full h-px -translate-y-12">
-                   <svg width="100%" height="2">
-                      <line x1="0" y1="1" x2="100%" y2="1" strokeWidth="2" strokeDasharray="8, 8" className="stroke-border" />
-                   </svg>
                 </div>
                  {howItWorks.map((step, index) => (
                   <div key={step.title} className="flex flex-col items-center relative bg-muted/30 px-4">
