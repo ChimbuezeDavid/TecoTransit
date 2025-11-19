@@ -106,9 +106,9 @@ export default function LandingPage() {
               We've simplified the travel process so you can focus on your trip.
             </p>
           </div>
-          <div className="mt-16 grid md:grid-cols-3 gap-8 text-center relative max-w-5xl mx-auto">
+          <div className="mt-16 grid md:grid-cols-3 gap-8 text-center max-w-5xl mx-auto">
             {howItWorks.map((step, index) => (
-              <Card key={step.title} className="bg-muted/30 border-0 shadow-lg">
+              <Card key={step.title} className="bg-card border shadow-lg">
                 <CardHeader className="items-center text-center">
                   <div className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/10 mb-6 border-2 border-primary relative">
                     <span className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">{index + 1}</span>
@@ -126,10 +126,19 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-16 sm:py-24 bg-muted/30">
-        <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline">Ready for a Smooth Ride?</h2>
-            <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
+      <section className="relative py-16 sm:py-24">
+        <Image
+          src={placeholderImages.cta.src}
+          alt="Comfortable vehicle interior"
+          fill
+          className="object-cover"
+          sizes="100vw"
+          data-ai-hint={placeholderImages.cta['data-ai-hint']}
+        />
+        <div className="absolute inset-0 bg-black/60" />
+        <div className="relative z-10 container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold font-headline text-white">Ready for a Smooth Ride?</h2>
+            <p className="mt-3 text-lg text-gray-200 max-w-2xl mx-auto">
               Don't wait. Secure your seat today and experience travel the TecoTransit way.
             </p>
             <Button asChild size="lg" className="mt-8 font-bold text-lg">
