@@ -126,7 +126,7 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-16 sm:py-24">
+      <section className="py-16 sm:py-24 bg-muted/30">
         <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold font-headline">Ready for a Smooth Ride?</h2>
             <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -134,7 +134,7 @@ export default function LandingPage() {
             </p>
             <Button asChild size="lg" className="mt-8 font-bold text-lg">
               <Link href="/book">
-                Book My Trip
+                Book Your Trip Now <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
         </div>
