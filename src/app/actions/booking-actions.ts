@@ -19,6 +19,11 @@ export async function updateBookingStatus(bookingId: string, status: 'Cancelled'
 
   await updateDoc(bookingDocRef, { status });
 
+  // After successfully updating the status, remove the passenger from the trip
+  if (bookingToUpdate.tripId) {
+    await cleanupTrips([bookingId]);
+  }
+
   try {
     await sendBookingStatusEmail({
         name: bookingToUpdate.name,
@@ -64,9 +69,20 @@ export async function requestRefund(bookingId: string): Promise<void> {
 
 export async function deleteBooking(id: string): Promise<void> {
   const bookingDocRef = doc(db, 'bookings', id);
-  await deleteDoc(bookingDocRef);
-  await cleanupTrips([id]);
+  // We need to get the booking data before deleting it to check for a tripId
+  const bookingSnap = await getDoc(bookingDocRef);
+  
+  if (bookingSnap.exists()) {
+      const bookingData = bookingSnap.data();
+      await deleteDoc(bookingDocRef);
+      
+      // Only run cleanup if the booking was actually assigned to a trip
+      if (bookingData.tripId) {
+          await cleanupTrips([id]);
+      }
+  }
 }
+
 
 export async function deleteBookingsInRange(startDate: Date | null, endDate: Date | null): Promise<number> {
     
@@ -100,7 +116,10 @@ export async function deleteBookingsInRange(startDate: Date | null, endDate: Dat
     let currentBatchSize = 0;
 
     for (const doc of snapshot.docs) {
-        deletedBookingIds.push(doc.id);
+        // Collect IDs of bookings that are actually part of a trip for cleanup
+        if (doc.data().tripId) {
+            deletedBookingIds.push(doc.id);
+        }
         currentBatch.delete(doc.ref);
         currentBatchSize++;
 
