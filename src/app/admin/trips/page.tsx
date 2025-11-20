@@ -7,16 +7,19 @@ import { useToast } from "@/hooks/use-toast";
 import { getAllTrips, getAllBookings } from "@/lib/data";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles } from "lucide-react";
+import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User as UserIcon, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Ticket, History } from "lucide-react";
 import { getStatusVariant } from "@/lib/utils";
+import { clearAllTrips } from "@/app/actions/clear-all-trips";
+import { cn } from "@/lib/utils";
 
 function TripsPageSkeleton() {
     return (
@@ -53,6 +56,7 @@ export default function AdminTripsPage() {
     const [trips, setTrips] = useState<Trip[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isClearing, setIsClearing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { toast } = useToast();
 
@@ -80,6 +84,26 @@ export default function AdminTripsPage() {
     useEffect(() => {
         fetchPageData();
     }, [fetchPageData]);
+    
+    const handleClearTrips = async () => {
+        setIsClearing(true);
+        try {
+            const result = await clearAllTrips();
+            if (result.success) {
+                toast({
+                    title: "Trips Cleared",
+                    description: `${result.clearedTripsCount} trips were deleted and ${result.deallocatedBookingsCount} bookings were deallocated.`,
+                });
+                fetchPageData(); // Refresh the data to show empty state
+            } else {
+                throw new Error(result.error || "An unknown error occurred.");
+            }
+        } catch (e: any) {
+            toast({ variant: "destructive", title: "Clearing Failed", description: e.message });
+        } finally {
+            setIsClearing(false);
+        }
+    };
     
     const openDialog = (bookingId: string) => {
         const booking = bookings.find(b => b.id === bookingId);
@@ -130,6 +154,28 @@ export default function AdminTripsPage() {
                     <p className="text-muted-foreground">View passenger lists for all scheduled trips.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isClearing || trips.length === 0}>
+                                {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Clear All Trips
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action will permanently delete ALL trips and deallocate ALL passengers from them. This is useful for a "hard reset" before re-synchronizing bookings, but cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleClearTrips} className={cn(buttonVariants({ variant: "destructive" }))}>
+                                    Yes, Clear Everything
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                     <Button variant="outline" onClick={fetchPageData} disabled={loading}>
                         {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Refresh
