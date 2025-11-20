@@ -62,15 +62,6 @@ export default function BookingReceivedEmail({
 
           <Hr style={hr} />
 
-          <Heading as="h2" style={h2}>Reservation Summary</Heading>
-          <Section style={detailsContainer}>
-            <Text style={detailItem}><strong>Intended Date:</strong> {format(new Date(intendedDate), 'EEEE, MMMM dd, yyyy')}</Text>
-            <Text style={detailItem}><strong>Route:</strong> {pickup} to {destination}</Text>
-            <Text style={detailItem}><strong>Total Fare Paid:</strong> ₦{totalFare.toLocaleString()}</Text>
-          </Section>
-
-          <Hr style={hr} />
-
           <Text style={text}>
             We'll be in touch soon with your final trip confirmation.
           </Text>
