@@ -18,5 +18,6 @@ declare namespace NodeJS {
     
     NEXT_PUBLIC_BASE_URL: string;
     VERCEL_URL?: string;
+    CRON_SECRET?: string;
   }
 }
