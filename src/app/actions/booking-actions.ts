@@ -51,8 +51,13 @@ export async function updateBookingStatus(bookingId: string, status: 'Cancelled'
 }
 
 export async function requestRefund(bookingId: string): Promise<void> {
-    const bookingDocRef = doc(db, 'bookings', bookingId);
-    const bookingSnap = await getDoc(bookingDocRef);
+    const adminDb = getFirebaseAdmin()?.firestore();
+    if (!adminDb) {
+      throw new Error("Database connection failed.");
+    }
+    
+    const bookingDocRef = adminDb.collection('bookings').doc(bookingId);
+    const bookingSnap = await bookingDocRef.get();
 
     if (!bookingSnap.exists()) {
         throw new Error("Booking not found");
@@ -67,7 +72,7 @@ export async function requestRefund(bookingId: string): Promise<void> {
     }
 
     await sendRefundRequestEmail({
-        bookingId: booking.id,
+        bookingId: bookingId,
         customerName: booking.name,
         customerEmail: booking.email,
         totalFare: booking.totalFare,
