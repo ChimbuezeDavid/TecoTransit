@@ -2,13 +2,13 @@
 'use server';
 
 import { doc, updateDoc, deleteDoc, getDoc, getDocs, query, collection, where, Timestamp, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { sendBookingStatusEmail, sendRefundRequestEmail, sendManualRescheduleEmail } from './send-email';
+import { sendBookingStatusEmail, sendManualRescheduleEmail } from './send-email';
 import { cleanupTrips } from './cleanup-trips';
 import type { Booking } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
+import { processRefund } from './paystack';
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
   const adminDb = getFirebaseAdmin()?.firestore();
@@ -50,7 +50,7 @@ export async function updateBookingStatus(bookingId: string, status: 'Cancelled'
   }
 }
 
-export async function requestRefund(bookingId: string): Promise<void> {
+export async function requestRefund(bookingId: string): Promise<{success: boolean, message: string}> {
     const adminDb = getFirebaseAdmin()?.firestore();
     if (!adminDb) {
       throw new Error("Database connection failed.");
@@ -71,26 +71,36 @@ export async function requestRefund(bookingId: string): Promise<void> {
         throw new Error("This booking has no payment reference, so a refund cannot be processed automatically.");
     }
 
-    await sendRefundRequestEmail({
-        bookingId: bookingId,
-        customerName: booking.name,
-        customerEmail: booking.email,
-        totalFare: booking.totalFare,
-        paymentReference: booking.paymentReference,
+    // Process refund directly via Paystack API
+    const refundResult = await processRefund({
+      reference: booking.paymentReference,
+      amount: booking.totalFare,
     });
+
+    if (refundResult.status) {
+      // Optionally, update the booking status to 'Refunded'
+      await bookingDocRef.update({ status: 'Refunded' });
+      return { success: true, message: refundResult.message || "Refund processed successfully." };
+    } else {
+      throw new Error(refundResult.message || "Failed to process refund on Paystack.");
+    }
 }
 
 export async function deleteBooking(id: string): Promise<void> {
-  const bookingDocRef = doc(db, 'bookings', id);
+  const db = getFirebaseAdmin()?.firestore();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+  const bookingDocRef = db.collection('bookings').doc(id);
   // We need to get the booking data before deleting it to check for a tripId
   const bookingSnap = await getDoc(bookingDocRef);
   
-  if (bookingSnap.exists()) {
+  if (bookingSnap.exists) {
       const bookingData = bookingSnap.data();
       await deleteDoc(bookingDocRef);
       
       // Only run cleanup if the booking was actually assigned to a trip
-      if (bookingData.tripId) {
+      if (bookingData && bookingData.tripId) {
           await cleanupTrips([id]);
       }
   }
@@ -98,6 +108,10 @@ export async function deleteBooking(id: string): Promise<void> {
 
 
 export async function deleteBookingsInRange(startDate: Date | null, endDate: Date | null): Promise<number> {
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+      throw new Error("Database not available");
+    }
     
     let bookingsQuery = query(collection(db, 'bookings'));
 
@@ -122,14 +136,11 @@ export async function deleteBookingsInRange(startDate: Date | null, endDate: Dat
     
     const deletedBookingIds: string[] = [];
     
-    // Firestore allows a maximum of 500 writes in a single batch.
-    // We'll process the deletions in chunks if there are more than 500.
     const batches = [];
     let currentBatch = writeBatch(db);
     let currentBatchSize = 0;
 
     for (const doc of snapshot.docs) {
-        // Collect IDs of bookings that are actually part of a trip for cleanup
         if (doc.data().tripId) {
             deletedBookingIds.push(doc.id);
         }
@@ -143,17 +154,14 @@ export async function deleteBookingsInRange(startDate: Date | null, endDate: Dat
         }
     }
 
-    // Add the last batch if it's not empty
     if (currentBatchSize > 0) {
         batches.push(currentBatch);
     }
 
-    // Commit all batches
     await Promise.all(batches.map(batch => batch.commit()));
 
 
     if (deletedBookingIds.length > 0) {
-      // Cleanup trips in smaller chunks to avoid overwhelming the function
       const chunkSize = 100;
       for (let i = 0; i < deletedBookingIds.length; i += chunkSize) {
         const chunk = deletedBookingIds.slice(i, i + chunkSize);
@@ -185,7 +193,6 @@ export async function manuallyRescheduleBooking(bookingId: string, newDate: stri
             const bookingData = bookingDoc.data() as Booking;
             oldTripId = bookingData.tripId;
 
-            // Prepare for reassignment
             bookingForAssignment = {
                 ...bookingData,
                 id: bookingDoc.id,
@@ -193,7 +200,6 @@ export async function manuallyRescheduleBooking(bookingId: string, newDate: stri
                 createdAt: (bookingData.createdAt as any), 
             };
 
-            // 1. Remove passenger from the old trip if they were in one
             if (oldTripId) {
                 const oldTripRef = adminDb.collection('trips').doc(oldTripId);
                 const passengerToRemove = {
@@ -206,19 +212,15 @@ export async function manuallyRescheduleBooking(bookingId: string, newDate: stri
                 });
             }
 
-            // 2. Update booking with new date and remove old tripId
             transaction.update(bookingRef, {
                 intendedDate: newDate,
                 tripId: FieldValue.delete(),
-                // Optionally reset reschedule count if you want manual reschedules to not count
                 rescheduledCount: 0 
             });
         });
 
-        // 3. Re-assign to a new trip with the updated date
         await assignBookingToTrip(bookingForAssignment);
 
-        // 4. Send notification email to customer
         await sendManualRescheduleEmail({
             name: bookingForAssignment.name,
             email: bookingForAssignment.email,

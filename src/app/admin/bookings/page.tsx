@@ -89,6 +89,7 @@ const getStatusIcon = (status: Booking['status']) => {
         case 'Cancelled': return <Ban className="h-4 w-4 text-destructive" />;
         case 'Paid': return <HandCoins className="h-4 w-4 text-blue-500" />;
         case 'Pending': return <CircleDot className="h-4 w-4 text-amber-500" />;
+        case 'Refunded': return <CreditCard className="h-4 w-4 text-slate-500" />;
         default: return <Check className="h-4 w-4" />;
     }
 };
@@ -159,15 +160,13 @@ export default function AdminBookingsPage() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        // Important: Re-fetch the individual booking to get the updated status
-        // so the UI can show the refund button if applicable.
         const updatedBooking = bookings.find(b => b.id === selectedBooking.id);
         if (updatedBooking) {
             setSelectedBooking({...updatedBooking, status: 'Cancelled'});
         } else {
             setIsManageDialogOpen(false);
         }
-        fetchBookingsData(); // Refresh data table in background
+        fetchBookingsData();
     } catch (error) {
         toast({
             variant: "destructive",
@@ -184,15 +183,21 @@ export default function AdminBookingsPage() {
 
     setIsProcessing(prev => ({ ...prev, refund: true }));
     try {
-        await requestRefund(selectedBooking.id);
-        toast({
-            title: "Refund Requested",
-            description: "An email has been sent to the finance team to process the refund.",
-        });
+        const result = await requestRefund(selectedBooking.id);
+        if (result.success) {
+            toast({
+                title: "Refund Processed",
+                description: result.message,
+            });
+            fetchBookingsData();
+            setIsManageDialogOpen(false);
+        } else {
+            throw new Error(result.message);
+        }
     } catch (error) {
         toast({
             variant: "destructive",
-            title: "Refund Request Failed",
+            title: "Refund Failed",
             description: error instanceof Error ? error.message : 'An unknown error occurred.',
         });
     } finally {
@@ -211,7 +216,7 @@ export default function AdminBookingsPage() {
         description: `Booking has been permanently deleted.`,
       });
       setIsManageDialogOpen(false);
-      fetchBookingsData(); // Refresh data
+      fetchBookingsData();
     } catch (error) {
        toast({
         variant: "destructive",
@@ -554,6 +559,7 @@ export default function AdminBookingsPage() {
                             <SelectItem value="Paid">Paid</SelectItem>
                             <SelectItem value="Pending">Pending</SelectItem>
                             <SelectItem value="Cancelled">Cancelled</SelectItem>
+                            <SelectItem value="Refunded">Refunded</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -763,7 +769,7 @@ export default function AdminBookingsPage() {
                         </AlertDialog>
                     </div>
                     <div className="flex flex-col-reverse sm:flex-row gap-2 w-full sm:w-auto">
-                        {selectedBooking.status !== 'Cancelled' && (
+                        {selectedBooking.status !== 'Cancelled' && selectedBooking.status !== 'Refunded' && (
                             <Button variant="secondary" className="w-full" size="lg" onClick={() => handleUpdateBooking('Cancelled')} disabled={isProcessing[selectedBooking.id]}>
                                 {isProcessing[selectedBooking.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
                                 Cancel Booking
@@ -774,24 +780,24 @@ export default function AdminBookingsPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" className="w-full" size="lg" disabled={isProcessing['refund']}>
                                         {isProcessing['refund'] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                                        Request Refund
+                                        Process Refund
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirm Refund Request</AlertDialogTitle>
+                                        <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will send an email to the finance team to process a refund for this booking. Are you sure you want to proceed?
+                                            This will immediately initiate a refund transaction via Paystack for this booking. This action cannot be undone. Are you sure?
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleRequestRefund}>Confirm</AlertDialogAction>
+                                        <AlertDialogAction onClick={handleRequestRefund}>Confirm Refund</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
                         )}
-                        {selectedBooking.status === 'Cancelled' && !selectedBooking.paymentReference && (
+                        {(selectedBooking.status === 'Refunded' || (selectedBooking.status === 'Cancelled' && !selectedBooking.paymentReference)) && (
                             <Button variant="outline" size="lg" className="w-full" onClick={() => setIsManageDialogOpen(false)}>Close</Button>
                         )}
                     </div>

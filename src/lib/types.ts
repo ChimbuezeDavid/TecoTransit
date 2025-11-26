@@ -15,7 +15,7 @@ export type Booking = {
   totalFare: number;
   allowReschedule: boolean;
   paymentReference?: string; // Paystack transaction reference
-  status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled';
+  status: 'Pending' | 'Paid' | 'Confirmed' | 'Cancelled' | 'Refunded';
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   tripId?: string; // ID of the trip this booking is assigned to
