@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
@@ -5,13 +6,14 @@ import { subDays, format } from 'date-fns';
 
 type CleanupResult = {
     success: boolean;
-    deletedCount: number;
+    archivedCount: number;
     error?: string;
 };
 
 /**
- * Deletes all trip documents that are older than 7 days.
- * This is designed to be run as a daily cron job to keep the trips collection clean.
+ * Finds trip documents older than 7 days, archives them to the 'archivedTrips'
+ * collection, and then deletes them from the main 'trips' collection.
+ * This is designed to be run as a daily cron job.
  */
 export async function cleanupPastTrips(): Promise<CleanupResult> {
     const db = getFirebaseAdmin()?.firestore();
@@ -20,12 +22,10 @@ export async function cleanupPastTrips(): Promise<CleanupResult> {
     }
 
     try {
-        // Calculate the date 7 days ago
         const cutoffDate = subDays(new Date(), 7);
         const cutoffDateStr = format(cutoffDate, 'yyyy-MM-dd');
 
         const tripsRef = db.collection('trips');
-        // Query for trips with a date less than the cutoff date
         const oldTripsQuery = tripsRef.where('date', '<', cutoffDateStr);
         
         const snapshot = await oldTripsQuery.get();
@@ -33,45 +33,50 @@ export async function cleanupPastTrips(): Promise<CleanupResult> {
         if (snapshot.empty) {
             return {
                 success: true,
-                deletedCount: 0,
+                archivedCount: 0,
             };
         }
 
-        // Firestore batches are limited to 500 operations.
-        // We'll process in chunks to stay within limits.
+        const archiveRef = db.collection('archivedTrips');
         const batchArray: FirebaseFirestore.WriteBatch[] = [];
         let currentBatch = db.batch();
         let currentBatchSize = 0;
 
         for (const doc of snapshot.docs) {
+            const tripData = doc.data();
+            // Copy to archive collection (using the same ID)
+            const archiveDocRef = archiveRef.doc(doc.id);
+            currentBatch.set(archiveDocRef, tripData);
+            
+            // Delete from original trips collection
             currentBatch.delete(doc.ref);
+            
+            // Each doc involves 2 operations, so we check for 250 docs to stay under 500 operations
             currentBatchSize++;
-            if (currentBatchSize === 500) {
+            if (currentBatchSize >= 250) {
                 batchArray.push(currentBatch);
                 currentBatch = db.batch();
                 currentBatchSize = 0;
             }
         }
         
-        // Add the last batch if it has operations
         if (currentBatchSize > 0) {
             batchArray.push(currentBatch);
         }
 
-        // Commit all batches
         await Promise.all(batchArray.map(batch => batch.commit()));
 
         return {
             success: true,
-            deletedCount: snapshot.size,
+            archivedCount: snapshot.size,
         };
 
     } catch (error: any) {
-        console.error("An error occurred during past trips cleanup:", error);
+        console.error("An error occurred during past trips cleanup and archival:", error);
         return { 
             success: false, 
-            deletedCount: 0,
-            error: "Failed to clean up past trips." 
+            archivedCount: 0,
+            error: "Failed to clean up and archive past trips." 
         };
     }
 }
