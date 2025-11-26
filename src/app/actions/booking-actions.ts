@@ -1,11 +1,14 @@
+
 'use server';
 
 import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { sendBookingStatusEmail, sendRefundRequestEmail } from './send-email';
+import { sendBookingStatusEmail, sendRefundRequestEmail, sendManualRescheduleEmail } from './send-email';
 import { cleanupTrips } from './cleanup-trips';
 import type { Booking } from '@/lib/types';
-import { getDocs, query, collection, where, Timestamp, writeBatch } from 'firebase/firestore';
+import { getDocs, query, collection, where, Timestamp, writeBatch, FieldValue } from 'firebase/firestore';
+import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { assignBookingToTrip } from './create-booking-and-assign-trip';
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
   const bookingDocRef = doc(db, 'bookings', bookingId);
@@ -149,4 +152,76 @@ export async function deleteBookingsInRange(startDate: Date | null, endDate: Dat
     }
     
     return snapshot.size;
+}
+
+
+export async function manuallyRescheduleBooking(bookingId: string, newDate: string): Promise<{success: boolean; error?: string}> {
+    const adminDb = getFirebaseAdmin()?.firestore();
+    if (!adminDb) {
+        return { success: false, error: "Database connection failed." };
+    }
+
+    const bookingRef = adminDb.collection('bookings').doc(bookingId);
+
+    try {
+        let oldTripId: string | undefined;
+        let bookingForAssignment: any;
+
+        await adminDb.runTransaction(async (transaction) => {
+            const bookingDoc = await transaction.get(bookingRef);
+            if (!bookingDoc.exists) {
+                throw new Error(`Booking ${bookingId} not found.`);
+            }
+            const bookingData = bookingDoc.data() as Booking;
+            oldTripId = bookingData.tripId;
+
+            // Prepare for reassignment
+            bookingForAssignment = {
+                ...bookingData,
+                id: bookingDoc.id,
+                intendedDate: newDate,
+                createdAt: (bookingData.createdAt as any), 
+            };
+
+            // 1. Remove passenger from the old trip if they were in one
+            if (oldTripId) {
+                const oldTripRef = adminDb.collection('trips').doc(oldTripId);
+                const passengerToRemove = {
+                    bookingId: bookingData.id,
+                    name: bookingData.name,
+                    phone: bookingData.phone
+                };
+                transaction.update(oldTripRef, {
+                    passengers: FieldValue.arrayRemove(passengerToRemove)
+                });
+            }
+
+            // 2. Update booking with new date and remove old tripId
+            transaction.update(bookingRef, {
+                intendedDate: newDate,
+                tripId: FieldValue.delete(),
+                // Optionally reset reschedule count if you want manual reschedules to not count
+                rescheduledCount: 0 
+            });
+        });
+
+        // 3. Re-assign to a new trip with the updated date
+        await assignBookingToTrip(bookingForAssignment);
+
+        // 4. Send notification email to customer
+        await sendManualRescheduleEmail({
+            name: bookingForAssignment.name,
+            email: bookingForAssignment.email,
+            bookingId: bookingForAssignment.id,
+            newDate: newDate,
+            pickup: bookingForAssignment.pickup,
+            destination: bookingForAssignment.destination,
+        });
+
+        return { success: true };
+
+    } catch (error: any) {
+        console.error(`Manual reschedule failed for booking ${bookingId}:`, error);
+        return { success: false, error: error.message };
+    }
 }

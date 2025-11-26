@@ -5,6 +5,9 @@ import { Resend } from 'resend';
 import BookingStatusEmail from '@/components/emails/booking-status-email';
 import BookingReceivedEmail from '@/components/emails/booking-received-email';
 import BookingRescheduledEmail from '@/components/emails/booking-rescheduled-email';
+import ManualRescheduleEmail from '@/components/emails/manual-reschedule-email';
+import type { Booking } from '@/lib/types';
+
 
 interface SendBookingStatusEmailProps {
   name: string;
@@ -142,4 +145,55 @@ export const sendRefundRequestEmail = async (props: SendRefundRequestEmailProps)
     console.error('Failed to send refund request email:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to send refund request email.');
   }
+};
+
+
+export const sendRescheduleFailedEmail = async (booking: Booking) => {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    try {
+        await resend.emails.send({
+            from: 'TecoTransit Alert <alert@tecotransit.org>',
+            to: ['tecotransportservices@gmail.com'],
+            subject: `Action Required: Booking Reschedule Failed (ID: ${booking.id.substring(0,8)})`,
+            html: `
+                <h1>Action Required: Automatic Reschedule Failed</h1>
+                <p>A booking could not be rescheduled for a second time automatically and requires manual intervention.</p>
+                <p><strong>Reason:</strong> The passenger was already automatically rescheduled once, and their new trip also did not fill up.</p>
+                <h3>Booking Details:</h3>
+                <ul>
+                    <li><strong>Booking ID:</strong> ${booking.id}</li>
+                    <li><strong>Passenger:</strong> ${booking.name} (${booking.email})</li>
+                    <li><strong>Route:</strong> ${booking.pickup} to ${booking.destination}</li>
+                    <li><strong>Intended Date:</strong> ${booking.intendedDate}</li>
+                </ul>
+                <p>Please log in to the admin panel to manually reschedule this booking or contact the customer.</p>
+            `,
+        });
+    } catch (e) {
+        console.error("Failed to send reschedule failure email:", e);
+    }
+};
+
+interface ManualRescheduleEmailProps {
+  name: string;
+  email: string;
+  bookingId: string;
+  newDate: string;
+  pickup: string;
+  destination: string;
+}
+
+export const sendManualRescheduleEmail = async (props: ManualRescheduleEmailProps) => {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    try {
+        await resend.emails.send({
+            from: 'TecoTransit <noreply@tecotransit.org>',
+            to: [props.email],
+            subject: `Update: Your TecoTransit Booking Has Been Manually Rescheduled (Ref: ${props.bookingId.substring(0,8)})`,
+            react: ManualRescheduleEmail(props),
+        });
+    } catch (e) {
+        console.error('Failed to send manual reschedule email:', e);
+        throw new Error(e instanceof Error ? e.message : 'Failed to send manual reschedule email.');
+    }
 };

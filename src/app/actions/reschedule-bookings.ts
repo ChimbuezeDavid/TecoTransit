@@ -5,7 +5,7 @@ import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import { format, subDays, startOfDay } from 'date-fns';
 import { assignBookingToTrip } from "./create-booking-and-assign-trip";
 import type { Booking, Trip, Passenger } from "@/lib/types";
-import { sendBookingRescheduledEmail } from "./send-email";
+import { sendBookingRescheduledEmail, sendRescheduleFailedEmail } from "./send-email";
 import { FieldValue } from 'firebase-admin/firestore';
 import { vehicleOptions } from "@/lib/constants";
 
@@ -68,20 +68,28 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                 let emailProps: any = null; // Variable to hold email data
 
                 try {
+                    let bookingDataForAlert: Booking | null = null;
+                    
                     await db.runTransaction(async (transaction) => {
                         const bookingDoc = await transaction.get(bookingRef);
                         if (!bookingDoc.exists) {
                             throw new Error(`Booking ${passenger.bookingId} not found during transaction.`);
                         }
                         const bookingData = { ...bookingDoc.data(), id: bookingDoc.id } as Booking;
+                        bookingDataForAlert = bookingData; // Store for potential alert email
 
                         // 1. Skip if user opted out, booking was cancelled, or already rescheduled once
-                        if (!bookingData.allowReschedule || bookingData.status === 'Cancelled' || (bookingData.rescheduledCount || 0) >= 1) {
+                        if (!bookingData.allowReschedule || bookingData.status === 'Cancelled') {
                             result.skippedCount++;
                             return; // Exit transaction for this passenger
                         }
-
-                        // --- Start of New, Perfected Logic ---
+                        
+                        if ((bookingData.rescheduledCount || 0) >= 1) {
+                            result.skippedCount++;
+                            // This is where we trigger the admin alert
+                            await sendRescheduleFailedEmail(bookingData);
+                            return; // Stop processing this passenger
+                        }
 
                         // 2. Remove from old trip
                         transaction.update(oldTripRef, { passengers: FieldValue.arrayRemove(passenger) });
@@ -103,26 +111,19 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                         };
                     });
 
-                    // If transaction was successful, re-run assignment logic for the new date
-                    const updatedBookingDoc = await bookingRef.get();
-                    if(updatedBookingDoc.exists()) {
-                       const updatedBookingData = updatedBookingDoc.data();
-
-                       // `assignBookingToTrip` needs a plain object, not a Firestore document
-                        const bookingForAssignment = {
-                            ...updatedBookingData,
-                            id: updatedBookingDoc.id,
-                            // createdAt is a timestamp, which is what assignBookingToTrip expects
-                            createdAt: updatedBookingData?.createdAt,
-                        }
-                       
-                        // This will throw an error if it fails, which is caught below
-                        await assignBookingToTrip(bookingForAssignment as any);
-                    }
-
-
-                    // If assignment succeeds, send email
+                    // If transaction was successful and we have email props, it means a reschedule happened
                     if (emailProps) {
+                       const updatedBookingDoc = await bookingRef.get();
+                       if(updatedBookingDoc.exists()) {
+                          const updatedBookingData = updatedBookingDoc.data();
+                          const bookingForAssignment = {
+                                ...updatedBookingData,
+                                id: updatedBookingDoc.id,
+                                createdAt: updatedBookingData?.createdAt,
+                          }
+                           await assignBookingToTrip(bookingForAssignment as any);
+                       }
+                        // If assignment succeeds, send email
                         await sendBookingRescheduledEmail(emailProps);
                         result.rescheduledCount++;
                     }
@@ -132,8 +133,6 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                     const errorMessage = `Failed to process booking ${passenger.bookingId}: ${e.message}`;
                     result.errors.push(errorMessage);
                     console.error(errorMessage, e);
-                     // If rescheduling fails, we should ideally roll back the date change.
-                    // For now, we log the error. The synchronization tool can fix this.
                 }
             }
         }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -24,7 +25,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
-import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund } from "@/app/actions/booking-actions";
+import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, manuallyRescheduleBooking } from "@/app/actions/booking-actions";
 import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
 
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
@@ -114,6 +115,9 @@ export default function AdminBookingsPage() {
     to: new Date(),
   });
   const [isCustomDeleteOpen, setIsCustomDeleteOpen] = useState(false);
+
+  const [newRescheduleDate, setNewRescheduleDate] = useState<Date | undefined>();
+  const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
 
 
   const fetchBookingsData = useCallback(async () => {
@@ -293,6 +297,31 @@ export default function AdminBookingsPage() {
         setIsSyncing(false);
     }
   }
+
+  const handleManualReschedule = async () => {
+    if (!selectedBooking || !newRescheduleDate) {
+        toast({ variant: "destructive", title: "Error", description: "No booking or date selected." });
+        return;
+    }
+    
+    setIsProcessing(prev => ({...prev, reschedule: true}));
+    try {
+        const result = await manuallyRescheduleBooking(selectedBooking.id, format(newRescheduleDate, 'yyyy-MM-dd'));
+        if (result.success) {
+            toast({ title: "Booking Rescheduled", description: `Booking has been moved to ${format(newRescheduleDate, 'PPP')}.` });
+            setIsManageDialogOpen(false);
+            fetchBookingsData();
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Reschedule Failed", description: error.message });
+    } finally {
+        setIsProcessing(prev => ({...prev, reschedule: false}));
+        setIsRescheduleConfirmOpen(false);
+        setNewRescheduleDate(undefined);
+    }
+  };
   
   const filteredBookings = useMemo(() => {
     return bookings.filter(booking => {
@@ -310,7 +339,7 @@ export default function AdminBookingsPage() {
         toast({ title: "No data to export" });
         return;
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID"];
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
     const csvContent = [
         headers.join(','),
         ...filteredBookings.map(b => [
@@ -330,6 +359,7 @@ export default function AdminBookingsPage() {
             b.confirmedDate || "",
             new Date(b.createdAt).toISOString(),
             b.tripId || "",
+            b.rescheduledCount || 0,
         ].join(','))
     ].join('\n');
 
@@ -576,7 +606,12 @@ export default function AdminBookingsPage() {
         </Card>
 
       {selectedBooking && (
-        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+        <Dialog open={isManageDialogOpen} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                setNewRescheduleDate(undefined);
+            }
+            setIsManageDialogOpen(isOpen);
+        }}>
             <DialogContent className="p-0 max-w-4xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="p-6 pr-16 pb-4 border-b">
                     <div className="flex items-center justify-between gap-4">
@@ -631,6 +666,13 @@ export default function AdminBookingsPage() {
                                             <p>{selectedBooking.allowReschedule ? 'Yes' : 'No'}</p>
                                         </div>
                                     </div>
+                                     <div className="flex items-start gap-3">
+                                        <RefreshCw className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <span className="font-medium text-foreground">Rescheduled:</span>
+                                            <p>{selectedBooking.rescheduledCount || 0} time(s)</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -660,6 +702,42 @@ export default function AdminBookingsPage() {
                                     <span>Confirmed for: {selectedBooking.confirmedDate ? format(parseISO(selectedBooking.confirmedDate), 'PPP') : 'N/A'}</span>
                                 </div>
                             )}
+
+                             {/* Manual Reschedule Section */}
+                            <div className="space-y-3">
+                                <h3 className="font-semibold text-lg">Manual Reschedule</h3>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !newRescheduleDate && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {newRescheduleDate ? format(newRescheduleDate, "PPP") : <span>Select new date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar mode="single" selected={newRescheduleDate} onSelect={setNewRescheduleDate} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
+                                    </PopoverContent>
+                                </Popover>
+                                <AlertDialog open={isRescheduleConfirmOpen} onOpenChange={setIsRescheduleConfirmOpen}>
+                                    <AlertDialogTrigger asChild>
+                                        <Button className="w-full" disabled={!newRescheduleDate || isProcessing['reschedule']}>
+                                            {isProcessing['reschedule'] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
+                                            Reschedule
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Confirm Reschedule</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will move the booking to {newRescheduleDate ? format(newRescheduleDate, 'PPP') : ''}. The customer will be notified. Are you sure?
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleManualReschedule}>Confirm</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </div>
                     </div>
                 </div>
