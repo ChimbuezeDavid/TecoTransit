@@ -1,13 +1,13 @@
 
 'use server';
 
-import { doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, getDoc, getDocs, query, collection, where, Timestamp, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { sendBookingStatusEmail, sendRefundRequestEmail, sendManualRescheduleEmail } from './send-email';
 import { cleanupTrips } from './cleanup-trips';
 import type { Booking } from '@/lib/types';
-import { getDocs, query, collection, where, Timestamp, writeBatch, FieldValue } from 'firebase/firestore';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
