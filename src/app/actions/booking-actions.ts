@@ -8,6 +8,14 @@ import type { Booking } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
+import Paystack from 'paystack';
+
+if (!process.env.PAYSTACK_SECRET_KEY) {
+  throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
+}
+
+const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY);
+
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
   const adminDb = getFirebaseAdmin()?.firestore();
@@ -52,22 +60,22 @@ export async function updateBookingStatus(bookingId: string, status: 'Cancelled'
 export async function requestRefund(bookingId: string): Promise<{success: boolean, message: string}> {
     const adminDb = getFirebaseAdmin()?.firestore();
     if (!adminDb) {
-      throw new Error("Database connection failed.");
+      return { success: false, message: "Database connection failed." };
     }
     
     const bookingDocRef = adminDb.collection('bookings').doc(bookingId);
     const bookingSnap = await bookingDocRef.get();
 
     if (!bookingSnap.exists) {
-        throw new Error("Booking not found");
+        return { success: false, message: "Booking not found" };
     }
 
     const booking = bookingSnap.data() as Booking;
     if (booking.status !== 'Cancelled') {
-        throw new Error("Refunds can only be requested for cancelled bookings.");
+        return { success: false, message: "Refunds can only be requested for cancelled bookings." };
     }
     if (!booking.paymentReference) {
-        throw new Error("This booking has no payment reference, so a refund cannot be processed automatically.");
+        return { success: false, message: "This booking has no payment reference, so a refund cannot be processed automatically." };
     }
 
     try {
@@ -81,7 +89,7 @@ export async function requestRefund(bookingId: string): Promise<{success: boolea
         return { success: true, message: "Refund request email sent to admin." };
     } catch(error: any) {
         console.error("Failed to send refund request email:", error);
-        throw new Error("Failed to send refund request email to admin.");
+        return { success: false, message: "Failed to send refund request email to admin." };
     }
 }
 
@@ -92,7 +100,7 @@ export async function deleteBooking(id: string): Promise<void> {
   }
   const bookingDocRef = db.collection('bookings').doc(id);
   // We need to get the booking data before deleting it to check for a tripId
-  const bookingSnap = await getDoc(bookingDocRef);
+  const bookingSnap = await bookingDocRef.get();
   
   if (bookingSnap.exists) {
       const bookingData = bookingSnap.data();
@@ -214,7 +222,7 @@ export async function manuallyRescheduleBooking(bookingId: string, newDate: stri
             transaction.update(bookingRef, {
                 intendedDate: newDate,
                 tripId: FieldValue.delete(),
-                rescheduledCount: 0 
+                rescheduledCount: FieldValue.increment(bookingData.rescheduledCount ? 1 : 1) 
             });
         });
 

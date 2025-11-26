@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { getBookingsPage } from "@/lib/data";
+import { getAllBookings, getBookingsPage } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, manuallyRescheduleBooking } from "@/app/actions/booking-actions";
 import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
@@ -151,7 +151,8 @@ export default function AdminBookingsPage() {
     try {
         const result: BookingsQueryResult = await getBookingsPage({
             limit: PAGE_SIZE,
-            startAfter: cursor
+            startAfter: cursor,
+            status: statusFilter === 'All' ? undefined : statusFilter,
         });
         
         if (result.error) throw new Error(result.error);
@@ -173,14 +174,15 @@ export default function AdminBookingsPage() {
     } finally {
         setLoading(false);
     }
-  }, [toast, lastVisible, page, pageCursors]);
+  }, [toast, lastVisible, page, pageCursors, statusFilter]);
   
   useEffect(() => {
     fetchBookingsData('refresh');
      // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [statusFilter]);
 
   const refreshCurrentPage = () => {
+    // This will refetch the data for the current page and filter
     fetchBookingsData('refresh');
   }
 
@@ -399,53 +401,63 @@ export default function AdminBookingsPage() {
   };
   
   const filteredBookings = useMemo(() => {
+    // Search term filtering is now done on the client for the current page
+    if (!searchTerm) return bookings;
+    
     return bookings.filter(booking => {
-        const matchesStatus = statusFilter === 'All' || booking.status === statusFilter;
-        const matchesSearch = searchTerm === "" ||
-            booking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.id.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesStatus && matchesSearch;
+        const term = searchTerm.toLowerCase();
+        return booking.name.toLowerCase().includes(term) ||
+               booking.email.toLowerCase().includes(term) ||
+               booking.id.toLowerCase().includes(term);
     });
-  }, [bookings, searchTerm, statusFilter]);
+  }, [bookings, searchTerm]);
 
-  const downloadCSV = () => {
-    if (filteredBookings.length === 0) {
-        toast({ title: "No data to export" });
-        return;
+  const downloadCSV = async () => {
+    toast({ title: "Preparing Export", description: "Fetching all matching bookings..." });
+    try {
+        const { bookings: allBookingsToExport } = await getAllBookings(statusFilter === 'All' ? undefined : statusFilter);
+
+        if (allBookingsToExport.length === 0) {
+            toast({ title: "No data to export", description: "No bookings found matching the current status filter." });
+            return;
+        }
+        const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
+        const csvContent = [
+            headers.join(','),
+            ...allBookingsToExport.map(b => [
+                b.id,
+                `"${b.name.replace(/"/g, '""')}"`,
+                b.email,
+                b.phone,
+                `"${b.pickup.replace(/"/g, '""')}"`,
+                `"${b.destination.replace(/"/g, '""')}"`,
+                b.intendedDate,
+                `"${b.vehicleType.replace(/"/g, '""')}"`,
+                b.luggageCount,
+                b.totalFare,
+                b.allowReschedule,
+                b.paymentReference || "",
+                b.status,
+                b.confirmedDate || "",
+                new Date(b.createdAt).toISOString(),
+                b.tripId || "",
+                b.rescheduledCount || 0,
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `bookings-export-${statusFilter.toLowerCase()}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({ title: "Export Successful", description: `${allBookingsToExport.length} bookings exported.` });
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Export Failed", description: e.message });
     }
-    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
-    const csvContent = [
-        headers.join(','),
-        ...filteredBookings.map(b => [
-            b.id,
-            `"${b.name.replace(/"/g, '""')}"`,
-            b.email,
-            b.phone,
-            `"${b.pickup.replace(/"/g, '""')}"`,
-            `"${b.destination.replace(/"/g, '""')}"`,
-            b.intendedDate,
-            `"${b.vehicleType.replace(/"/g, '""')}"`,
-            b.luggageCount,
-            b.totalFare,
-            b.allowReschedule,
-            b.paymentReference || "",
-            b.status,
-            b.confirmedDate || "",
-            new Date(b.createdAt).toISOString(),
-            b.tripId || "",
-            b.rescheduledCount || 0,
-        ].join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `bookings-page-${page}-${statusFilter.toLowerCase()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
   
   if (loading && page === 1) {

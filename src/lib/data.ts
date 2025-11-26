@@ -3,7 +3,7 @@
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Trip, Booking, BookingsQueryResult } from '@/lib/types';
-import { collection, query, orderBy, getDocs as adminGetDocs, limit as adminLimit, startAfter as adminStartAfter } from 'firebase-admin/firestore';
+import { collection, query, orderBy, getDocs as adminGetDocs, limit as adminLimit, startAfter as adminStartAfter, where } from 'firebase-admin/firestore';
 
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
@@ -25,24 +25,56 @@ export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | nu
     }
 }
 
+export async function getAllBookings(status?: Booking['status']): Promise<{ bookings: Booking[], error: string | null }> {
+    const db = getFirebaseAdmin()?.firestore();
+    if (!db) {
+        return { bookings: [], error: 'Database connection failed.' };
+    }
+    
+    try {
+        let q = query(collection(db, "bookings"), orderBy('createdAt', 'desc'));
+        if (status) {
+            q = query(q, where('status', '==', status));
+        }
 
-export async function getBookingsPage({ pageLimit = 25, startAfter }: { pageLimit?: number, startAfter?: any }): Promise<BookingsQueryResult> {
+        const snapshot = await adminGetDocs(q);
+        
+        const bookings = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                createdAt: (data.createdAt as FirebaseFirestore.Timestamp).toMillis(),
+            } as Booking;
+        });
+
+        return { bookings, error: null };
+
+    } catch (e: any) {
+        console.error("API Error fetching all bookings:", e);
+        return { bookings: [], error: 'Failed to fetch all bookings.' };
+    }
+}
+
+
+export async function getBookingsPage({ limit = 25, startAfter, status }: { limit?: number, startAfter?: any, status?: Booking['status'] }): Promise<BookingsQueryResult> {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
         return { bookings: [], lastVisible: null, error: 'Database connection failed.' };
     }
 
     try {
-        let bookingsQuery;
-        const baseQuery = collection(db, "bookings");
-        
-        let q = query(baseQuery, orderBy('createdAt', 'desc'));
+        let q = query(collection(db, "bookings"), orderBy('createdAt', 'desc'));
+
+        if (status) {
+            q = query(q, where('status', '==', status));
+        }
 
         if (startAfter) {
             q = query(q, adminStartAfter(startAfter));
         }
         
-        q = query(q, adminLimit(pageLimit));
+        q = query(q, adminLimit(limit));
 
         const bookingsSnapshot = await adminGetDocs(q);
         
@@ -57,20 +89,8 @@ export async function getBookingsPage({ pageLimit = 25, startAfter }: { pageLimi
 
         const lastVisible = bookingsSnapshot.docs[bookingsSnapshot.docs.length - 1] || null;
 
-        // Serialize the lastVisible document snapshot for client-side usage
-        const serializedLastVisible = lastVisible ? {
-            _fieldsProto: lastVisible.data(),
-            _ref: {
-                _path: {
-                    segments: lastVisible.ref.path.split('/')
-                }
-            }
-        } : null;
-
-        // A hacky way to send a server-side object to the client, but it works for pagination cursors.
-        // We'll need to reconstruct it on the client if we were to use it there, but we send it back to the server.
-        // For this implementation, we send it back to the server action, so we can just pass it as is.
-        return { bookings, lastVisible: lastVisible, error: null };
+        // We can just pass the snapshot back to the server action, no need to serialize.
+        return { bookings, lastVisible, error: null };
 
     } catch (error: any) {
         console.error("API Error fetching bookings data:", error);
