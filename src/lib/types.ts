@@ -19,6 +19,7 @@ export type Booking = {
   createdAt: number; // Stored as Firestore Timestamp, but millis in UI
   confirmedDate?: string; // Stored as 'yyyy-MM-dd'
   tripId?: string; // ID of the trip this booking is assigned to
+  rescheduledCount?: number; // Tracks how many times a booking has been auto-rescheduled
 };
 
 export type Passenger = {
@@ -40,7 +41,7 @@ export type Trip = {
     isFull: boolean;
 };
 
-export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate'> & {
+export type BookingFormData = Omit<Booking, 'id' | 'status' | 'createdAt' | 'tripId' | 'intendedDate' | 'rescheduledCount'> & {
     intendedDate: Date;
     privacyPolicy: boolean;
     allowReschedule: boolean;

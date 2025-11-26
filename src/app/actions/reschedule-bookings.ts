@@ -75,8 +75,8 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                         }
                         const bookingData = { ...bookingDoc.data(), id: bookingDoc.id } as Booking;
 
-                        // 1. Skip if user opted out or booking was cancelled
-                        if (!bookingData.allowReschedule || bookingData.status === 'Cancelled') {
+                        // 1. Skip if user opted out, booking was cancelled, or already rescheduled once
+                        if (!bookingData.allowReschedule || bookingData.status === 'Cancelled' || (bookingData.rescheduledCount || 0) >= 1) {
                             result.skippedCount++;
                             return; // Exit transaction for this passenger
                         }
@@ -86,8 +86,12 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                         // 2. Remove from old trip
                         transaction.update(oldTripRef, { passengers: FieldValue.arrayRemove(passenger) });
                         
-                        // 3. Update booking to new date and remove old tripId
-                        transaction.update(bookingRef, { intendedDate: todayStr, tripId: FieldValue.delete() });
+                        // 3. Update booking to new date, remove old tripId, and increment reschedule count
+                        transaction.update(bookingRef, { 
+                            intendedDate: todayStr, 
+                            tripId: FieldValue.delete(),
+                            rescheduledCount: FieldValue.increment(1)
+                        });
                         
                         // 4. Prepare email props for sending *after* transaction commits
                         emailProps = {
