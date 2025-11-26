@@ -27,6 +27,7 @@ import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, manuallyRescheduleBooking } from "@/app/actions/booking-actions";
 import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
+import { rescheduleUnderfilledTrips } from "@/app/actions/reschedule-bookings";
 
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
 
@@ -105,6 +106,7 @@ export default function AdminBookingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRescheduling, setIsRescheduling] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isManageDialogOpen, setIsManageDialogOpen] = useState(false);
   
@@ -302,6 +304,39 @@ export default function AdminBookingsPage() {
         setIsSyncing(false);
     }
   }
+
+  const handleRunReschedule = async () => {
+    setIsRescheduling(true);
+    try {
+        const result = await rescheduleUnderfilledTrips();
+        let description = `Scanned ${result.totalTripsScanned} of yesterday's trips.`;
+        if (result.rescheduledCount > 0) {
+            description += ` Successfully rescheduled ${result.rescheduledCount} passenger(s).`;
+        }
+        if (result.failedCount > 0) {
+             toast({
+                variant: "destructive",
+                title: `Reschedule Job Partially Failed`,
+                description: `Rescheduled ${result.rescheduledCount}, but ${result.failedCount} failed. Check server logs for errors.`,
+            });
+        } else if (result.totalPassengersToProcess === 0) {
+            toast({
+                title: "Nothing to Reschedule",
+                description: "No passengers were found on under-filled trips from yesterday.",
+            });
+        } else {
+            toast({
+                title: "Reschedule Job Complete",
+                description: description,
+            });
+        }
+        fetchBookingsData(); // Refresh data to reflect any changes
+    } catch (e: any) {
+        toast({ variant: "destructive", title: "Reschedule Error", description: e.message });
+    } finally {
+        setIsRescheduling(false);
+    }
+  };
 
   const handleManualReschedule = async () => {
     if (!selectedBooking || !newRescheduleDate) {
@@ -530,11 +565,31 @@ export default function AdminBookingsPage() {
                         <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full lg:w-auto">
                         <Button variant="outline" className="w-full" size="sm" onClick={handleSync} disabled={isSyncing}>
                             {isSyncing ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Sparkles className="mr-2 h-4 w-4" />}
                             Synchronize
                         </Button>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" className="w-full" size="sm" disabled={isRescheduling}>
+                                    {isRescheduling ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <History className="mr-2 h-4 w-4" />}
+                                    Run Rescheduler
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Run Daily Reschedule Job?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will manually trigger the automated process that reschedules passengers from yesterday's under-filled trips to today. Are you sure you want to run this now?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleRunReschedule}>Yes, Run Now</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                         <Button variant="outline" className="w-full" size="sm" onClick={downloadCSV}><Download className="mr-2 h-4 w-4" />Export CSV</Button>
                     </div>
                 </div>
@@ -808,3 +863,5 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
+
+      
