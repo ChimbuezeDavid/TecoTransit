@@ -11,16 +11,21 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
-  const bookingDocRef = doc(db, 'bookings', bookingId);
-  const bookingSnap = await getDoc(bookingDocRef);
+  const adminDb = getFirebaseAdmin()?.firestore();
+  if (!adminDb) {
+    throw new Error("Database connection failed.");
+  }
+  
+  const bookingDocRef = adminDb.collection('bookings').doc(bookingId);
+  const bookingSnap = await bookingDocRef.get();
 
-  if (!bookingSnap.exists()) {
+  if (!bookingSnap.exists) {
     throw new Error("Booking not found");
   }
   
   const bookingToUpdate = bookingSnap.data() as Booking;
 
-  await updateDoc(bookingDocRef, { status });
+  await bookingDocRef.update({ status });
 
   // After successfully updating the status, remove the passenger from the trip
   if (bookingToUpdate.tripId) {
