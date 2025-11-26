@@ -2,13 +2,12 @@
 'use server';
 
 import { doc, updateDoc, deleteDoc, getDoc, getDocs, query, collection, where, Timestamp, writeBatch } from 'firebase/firestore';
-import { sendBookingStatusEmail, sendManualRescheduleEmail } from './send-email';
+import { sendBookingStatusEmail, sendManualRescheduleEmail, sendRefundRequestEmail } from './send-email';
 import { cleanupTrips } from './cleanup-trips';
 import type { Booking } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
-import { processRefund } from './paystack';
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
   const adminDb = getFirebaseAdmin()?.firestore();
@@ -71,18 +70,18 @@ export async function requestRefund(bookingId: string): Promise<{success: boolea
         throw new Error("This booking has no payment reference, so a refund cannot be processed automatically.");
     }
 
-    // Process refund directly via Paystack API
-    const refundResult = await processRefund({
-      reference: booking.paymentReference,
-      amount: booking.totalFare,
-    });
-
-    if (refundResult.status) {
-      // Optionally, update the booking status to 'Refunded'
-      await bookingDocRef.update({ status: 'Refunded' });
-      return { success: true, message: refundResult.message || "Refund processed successfully." };
-    } else {
-      throw new Error(refundResult.message || "Failed to process refund on Paystack.");
+    try {
+        await sendRefundRequestEmail({
+            customerName: booking.name,
+            customerEmail: booking.email,
+            bookingId: bookingId,
+            totalFare: booking.totalFare,
+            paymentReference: booking.paymentReference,
+        });
+        return { success: true, message: "Refund request email sent to admin." };
+    } catch(error: any) {
+        console.error("Failed to send refund request email:", error);
+        throw new Error("Failed to send refund request email to admin.");
     }
 }
 

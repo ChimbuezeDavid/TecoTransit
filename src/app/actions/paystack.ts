@@ -128,38 +128,3 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
         return { success: false, error: error.message };
     }
 };
-
-
-interface ProcessRefundArgs {
-    reference: string;
-    amount: number;
-}
-
-export const processRefund = async ({ reference, amount }: ProcessRefundArgs) => {
-    try {
-        const response = await axios.post(
-            'https://api.paystack.co/refund',
-            {
-                transaction: reference,
-                amount: amount * 100, // Amount in kobo
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${paystackSecret}`,
-                    'Content-Type': 'application/json',
-                },
-            }
-        );
-
-        if (response.data.status) {
-            return { status: true, message: response.data.message };
-        } else {
-            return { status: false, message: response.data.message };
-        }
-
-    } catch (error: any) {
-        console.error('Paystack refund error:', error.response?.data || error.message);
-        const errorMessage = error.response?.data?.message || 'An error occurred while processing the refund.';
-        return { status: false, message: errorMessage };
-    }
-};

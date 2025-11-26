@@ -186,18 +186,18 @@ export default function AdminBookingsPage() {
         const result = await requestRefund(selectedBooking.id);
         if (result.success) {
             toast({
-                title: "Refund Processed",
-                description: result.message,
+                title: "Refund Request Sent",
+                description: "An email has been sent to the admin to process the refund.",
             });
-            fetchBookingsData();
-            setIsManageDialogOpen(false);
+            // We don't fetch data or close dialog here, status remains 'Cancelled'
+            // The admin has to manually track the refund.
         } else {
             throw new Error(result.message);
         }
     } catch (error) {
         toast({
             variant: "destructive",
-            title: "Refund Failed",
+            title: "Refund Request Failed",
             description: error instanceof Error ? error.message : 'An unknown error occurred.',
         });
     } finally {
@@ -780,19 +780,19 @@ export default function AdminBookingsPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="outline" className="w-full" size="lg" disabled={isProcessing['refund']}>
                                         {isProcessing['refund'] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
-                                        Process Refund
+                                        Request Refund
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirm Refund</AlertDialogTitle>
+                                        <AlertDialogTitle>Confirm Refund Request</AlertDialogTitle>
                                         <AlertDialogDescription>
-                                            This will immediately initiate a refund transaction via Paystack for this booking. This action cannot be undone. Are you sure?
+                                            This will send an email to the administrator to manually process the refund via Paystack. Are you sure?
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleRequestRefund}>Confirm Refund</AlertDialogAction>
+                                        <AlertDialogAction onClick={handleRequestRefund}>Yes, Send Request</AlertDialogAction>
                                     </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
