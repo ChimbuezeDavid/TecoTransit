@@ -71,8 +71,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             throw new Error("Could not connect to the database.");
         }
 
-        // --- IDEMPOTENCY CHECK ---
-        // Check if a booking with this payment reference already exists.
         const existingBookingQuery = db.collection('bookings').where('paymentReference', '==', reference).limit(1);
         const existingBookingSnapshot = await existingBookingQuery.get();
         if (!existingBookingSnapshot.empty) {
@@ -80,7 +78,6 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             console.log(`Duplicate booking prevented for reference: ${reference}. Existing booking ID: ${existingBookingId}`);
             return { success: true, bookingId: existingBookingId };
         }
-        // --- END IDEMPOTENCY CHECK ---
 
         const verificationResponse = await paystack.transaction.verify(reference);
         const metadata = verificationResponse.data?.metadata;
@@ -106,10 +103,8 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             paymentReference: reference,
         };
         
-        // Step 1: Create the 'Paid' booking document.
         await newBookingRef.set(newBookingData);
         
-        // Send post-booking email immediately after creation
         try {
             await sendBookingReceivedEmail({
                 name: bookingDetails.name,
@@ -122,10 +117,8 @@ export const verifyTransactionAndCreateBooking = async (reference: string) => {
             });
         } catch (e) {
             console.error(`Failed to send booking received email for booking ${bookingId}:`, e);
-            // We don't want to fail the whole process if the email fails, just log it.
         }
         
-        // Step 2: Now, attempt to assign this new booking to a trip.
         await assignBookingToTrip(newBookingData);
 
         return { success: true, bookingId: bookingId };

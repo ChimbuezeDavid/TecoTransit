@@ -24,9 +24,11 @@ import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
 import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
-import { useBooking } from '@/context/booking-context';
 import { useSettings } from '@/context/settings-context';
 import { createPendingBooking } from '@/app/actions/create-booking-and-assign-trip';
+import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import type { PriceRule } from '@/lib/types';
 
 
 const bookingSchema = z.object({
@@ -58,7 +60,8 @@ const contactOptions = [
 
 export default function BookingForm() {
   const { toast } = useToast();
-  const { prices, loading: pricesLoading } = useBooking();
+  const [prices, setPrices] = useState<PriceRule[]>([]);
+  const [pricesLoading, setPricesLoading] = useState(true);
   const { isPaystackEnabled, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
@@ -78,6 +81,29 @@ export default function BookingForm() {
       allowReschedule: false,
     },
   });
+
+  // Fetch prices from Firestore
+  useEffect(() => {
+    const q = query(collection(db, "prices"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const pricesData: PriceRule[] = [];
+      querySnapshot.forEach((doc) => {
+        pricesData.push({ id: doc.id, ...doc.data() } as PriceRule);
+      });
+      setPrices(pricesData);
+      setPricesLoading(false);
+    }, (error) => {
+      console.error("Error fetching prices: ", error);
+      toast({
+        variant: "destructive",
+        title: "Could not load prices",
+        description: "There was an issue fetching pricing data. Please refresh the page.",
+      });
+      setPricesLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [toast]);
 
   const { watch, setValue, handleSubmit: formHandleSubmit } = form;
   const pickup = watch("pickup");
