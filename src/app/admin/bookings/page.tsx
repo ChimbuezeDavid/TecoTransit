@@ -3,19 +3,19 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO, startOfMonth, subDays } from "date-fns";
-import type { Booking } from "@/lib/types";
+import type { Booking, BookingsQueryResult } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical, Sparkles } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -23,13 +23,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { getAllBookings } from "@/lib/data";
+import { getBookingsPage } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, manuallyRescheduleBooking } from "@/app/actions/booking-actions";
 import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
 import { rescheduleUnderfilledTrips } from "@/app/actions/reschedule-bookings";
 
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
+const PAGE_SIZE = 25;
 
 function BookingsPageSkeleton() {
     return (
@@ -100,6 +101,11 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [pageCursors, setPageCursors] = useState<any[]>([null]); // Cursors for previous pages
+
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
@@ -123,24 +129,60 @@ export default function AdminBookingsPage() {
   const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
 
 
-  const fetchBookingsData = useCallback(async () => {
+  const fetchBookingsData = useCallback(async (direction: 'next' | 'prev' | 'refresh' = 'refresh') => {
     setLoading(true);
     setError(null);
+    
+    let cursor: any;
+    let newPage = page;
+    
+    if (direction === 'next') {
+        cursor = lastVisible;
+        newPage = page + 1;
+    } else if (direction === 'prev') {
+        cursor = pageCursors[page - 2] || null; // page - 2 because page is 1-indexed
+        newPage = page - 1;
+    } else { // refresh
+        cursor = null;
+        newPage = 1;
+        setPageCursors([null]);
+    }
+
     try {
-        const { bookings, error } = await getAllBookings();
-        if (error) throw new Error(error);
-        setBookings(bookings);
+        const result: BookingsQueryResult = await getBookingsPage({
+            limit: PAGE_SIZE,
+            startAfter: cursor
+        });
+        
+        if (result.error) throw new Error(result.error);
+        
+        setBookings(result.bookings);
+        setLastVisible(result.lastVisible || null);
+        setHasMore(result.bookings.length === PAGE_SIZE);
+        setPage(newPage);
+
+        if (direction === 'next' && result.lastVisible) {
+            setPageCursors(prev => [...prev, result.lastVisible]);
+        } else if (direction === 'prev') {
+            setPageCursors(prev => prev.slice(0, newPage));
+        }
+
     } catch (e: any) {
         setError(e.message);
         toast({ variant: "destructive", title: "Error", description: e.message });
     } finally {
         setLoading(false);
     }
-  }, [toast]);
+  }, [toast, lastVisible, page, pageCursors]);
   
   useEffect(() => {
-    fetchBookingsData();
-  }, [fetchBookingsData]);
+    fetchBookingsData('refresh');
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshCurrentPage = () => {
+    fetchBookingsData('refresh');
+  }
 
 
   const openDialog = (bookingId: string) => {
@@ -162,13 +204,8 @@ export default function AdminBookingsPage() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        const updatedBooking = bookings.find(b => b.id === selectedBooking.id);
-        if (updatedBooking) {
-            setSelectedBooking({...updatedBooking, status: 'Cancelled'});
-        } else {
-            setIsManageDialogOpen(false);
-        }
-        fetchBookingsData();
+        refreshCurrentPage();
+        setIsManageDialogOpen(false);
     } catch (error) {
         toast({
             variant: "destructive",
@@ -191,8 +228,6 @@ export default function AdminBookingsPage() {
                 title: "Refund Request Sent",
                 description: "An email has been sent to the admin to process the refund.",
             });
-            // We don't fetch data or close dialog here, status remains 'Cancelled'
-            // The admin has to manually track the refund.
         } else {
             throw new Error(result.message);
         }
@@ -218,7 +253,7 @@ export default function AdminBookingsPage() {
         description: `Booking has been permanently deleted.`,
       });
       setIsManageDialogOpen(false);
-      fetchBookingsData();
+      refreshCurrentPage();
     } catch (error) {
        toast({
         variant: "destructive",
@@ -267,7 +302,7 @@ export default function AdminBookingsPage() {
             title: "Bulk Delete Successful",
             description: `${count} ${description} have been deleted.`,
         });
-        fetchBookingsData();
+        refreshCurrentPage();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Bulk Delete Failed", description: e.message });
     } finally {
@@ -297,7 +332,7 @@ export default function AdminBookingsPage() {
                 description: "All relevant bookings are already assigned to trips.",
             });
         }
-        fetchBookingsData();
+        refreshCurrentPage();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Synchronization Error", description: e.message });
     } finally {
@@ -330,7 +365,7 @@ export default function AdminBookingsPage() {
                 description: description,
             });
         }
-        fetchBookingsData(); // Refresh data to reflect any changes
+        refreshCurrentPage();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Reschedule Error", description: e.message });
     } finally {
@@ -350,7 +385,7 @@ export default function AdminBookingsPage() {
         if (result.success) {
             toast({ title: "Booking Rescheduled", description: `Booking has been moved to ${format(newRescheduleDate, 'PPP')}.` });
             setIsManageDialogOpen(false);
-            fetchBookingsData();
+            refreshCurrentPage();
         } else {
             throw new Error(result.error);
         }
@@ -407,13 +442,13 @@ export default function AdminBookingsPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `bookings-${statusFilter.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `bookings-page-${page}-${statusFilter.toLowerCase()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
   
-  if (loading) {
+  if (loading && page === 1) {
     return <BookingsPageSkeleton />;
   }
 
@@ -424,7 +459,7 @@ export default function AdminBookingsPage() {
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">{error}</p>
-                 <Button onClick={fetchBookingsData} variant="outline" className="mt-4">
+                 <Button onClick={() => fetchBookingsData('refresh')} variant="outline" className="mt-4">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Retry
                 </Button>
@@ -443,7 +478,7 @@ export default function AdminBookingsPage() {
                 <p className="text-muted-foreground">Search, manage, and export all customer bookings.</p>
             </div>
              <div className="flex items-center gap-2 self-start sm:self-center">
-                <Button variant="outline" size="icon" onClick={fetchBookingsData} disabled={loading}>
+                <Button variant="outline" size="icon" onClick={() => fetchBookingsData('refresh')} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
                  
@@ -562,7 +597,7 @@ export default function AdminBookingsPage() {
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
-                        <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
+                        <CardTitle>All Bookings</CardTitle>
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full lg:w-auto">
@@ -632,7 +667,14 @@ export default function AdminBookingsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredBookings.length > 0 ? filteredBookings.map(booking => (
+                            {loading && (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="text-center h-24">
+                                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {!loading && filteredBookings.length > 0 ? filteredBookings.map(booking => (
                                 <TableRow key={booking.id}>
                                     <TableCell className="pl-4 font-medium">
                                         <div className="font-medium">{booking.name}</div>
@@ -653,10 +695,10 @@ export default function AdminBookingsPage() {
                                         <Button variant="ghost" size="sm" onClick={() => openDialog(booking.id)}>View</Button>
                                     </TableCell>
                                 </TableRow>
-                            )) : (
+                            )) : !loading && (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center h-24">
-                                        No bookings found.
+                                        No bookings found for the current filter or page.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -664,6 +706,17 @@ export default function AdminBookingsPage() {
                     </Table>
                     </div>
             </CardContent>
+            <CardFooter className="flex items-center justify-end space-x-2 py-4 border-t">
+                <Button variant="outline" size="sm" onClick={() => fetchBookingsData('prev')} disabled={page <= 1 || loading}>
+                    <ChevronLeft className="h-4 w-4 mr-1"/>
+                    Previous
+                </Button>
+                <span className="text-sm font-medium">Page {page}</span>
+                <Button variant="outline" size="sm" onClick={() => fetchBookingsData('next')} disabled={!hasMore || loading}>
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1"/>
+                </Button>
+            </CardFooter>
         </Card>
 
       {selectedBooking && (
@@ -863,5 +916,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-      
