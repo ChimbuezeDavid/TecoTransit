@@ -37,7 +37,7 @@ export async function updateBookingStatus(bookingId: string, status: 'Cancelled'
         name: bookingToUpdate.name,
         email: bookingToUpdate.email,
         status: status,
-        bookingId: bookingToUpdate.id,
+        bookingId: bookingId,
         pickup: bookingToUpdate.pickup,
         destination: bookingToUpdate.destination,
         vehicleType: bookingToUpdate.vehicleType,
@@ -192,7 +192,7 @@ export async function manuallyRescheduleBooking(bookingId: string, newDate: stri
             if (oldTripId) {
                 const oldTripRef = adminDb.collection('trips').doc(oldTripId);
                 const passengerToRemove = {
-                    bookingId: bookingData.id,
+                    bookingId: bookingId,
                     name: bookingData.name,
                     phone: bookingData.phone
                 };
