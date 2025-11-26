@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -12,8 +13,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { User as UserIcon, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Ticket, History, X } from "lucide-react";
@@ -21,6 +20,7 @@ import { getStatusVariant } from "@/lib/utils";
 import { clearAllTrips } from "@/app/actions/clear-all-trips";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 function TripsPageSkeleton() {
     return (
@@ -137,19 +137,19 @@ function PassengerDialog({ booking, isOpen, onClose }: { booking: Booking | null
 }
 
 
-function ManifestSheet({ trip, passengers, allBookings, isOpen, onClose }: { trip: Trip | null, passengers: Passenger[], allBookings: Booking[], isOpen: boolean, onClose: () => void }) {
+function ManifestDialog({ trip, passengers, allBookings, isOpen, onClose, onPassengerClick }: { trip: Trip | null, passengers: Passenger[], allBookings: Booking[], isOpen: boolean, onClose: () => void, onPassengerClick: (bookingId: string) => void }) {
     if (!trip) return null;
 
     return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
-                 <SheetHeader className="p-6 pb-4 border-b">
-                    <SheetTitle className="text-xl">{trip.pickup} to {trip.destination}</SheetTitle>
-                    <SheetDescription>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-xl p-0">
+                 <DialogHeader className="p-6 pb-4 border-b">
+                    <DialogTitle className="text-xl">{trip.pickup} to {trip.destination}</DialogTitle>
+                    <DialogDescription>
                         {format(parseISO(trip.date), 'EEEE, MMM dd, yyyy')} - {trip.vehicleType} (Car {trip.vehicleIndex})
-                    </SheetDescription>
-                </SheetHeader>
-                <div className="flex-1 overflow-y-auto">
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto px-6">
                     {passengers.length === 0 ? (
                         <div className="text-center py-10">
                             <Users className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -160,9 +160,9 @@ function ManifestSheet({ trip, passengers, allBookings, isOpen, onClose }: { tri
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="pl-6">Passenger</TableHead>
+                                    <TableHead>Passenger</TableHead>
                                     <TableHead>Phone</TableHead>
-                                    <TableHead className="pr-6 text-right">Status</TableHead>
+                                    <TableHead className="text-right">Status</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -170,9 +170,13 @@ function ManifestSheet({ trip, passengers, allBookings, isOpen, onClose }: { tri
                                     const booking = allBookings.find(b => b.id === passenger.bookingId);
                                     return (
                                         <TableRow key={passenger.bookingId}>
-                                            <TableCell className="pl-6 font-medium">{passenger.name}</TableCell>
+                                            <TableCell className="font-medium">
+                                                <button onClick={() => onPassengerClick(passenger.bookingId)} className="hover:underline text-left">
+                                                    {passenger.name}
+                                                </button>
+                                            </TableCell>
                                             <TableCell><a href={`tel:${passenger.phone}`} className="hover:underline">{passenger.phone}</a></TableCell>
-                                            <TableCell className="pr-6 text-right">
+                                            <TableCell className="text-right">
                                                 {booking ? <Badge variant={getStatusVariant(booking.status)}>{booking.status}</Badge> : <Badge variant="outline">Unknown</Badge>}
                                             </TableCell>
                                         </TableRow>
@@ -182,11 +186,11 @@ function ManifestSheet({ trip, passengers, allBookings, isOpen, onClose }: { tri
                         </Table>
                     )}
                 </div>
-                 <div className="p-6 border-t">
+                 <DialogFooter className="p-6 border-t">
                     <Button onClick={onClose} variant="outline" className="w-full">Close</Button>
-                </div>
-            </SheetContent>
-        </Sheet>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -251,6 +255,8 @@ export default function AdminTripsPage() {
         const booking = bookings.find(b => b.id === bookingId);
         if (booking) {
             setSelectedPassengerBooking(booking);
+            // Close manifest to open passenger dialog
+            setIsManifestOpen(false); 
             setIsPassengerDialogOpen(true);
         }
     }
@@ -377,12 +383,13 @@ export default function AdminTripsPage() {
                     ))
             )}
             
-            <ManifestSheet
+            <ManifestDialog
                 trip={selectedManifest}
                 passengers={selectedManifest?.passengers || []}
                 allBookings={bookings}
                 isOpen={isManifestOpen}
                 onClose={() => setIsManifestOpen(false)}
+                onPassengerClick={openPassengerDialog}
             />
 
             <PassengerDialog 
@@ -393,3 +400,5 @@ export default function AdminTripsPage() {
         </div>
     );
 }
+
+    
