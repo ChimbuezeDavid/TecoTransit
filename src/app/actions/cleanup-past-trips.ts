@@ -2,7 +2,7 @@
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
-import { subDays, format } from 'date-fns';
+import { startOfToday, format } from 'date-fns';
 
 type CleanupResult = {
     success: boolean;
@@ -11,7 +11,7 @@ type CleanupResult = {
 };
 
 /**
- * Finds trip documents older than 7 days, archives them to the 'archivedTrips'
+ * Finds all trip documents from past dates, archives them to the 'archivedTrips'
  * collection, and then deletes them from the main 'trips' collection.
  * This is designed to be run as a daily cron job.
  */
@@ -22,10 +22,12 @@ export async function cleanupPastTrips(): Promise<CleanupResult> {
     }
 
     try {
-        const cutoffDate = subDays(new Date(), 7);
+        // Use the start of today to ensure we only get trips from previous days.
+        const cutoffDate = startOfToday();
         const cutoffDateStr = format(cutoffDate, 'yyyy-MM-dd');
 
         const tripsRef = db.collection('trips');
+        // Query for all trips with a 'date' property strictly less than today's date string.
         const oldTripsQuery = tripsRef.where('date', '<', cutoffDateStr);
         
         const snapshot = await oldTripsQuery.get();
@@ -51,7 +53,7 @@ export async function cleanupPastTrips(): Promise<CleanupResult> {
             // Delete from original trips collection
             currentBatch.delete(doc.ref);
             
-            // Each doc involves 2 operations, so we check for 250 docs to stay under 500 operations
+            // Each doc involves 2 operations, so we check for 250 docs to stay under 500 operations per batch
             currentBatchSize++;
             if (currentBatchSize >= 250) {
                 batchArray.push(currentBatch);
