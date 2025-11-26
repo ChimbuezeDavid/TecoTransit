@@ -59,7 +59,7 @@ export async function requestRefund(bookingId: string): Promise<void> {
     const bookingDocRef = adminDb.collection('bookings').doc(bookingId);
     const bookingSnap = await bookingDocRef.get();
 
-    if (!bookingSnap.exists()) {
+    if (!bookingSnap.exists) {
         throw new Error("Booking not found");
     }
 
