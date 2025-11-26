@@ -19,8 +19,8 @@ type RescheduleResult = {
 };
 
 /**
- * Finds all trips from the previous day that were not full and attempts to reschedule
- * the passengers to a trip on the current day.
+ * Finds all trips from the previous day that were not full, attempts to reschedule
+ * the passengers to a trip on the current day, and then deletes the old, empty trip.
  * 
  * This action is designed to be run as an automated daily job (cron job).
  * It ensures that the process of moving a passenger from an old trip to a new one
@@ -66,7 +66,8 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                 const bookingRef = db.collection('bookings').doc(passenger.bookingId);
                 const oldTripRef = tripDoc.ref;
                 let emailProps: any = null; // Variable to hold email data
-                let bookingForAssignment: (Booking & {id: string, createdAt: any}) | null = null;
+                let bookingForAssignment: (Omit<Booking, 'createdAt'> & {id: string, createdAt: any}) | null = null;
+
 
                 try {
                     await db.runTransaction(async (transaction) => {
@@ -74,7 +75,7 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                         if (!bookingDoc.exists) {
                             throw new Error(`Booking ${passenger.bookingId} not found during transaction.`);
                         }
-                        const bookingData = { ...bookingDoc.data(), id: bookingDoc.id } as Booking;
+                        const bookingData = { id: bookingDoc.id, ...bookingDoc.data() } as Omit<Booking, 'createdAt'> & {id: string, createdAt: any};
                         
                         // 1. Skip if user opted out, booking was cancelled, or already rescheduled once
                         if (!bookingData.allowReschedule || bookingData.status === 'Cancelled') {
@@ -84,11 +85,11 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                         
                         if ((bookingData.rescheduledCount || 0) >= 1) {
                             result.skippedCount++;
-                            await sendRescheduleFailedEmail(bookingData);
+                            await sendRescheduleFailedEmail(bookingData as Booking);
                             return; // Stop processing this passenger
                         }
 
-                        // 2. Remove from old trip
+                        // 2. Remove from old trip (this happens implicitly when the trip is deleted, but good for atomicity)
                         transaction.update(oldTripRef, { passengers: FieldValue.arrayRemove(passenger) });
                         
                         // 3. Update booking to new date, remove old tripId, and increment reschedule count
@@ -109,8 +110,7 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
 
                         // We need the full booking data for the assignment logic
                         bookingForAssignment = {
-                            ...bookingData,
-                            createdAt: (bookingData.createdAt as any) // Keep as Firestore timestamp
+                            ...bookingData
                         };
                     });
 
@@ -133,6 +133,17 @@ export async function rescheduleUnderfilledTrips(): Promise<RescheduleResult> {
                     result.errors.push(errorMessage);
                     console.error(errorMessage, e);
                 }
+            }
+
+            // After processing all passengers for the trip, delete the old trip document.
+            // This happens regardless of individual passenger success/failure, as the trip itself
+            // is from a past date and has been processed.
+            try {
+                await tripDoc.ref.delete();
+            } catch (deleteError: any) {
+                const deleteErrorMessage = `Failed to delete old trip ${tripDoc.id} after rescheduling: ${deleteError.message}`;
+                result.errors.push(deleteErrorMessage);
+                console.error(deleteErrorMessage);
             }
         }
         
