@@ -4,7 +4,7 @@
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Trip, Booking, BookingsQueryResult } from '@/lib/types';
 import { collection, query as clientQuery, orderBy as clientOrderBy, getDocs as clientGetDocs, where as clientWhere, limit as clientLimit, startAfter as clientStartAfter } from 'firebase/firestore';
-import { Query } from 'firebase-admin/firestore';
+import { Query, Timestamp } from 'firebase-admin/firestore';
 
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
@@ -33,10 +33,12 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
     }
     
     try {
-        let q: Query = db.collection("bookings").orderBy('createdAt', 'desc');
+        let q: Query = db.collection("bookings");
         if (status) {
             q = q.where('status', '==', status);
         }
+        
+        q = q.orderBy('createdAt', 'desc');
 
         const snapshot = await q.get();
         
@@ -58,21 +60,26 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
 }
 
 
-export async function getBookingsPage({ limit = 25, startAfter, status }: { limit?: number, startAfter?: any, status?: Booking['status'] }): Promise<BookingsQueryResult> {
+export async function getBookingsPage({ limit = 25, startAfter, status }: { limit?: number, startAfter?: { createdAt: number, id: string } | null, status?: Booking['status'] }): Promise<BookingsQueryResult> {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
-        return { bookings: [], lastVisible: null, error: 'Database connection failed.' };
+        return { bookings: [], error: 'Database connection failed.' };
     }
 
     try {
-        let q: Query = db.collection("bookings").orderBy('createdAt', 'desc');
+        let q: Query = db.collection("bookings");
 
         if (status) {
             q = q.where('status', '==', status);
         }
+        
+        q = q.orderBy('createdAt', 'desc');
+
 
         if (startAfter) {
-            q = q.startAfter(startAfter);
+            const startAfterTimestamp = Timestamp.fromMillis(startAfter.createdAt);
+            const startAfterDoc = await db.collection('bookings').doc(startAfter.id).get();
+            q = q.startAfter(startAfterDoc);
         }
         
         q = q.limit(limit);
@@ -88,12 +95,12 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
             } as Booking;
         });
 
-        const lastVisible = bookingsSnapshot.docs[bookingsSnapshot.docs.length - 1] || null;
-
-        return { bookings, lastVisible, error: null };
+        return { bookings, error: null };
 
     } catch (error: any) {
         console.error("API Error fetching bookings data:", error);
-        return { bookings: [], lastVisible: null, error: 'An internal server error occurred while fetching bookings.' };
+        return { bookings: [], error: 'An internal server error occurred while fetching bookings.' };
     }
 }
+
+    

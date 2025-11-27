@@ -32,6 +32,12 @@ import { rescheduleUnderfilledTrips } from "@/app/actions/reschedule-bookings";
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
 const PAGE_SIZE = 25;
 
+type PageCursor = {
+    createdAt: number;
+    id: string;
+} | null;
+
+
 function BookingsPageSkeleton() {
     return (
         <div className="space-y-6">
@@ -103,8 +109,10 @@ export default function AdminBookingsPage() {
 
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [lastVisible, setLastVisible] = useState<any>(null);
-  const [pageCursors, setPageCursors] = useState<any[]>([null]); // Cursors for previous pages
+  
+  const [lastVisible, setLastVisible] = useState<PageCursor>(null);
+  const [pageCursors, setPageCursors] = useState<PageCursor[]>([null]);
+
 
   const { toast } = useToast();
 
@@ -133,7 +141,7 @@ export default function AdminBookingsPage() {
     setLoading(true);
     setError(null);
     
-    let cursor: any;
+    let cursor: PageCursor;
     let newPage = page;
     
     if (direction === 'next') {
@@ -158,12 +166,18 @@ export default function AdminBookingsPage() {
         if (result.error) throw new Error(result.error);
         
         setBookings(result.bookings);
-        setLastVisible(result.lastVisible || null);
+        
+        const newLastVisible = result.bookings.length > 0 ? {
+            createdAt: result.bookings[result.bookings.length - 1].createdAt,
+            id: result.bookings[result.bookings.length - 1].id
+        } : null;
+        setLastVisible(newLastVisible);
+
         setHasMore(result.bookings.length === PAGE_SIZE);
         setPage(newPage);
 
-        if (direction === 'next' && result.lastVisible) {
-            setPageCursors(prev => [...prev, result.lastVisible]);
+        if (direction === 'next' && newLastVisible) {
+            setPageCursors(prev => [...prev, newLastVisible]);
         } else if (direction === 'prev') {
             setPageCursors(prev => prev.slice(0, newPage));
         }
@@ -928,3 +942,5 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
+
+    

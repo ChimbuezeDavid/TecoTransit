@@ -66,7 +66,8 @@ export type Feedback = {
 
 export type BookingsQueryResult = {
     bookings: Booking[];
-    lastVisible: any; // Can be a DocumentSnapshot or null
     error: string | null;
 };
+    
+
     
