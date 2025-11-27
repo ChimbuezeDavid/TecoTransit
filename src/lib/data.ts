@@ -36,6 +36,7 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
         let q: Query = db.collection("bookings");
         if (status) {
             q = q.where('status', '==', status);
+            q = q.orderBy('status'); // Add orderBy for the field being filtered
         }
         
         q = q.orderBy('createdAt', 'desc');
@@ -71,13 +72,15 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
 
         if (status) {
             q = q.where('status', '==', status);
+            // Firestore requires the first orderBy to be on the same field as the where filter if it exists
+            q = q.orderBy('status');
         }
         
         q = q.orderBy('createdAt', 'desc');
 
 
         if (startAfter) {
-            const startAfterTimestamp = Timestamp.fromMillis(startAfter.createdAt);
+            // We don't need the timestamp directly, we need the document snapshot
             const startAfterDoc = await db.collection('bookings').doc(startAfter.id).get();
             q = q.startAfter(startAfterDoc);
         }
@@ -102,5 +105,3 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
         return { bookings: [], error: 'An internal server error occurred while fetching bookings.' };
     }
 }
-
-    
