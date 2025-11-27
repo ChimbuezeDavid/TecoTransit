@@ -62,7 +62,7 @@ export default function BookingForm() {
   const { toast } = useToast();
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [pricesLoading, setPricesLoading] = useState(true);
-  const { isPaystackEnabled, loading: settingsLoading } = useSettings();
+  const { isPaystackEnabled, bookingDateRange, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -335,7 +335,15 @@ export default function BookingForm() {
                                     field.onChange(date);
                                     setIsIntendedDatePopoverOpen(false);
                                 }}
-                                disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} 
+                                fromDate={bookingDateRange?.from}
+                                toDate={bookingDateRange?.to}
+                                disabled={(date) => {
+                                    const today = new Date(new Date().setHours(0,0,0,0));
+                                    if (date < today) return true;
+                                    if (bookingDateRange?.from && date < bookingDateRange.from) return true;
+                                    if (bookingDateRange?.to && date > bookingDateRange.to) return true;
+                                    return false;
+                                }}
                                 initialFocus 
                             />
                         </PopoverContent>

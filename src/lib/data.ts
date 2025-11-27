@@ -1,7 +1,10 @@
+
 'use server';
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
-import type { Trip, Booking } from '@/lib/types';
+import type { Trip, Booking, BookingsQueryResult } from '@/lib/types';
+import { Query } from 'firebase-admin/firestore';
+
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
     const db = getFirebaseAdmin()?.firestore();
@@ -22,31 +25,36 @@ export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | nu
     }
 }
 
-
-export async function getAllBookings(): Promise<{ bookings: Booking[]; error: string | null; }> {
+export async function getAllBookings(status?: Booking['status']): Promise<{ bookings: Booking[], error: string | null }> {
     const db = getFirebaseAdmin()?.firestore();
     if (!db) {
         return { bookings: [], error: 'Database connection failed.' };
     }
-
+    
     try {
-        const bookingsQuery = db.collection("bookings").orderBy('createdAt', 'desc');
-        const bookingsSnapshot = await bookingsQuery.get();
+        let q: Query = db.collection("bookings");
         
-        const bookings = bookingsSnapshot.docs.map(doc => {
+        if (status) {
+            q = q.where('status', '==', status);
+        }
+        
+        q = q.orderBy('createdAt', 'desc');
+
+        const snapshot = await q.get();
+        
+        const bookings = snapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
-                // Ensure timestamp is consistently handled as milliseconds for the client
                 createdAt: (data.createdAt as FirebaseFirestore.Timestamp).toMillis(),
             } as Booking;
         });
 
         return { bookings, error: null };
 
-    } catch (error: any) {
-        console.error("API Error fetching bookings data:", error);
-        return { bookings: [], error: 'An internal server error occurred while fetching bookings.' };
+    } catch (e: any) {
+        console.error("API Error fetching all bookings:", e);
+        return { bookings: [], error: 'Failed to fetch all bookings.' };
     }
 }

@@ -63,4 +63,11 @@ export type Feedback = {
   message: string;
   createdAt: Date;
 };
+
+export type BookingsQueryResult = {
+    bookings: Booking[];
+    error: string | null;
+};
+    
+
     

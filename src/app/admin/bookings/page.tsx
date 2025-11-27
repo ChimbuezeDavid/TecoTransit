@@ -96,10 +96,9 @@ const getStatusIcon = (status: Booking['status']) => {
 };
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
@@ -122,14 +121,15 @@ export default function AdminBookingsPage() {
   const [newRescheduleDate, setNewRescheduleDate] = useState<Date | undefined>();
   const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
 
-
-  const fetchBookingsData = useCallback(async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
         const { bookings, error } = await getAllBookings();
-        if (error) throw new Error(error);
-        setBookings(bookings);
+        if (error) {
+            throw new Error(error);
+        }
+        setAllBookings(bookings);
     } catch (e: any) {
         setError(e.message);
         toast({ variant: "destructive", title: "Error", description: e.message });
@@ -139,12 +139,11 @@ export default function AdminBookingsPage() {
   }, [toast]);
   
   useEffect(() => {
-    fetchBookingsData();
-  }, [fetchBookingsData]);
-
+    fetchBookings();
+  }, [fetchBookings]);
 
   const openDialog = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
+    const booking = allBookings.find(b => b.id === bookingId);
     if (booking) {
         setSelectedBooking(booking);
         setIsManageDialogOpen(true);
@@ -162,13 +161,8 @@ export default function AdminBookingsPage() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        const updatedBooking = bookings.find(b => b.id === selectedBooking.id);
-        if (updatedBooking) {
-            setSelectedBooking({...updatedBooking, status: 'Cancelled'});
-        } else {
-            setIsManageDialogOpen(false);
-        }
-        fetchBookingsData();
+        fetchBookings(); // Refetch all bookings
+        setIsManageDialogOpen(false);
     } catch (error) {
         toast({
             variant: "destructive",
@@ -191,8 +185,6 @@ export default function AdminBookingsPage() {
                 title: "Refund Request Sent",
                 description: "An email has been sent to the admin to process the refund.",
             });
-            // We don't fetch data or close dialog here, status remains 'Cancelled'
-            // The admin has to manually track the refund.
         } else {
             throw new Error(result.message);
         }
@@ -207,7 +199,6 @@ export default function AdminBookingsPage() {
     }
   };
 
-
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
     setIsDeleting(true);
@@ -218,7 +209,7 @@ export default function AdminBookingsPage() {
         description: `Booking has been permanently deleted.`,
       });
       setIsManageDialogOpen(false);
-      fetchBookingsData();
+      fetchBookings();
     } catch (error) {
        toast({
         variant: "destructive",
@@ -267,7 +258,7 @@ export default function AdminBookingsPage() {
             title: "Bulk Delete Successful",
             description: `${count} ${description} have been deleted.`,
         });
-        fetchBookingsData();
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Bulk Delete Failed", description: e.message });
     } finally {
@@ -297,7 +288,7 @@ export default function AdminBookingsPage() {
                 description: "All relevant bookings are already assigned to trips.",
             });
         }
-        fetchBookingsData();
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Synchronization Error", description: e.message });
     } finally {
@@ -330,7 +321,7 @@ export default function AdminBookingsPage() {
                 description: description,
             });
         }
-        fetchBookingsData(); // Refresh data to reflect any changes
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Reschedule Error", description: e.message });
     } finally {
@@ -350,7 +341,7 @@ export default function AdminBookingsPage() {
         if (result.success) {
             toast({ title: "Booking Rescheduled", description: `Booking has been moved to ${format(newRescheduleDate, 'PPP')}.` });
             setIsManageDialogOpen(false);
-            fetchBookingsData();
+            fetchBookings();
         } else {
             throw new Error(result.error);
         }
@@ -364,20 +355,21 @@ export default function AdminBookingsPage() {
   };
   
   const filteredBookings = useMemo(() => {
-    return bookings.filter(booking => {
-        const matchesStatus = statusFilter === 'All' || booking.status === statusFilter;
-        const matchesSearch = searchTerm === "" ||
-            booking.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            booking.id.toLowerCase().includes(searchTerm.toLowerCase());
-        return matchesStatus && matchesSearch;
-    });
-  }, [bookings, searchTerm, statusFilter]);
+    return allBookings
+      .filter(booking => statusFilter === 'All' || booking.status === statusFilter)
+      .filter(booking => {
+        const term = searchTerm.toLowerCase();
+        if (!term) return true;
+        return booking.name.toLowerCase().includes(term) ||
+               booking.email.toLowerCase().includes(term) ||
+               booking.id.toLowerCase().includes(term);
+      });
+  }, [allBookings, statusFilter, searchTerm]);
 
   const downloadCSV = () => {
     if (filteredBookings.length === 0) {
-        toast({ title: "No data to export" });
-        return;
+      toast({ title: "No data to export", description: "No bookings found matching the current filters." });
+      return;
     }
     const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
     const csvContent = [
@@ -407,7 +399,7 @@ export default function AdminBookingsPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `bookings-${statusFilter.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `bookings-export-${statusFilter.toLowerCase()}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -424,7 +416,7 @@ export default function AdminBookingsPage() {
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">{error}</p>
-                 <Button onClick={fetchBookingsData} variant="outline" className="mt-4">
+                 <Button onClick={fetchBookings} variant="outline" className="mt-4">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Retry
                 </Button>
@@ -443,7 +435,7 @@ export default function AdminBookingsPage() {
                 <p className="text-muted-foreground">Search, manage, and export all customer bookings.</p>
             </div>
              <div className="flex items-center gap-2 self-start sm:self-center">
-                <Button variant="outline" size="icon" onClick={fetchBookingsData} disabled={loading}>
+                <Button variant="outline" size="icon" onClick={fetchBookings} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
                  
@@ -632,7 +624,13 @@ export default function AdminBookingsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredBookings.length > 0 ? filteredBookings.map(booking => (
+                            {loading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredBookings.length > 0 ? filteredBookings.map(booking => (
                                 <TableRow key={booking.id}>
                                     <TableCell className="pl-4 font-medium">
                                         <div className="font-medium">{booking.name}</div>
@@ -656,7 +654,7 @@ export default function AdminBookingsPage() {
                             )) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center h-24">
-                                        No bookings found.
+                                        No bookings found for the current filters.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -863,5 +861,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-      
