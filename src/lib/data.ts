@@ -3,7 +3,8 @@
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Trip, Booking, BookingsQueryResult } from '@/lib/types';
-import { collection, query, orderBy, getDocs as adminGetDocs, limit as adminLimit, startAfter as adminStartAfter, where } from 'firebase-admin/firestore';
+import { collection, query as clientQuery, orderBy as clientOrderBy, getDocs as clientGetDocs, where as clientWhere, limit as clientLimit, startAfter as clientStartAfter } from 'firebase/firestore';
+import { Query } from 'firebase-admin/firestore';
 
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
@@ -32,12 +33,12 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
     }
     
     try {
-        let q = query(collection(db, "bookings"), orderBy('createdAt', 'desc'));
+        let q: Query = db.collection("bookings").orderBy('createdAt', 'desc');
         if (status) {
-            q = query(q, where('status', '==', status));
+            q = q.where('status', '==', status);
         }
 
-        const snapshot = await adminGetDocs(q);
+        const snapshot = await q.get();
         
         const bookings = snapshot.docs.map(doc => {
             const data = doc.data();
@@ -64,19 +65,19 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
     }
 
     try {
-        let q = query(collection(db, "bookings"), orderBy('createdAt', 'desc'));
+        let q: Query = db.collection("bookings").orderBy('createdAt', 'desc');
 
         if (status) {
-            q = query(q, where('status', '==', status));
+            q = q.where('status', '==', status);
         }
 
         if (startAfter) {
-            q = query(q, adminStartAfter(startAfter));
+            q = q.startAfter(startAfter);
         }
         
-        q = query(q, adminLimit(limit));
+        q = q.limit(limit);
 
-        const bookingsSnapshot = await adminGetDocs(q);
+        const bookingsSnapshot = await q.get();
         
         const bookings = bookingsSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -89,7 +90,6 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
 
         const lastVisible = bookingsSnapshot.docs[bookingsSnapshot.docs.length - 1] || null;
 
-        // We can just pass the snapshot back to the server action, no need to serialize.
         return { bookings, lastVisible, error: null };
 
     } catch (error: any) {
