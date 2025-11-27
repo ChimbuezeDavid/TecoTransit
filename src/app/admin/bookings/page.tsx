@@ -3,19 +3,19 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { format, parseISO, startOfMonth, subDays } from "date-fns";
-import type { Booking, BookingsQueryResult } from "@/lib/types";
+import type { Booking } from "@/lib/types";
 import { DateRange } from "react-day-picker";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { User, Mail, Phone, MapPin, Car, Bus, Briefcase, Calendar as CalendarIcon, CheckCircle, Download, RefreshCw, Trash2, AlertCircle, Loader2, Ticket, History, Search, HandCoins, Ban, CircleDot, Check, CreditCard, EllipsisVertical, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -23,20 +23,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
-import { getAllBookings, getBookingsPage } from "@/lib/data";
+import { getAllBookings } from "@/lib/data";
 import { getStatusVariant } from "@/lib/utils";
 import { updateBookingStatus, deleteBooking, deleteBookingsInRange, requestRefund, manuallyRescheduleBooking } from "@/app/actions/booking-actions";
 import { synchronizeAndCreateTrips } from "@/app/actions/synchronize-bookings";
 import { rescheduleUnderfilledTrips } from "@/app/actions/reschedule-bookings";
 
 type BulkDeleteMode = 'all' | '7d' | '30d' | 'custom';
-const PAGE_SIZE = 25;
-
-type PageCursor = {
-    createdAt: number;
-    id: string;
-} | null;
-
 
 function BookingsPageSkeleton() {
     return (
@@ -103,17 +96,9 @@ const getStatusIcon = (status: Booking['status']) => {
 };
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  
-  const [lastVisible, setLastVisible] = useState<PageCursor>(null);
-  const [pageCursors, setPageCursors] = useState<PageCursor[]>([null]);
-
-
   const { toast } = useToast();
 
   const [isProcessing, setIsProcessing] = useState<Record<string, boolean>>({});
@@ -136,73 +121,29 @@ export default function AdminBookingsPage() {
   const [newRescheduleDate, setNewRescheduleDate] = useState<Date | undefined>();
   const [isRescheduleConfirmOpen, setIsRescheduleConfirmOpen] = useState(false);
 
-
-  const fetchBookingsData = useCallback(async (direction: 'next' | 'prev' | 'refresh' = 'refresh') => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
-    let cursor: PageCursor;
-    let newPage = page;
-    
-    if (direction === 'next') {
-        cursor = lastVisible;
-        newPage = page + 1;
-    } else if (direction === 'prev') {
-        cursor = pageCursors[page - 2] || null; // page - 2 because page is 1-indexed
-        newPage = page - 1;
-    } else { // refresh
-        cursor = null;
-        newPage = 1;
-        setPageCursors([null]);
-    }
-
     try {
-        const result: BookingsQueryResult = await getBookingsPage({
-            limit: PAGE_SIZE,
-            startAfter: cursor,
-            status: statusFilter === 'All' ? undefined : statusFilter,
-        });
-        
-        if (result.error) throw new Error(result.error);
-        
-        setBookings(result.bookings);
-        
-        const newLastVisible = result.bookings.length > 0 ? {
-            createdAt: result.bookings[result.bookings.length - 1].createdAt,
-            id: result.bookings[result.bookings.length - 1].id
-        } : null;
-        setLastVisible(newLastVisible);
-
-        setHasMore(result.bookings.length === PAGE_SIZE);
-        setPage(newPage);
-
-        if (direction === 'next' && newLastVisible) {
-            setPageCursors(prev => [...prev, newLastVisible]);
-        } else if (direction === 'prev') {
-            setPageCursors(prev => prev.slice(0, newPage));
+        const { bookings, error } = await getAllBookings();
+        if (error) {
+            throw new Error(error);
         }
-
+        setAllBookings(bookings);
     } catch (e: any) {
         setError(e.message);
         toast({ variant: "destructive", title: "Error", description: e.message });
     } finally {
         setLoading(false);
     }
-  }, [toast, lastVisible, page, pageCursors, statusFilter]);
+  }, [toast]);
   
   useEffect(() => {
-    fetchBookingsData('refresh');
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
-
-  const refreshCurrentPage = useCallback(() => {
-    // This will refetch the data for the current page and filter
-    fetchBookingsData('refresh');
-  }, [fetchBookingsData]);
-
+    fetchBookings();
+  }, [fetchBookings]);
 
   const openDialog = (bookingId: string) => {
-    const booking = bookings.find(b => b.id === bookingId);
+    const booking = allBookings.find(b => b.id === bookingId);
     if (booking) {
         setSelectedBooking(booking);
         setIsManageDialogOpen(true);
@@ -220,7 +161,7 @@ export default function AdminBookingsPage() {
             title: "Booking Updated",
             description: `Booking has been successfully ${status.toLowerCase()}.`,
         });
-        refreshCurrentPage();
+        fetchBookings(); // Refetch all bookings
         setIsManageDialogOpen(false);
     } catch (error) {
         toast({
@@ -258,7 +199,6 @@ export default function AdminBookingsPage() {
     }
   };
 
-
   const handleDeleteBooking = async () => {
     if (!selectedBooking) return;
     setIsDeleting(true);
@@ -269,7 +209,7 @@ export default function AdminBookingsPage() {
         description: `Booking has been permanently deleted.`,
       });
       setIsManageDialogOpen(false);
-      refreshCurrentPage();
+      fetchBookings();
     } catch (error) {
        toast({
         variant: "destructive",
@@ -318,7 +258,7 @@ export default function AdminBookingsPage() {
             title: "Bulk Delete Successful",
             description: `${count} ${description} have been deleted.`,
         });
-        refreshCurrentPage();
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Bulk Delete Failed", description: e.message });
     } finally {
@@ -348,7 +288,7 @@ export default function AdminBookingsPage() {
                 description: "All relevant bookings are already assigned to trips.",
             });
         }
-        refreshCurrentPage();
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Synchronization Error", description: e.message });
     } finally {
@@ -381,7 +321,7 @@ export default function AdminBookingsPage() {
                 description: description,
             });
         }
-        refreshCurrentPage();
+        fetchBookings();
     } catch (e: any) {
         toast({ variant: "destructive", title: "Reschedule Error", description: e.message });
     } finally {
@@ -401,7 +341,7 @@ export default function AdminBookingsPage() {
         if (result.success) {
             toast({ title: "Booking Rescheduled", description: `Booking has been moved to ${format(newRescheduleDate, 'PPP')}.` });
             setIsManageDialogOpen(false);
-            refreshCurrentPage();
+            fetchBookings();
         } else {
             throw new Error(result.error);
         }
@@ -415,66 +355,57 @@ export default function AdminBookingsPage() {
   };
   
   const filteredBookings = useMemo(() => {
-    // Search term filtering is now done on the client for the current page
-    if (!searchTerm) return bookings;
-    
-    return bookings.filter(booking => {
+    return allBookings
+      .filter(booking => statusFilter === 'All' || booking.status === statusFilter)
+      .filter(booking => {
         const term = searchTerm.toLowerCase();
+        if (!term) return true;
         return booking.name.toLowerCase().includes(term) ||
                booking.email.toLowerCase().includes(term) ||
                booking.id.toLowerCase().includes(term);
-    });
-  }, [bookings, searchTerm]);
+      });
+  }, [allBookings, statusFilter, searchTerm]);
 
-  const downloadCSV = async () => {
-    toast({ title: "Preparing Export", description: "Fetching all matching bookings..." });
-    try {
-        const { bookings: allBookingsToExport } = await getAllBookings(statusFilter === 'All' ? undefined : statusFilter);
-
-        if (allBookingsToExport.length === 0) {
-            toast({ title: "No data to export", description: "No bookings found matching the current status filter." });
-            return;
-        }
-        const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
-        const csvContent = [
-            headers.join(','),
-            ...allBookingsToExport.map(b => [
-                b.id,
-                `"${b.name.replace(/"/g, '""')}"`,
-                b.email,
-                b.phone,
-                `"${b.pickup.replace(/"/g, '""')}"`,
-                `"${b.destination.replace(/"/g, '""')}"`,
-                b.intendedDate,
-                `"${b.vehicleType.replace(/"/g, '""')}"`,
-                b.luggageCount,
-                b.totalFare,
-                b.allowReschedule,
-                b.paymentReference || "",
-                b.status,
-                b.confirmedDate || "",
-                new Date(b.createdAt).toISOString(),
-                b.tripId || "",
-                b.rescheduledCount || 0,
-            ].join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', `bookings-export-${statusFilter.toLowerCase()}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        toast({ title: "Export Successful", description: `${allBookingsToExport.length} bookings exported.` });
-    } catch (e: any) {
-        toast({ variant: "destructive", title: "Export Failed", description: e.message });
+  const downloadCSV = () => {
+    if (filteredBookings.length === 0) {
+      toast({ title: "No data to export", description: "No bookings found matching the current filters." });
+      return;
     }
+    const headers = ["ID", "Name", "Email", "Phone", "Pickup", "Destination", "Intended Date", "Vehicle", "Luggage", "Total Fare", "Allows Reschedule", "Payment Reference", "Status", "Confirmed Date", "Created At", "Trip ID", "Rescheduled Count"];
+    const csvContent = [
+        headers.join(','),
+        ...filteredBookings.map(b => [
+            b.id,
+            `"${b.name.replace(/"/g, '""')}"`,
+            b.email,
+            b.phone,
+            `"${b.pickup.replace(/"/g, '""')}"`,
+            `"${b.destination.replace(/"/g, '""')}"`,
+            b.intendedDate,
+            `"${b.vehicleType.replace(/"/g, '""')}"`,
+            b.luggageCount,
+            b.totalFare,
+            b.allowReschedule,
+            b.paymentReference || "",
+            b.status,
+            b.confirmedDate || "",
+            new Date(b.createdAt).toISOString(),
+            b.tripId || "",
+            b.rescheduledCount || 0,
+        ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bookings-export-${statusFilter.toLowerCase()}-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
   
-  if (loading && page === 1) {
+  if (loading) {
     return <BookingsPageSkeleton />;
   }
 
@@ -485,7 +416,7 @@ export default function AdminBookingsPage() {
                 <AlertCircle className="h-8 w-8" />
                 <span className="font-semibold">An Error Occurred</span>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto">{error}</p>
-                 <Button onClick={() => fetchBookingsData('refresh')} variant="outline" className="mt-4">
+                 <Button onClick={fetchBookings} variant="outline" className="mt-4">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Retry
                 </Button>
@@ -504,7 +435,7 @@ export default function AdminBookingsPage() {
                 <p className="text-muted-foreground">Search, manage, and export all customer bookings.</p>
             </div>
              <div className="flex items-center gap-2 self-start sm:self-center">
-                <Button variant="outline" size="icon" onClick={() => fetchBookingsData('refresh')} disabled={loading}>
+                <Button variant="outline" size="icon" onClick={fetchBookings} disabled={loading}>
                     {loading ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
                  
@@ -623,7 +554,7 @@ export default function AdminBookingsPage() {
             <CardHeader>
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
-                        <CardTitle>All Bookings</CardTitle>
+                        <CardTitle>All Bookings ({filteredBookings.length})</CardTitle>
                         <CardDescription>Use special actions for bulk operations on bookings.</CardDescription>
                     </div>
                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 w-full lg:w-auto">
@@ -693,14 +624,13 @@ export default function AdminBookingsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading && (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">
-                                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                            {!loading && filteredBookings.length > 0 ? filteredBookings.map(booking => (
+                            {loading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredBookings.length > 0 ? filteredBookings.map(booking => (
                                 <TableRow key={booking.id}>
                                     <TableCell className="pl-4 font-medium">
                                         <div className="font-medium">{booking.name}</div>
@@ -721,10 +651,10 @@ export default function AdminBookingsPage() {
                                         <Button variant="ghost" size="sm" onClick={() => openDialog(booking.id)}>View</Button>
                                     </TableCell>
                                 </TableRow>
-                            )) : !loading && (
+                            )) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center h-24">
-                                        No bookings found for the current filter or page.
+                                        No bookings found for the current filters.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -732,17 +662,6 @@ export default function AdminBookingsPage() {
                     </Table>
                     </div>
             </CardContent>
-            <CardFooter className="flex items-center justify-end space-x-2 py-4 border-t">
-                <Button variant="outline" size="sm" onClick={() => fetchBookingsData('prev')} disabled={page <= 1 || loading}>
-                    <ChevronLeft className="h-4 w-4 mr-1"/>
-                    Previous
-                </Button>
-                <span className="text-sm font-medium">Page {page}</span>
-                <Button variant="outline" size="sm" onClick={() => fetchBookingsData('next')} disabled={!hasMore || loading}>
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-1"/>
-                </Button>
-            </CardFooter>
         </Card>
 
       {selectedBooking && (
@@ -942,5 +861,3 @@ export default function AdminBookingsPage() {
     </div>
   );
 }
-
-    
