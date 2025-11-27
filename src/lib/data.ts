@@ -3,8 +3,7 @@
 
 import { getFirebaseAdmin } from "@/lib/firebase-admin";
 import type { Trip, Booking, BookingsQueryResult } from '@/lib/types';
-import { collection, query as clientQuery, orderBy as clientOrderBy, getDocs as clientGetDocs, where as clientWhere, limit as clientLimit, startAfter as clientStartAfter } from 'firebase/firestore';
-import { Query, Timestamp } from 'firebase-admin/firestore';
+import { Query } from 'firebase-admin/firestore';
 
 
 export async function getAllTrips(): Promise<{ trips: Trip[]; error: string | null; }> {
@@ -37,6 +36,8 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
         
         if (status) {
             q = q.where('status', '==', status);
+            // When filtering by status, we must order by status first for the composite index to work
+            q = q.orderBy('status', 'asc');
         }
         
         // Always order by createdAt desc as the primary sort order
@@ -73,6 +74,8 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
 
         if (status) {
             q = q.where('status', '==', status);
+            // Add the first orderBy clause on the field being filtered (status)
+            q = q.orderBy('status', 'asc');
         }
         
         // The primary sort order must always be consistent.
@@ -108,3 +111,5 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
         return { bookings: [], error: 'An internal server error occurred while fetching bookings.' };
     }
 }
+
+    

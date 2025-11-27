@@ -195,10 +195,10 @@ export default function AdminBookingsPage() {
      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  const refreshCurrentPage = () => {
+  const refreshCurrentPage = useCallback(() => {
     // This will refetch the data for the current page and filter
     fetchBookingsData('refresh');
-  }
+  }, [fetchBookingsData]);
 
 
   const openDialog = (bookingId: string) => {
