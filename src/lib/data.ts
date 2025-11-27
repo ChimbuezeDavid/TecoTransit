@@ -34,11 +34,12 @@ export async function getAllBookings(status?: Booking['status']): Promise<{ book
     
     try {
         let q: Query = db.collection("bookings");
+        
         if (status) {
             q = q.where('status', '==', status);
-            q = q.orderBy('status'); // Add orderBy for the field being filtered
         }
         
+        // Always order by createdAt desc as the primary sort order
         q = q.orderBy('createdAt', 'desc');
 
         const snapshot = await q.get();
@@ -72,16 +73,18 @@ export async function getBookingsPage({ limit = 25, startAfter, status }: { limi
 
         if (status) {
             q = q.where('status', '==', status);
-            // Firestore requires the first orderBy to be on the same field as the where filter if it exists
-            q = q.orderBy('status');
         }
         
+        // The primary sort order must always be consistent.
         q = q.orderBy('createdAt', 'desc');
 
 
         if (startAfter) {
-            // We don't need the timestamp directly, we need the document snapshot
             const startAfterDoc = await db.collection('bookings').doc(startAfter.id).get();
+            if (!startAfterDoc.exists) {
+                console.warn(`Pagination cursor document with ID ${startAfter.id} not found.`);
+                return { bookings: [], error: 'Pagination cursor is invalid.' };
+            }
             q = q.startAfter(startAfterDoc);
         }
         
