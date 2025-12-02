@@ -56,13 +56,13 @@ export default function BookingRescheduledEmail({
           <Heading as="h2" style={h2}>Reschedule Details</Heading>
           <Section style={detailsContainer}>
             <Text style={detailItem}><strong>Previous Date:</strong> {format(new Date(oldDate), 'EEEE, MMMM dd, yyyy')}</Text>
-            <Text style={detailItem}><strong>New Confirmed Date:</strong> <strong style={{color: '#16a34a'}}>{format(new Date(newDate), 'EEEE, MMMM dd, yyyy')}</strong></Text>
+            <Text style={detailItem}><strong>New Intended Date:</strong> <strong>{format(new Date(newDate), 'EEEE, MMMM dd, yyyy')}</strong></Text>
           </Section>
 
           <Hr style={hr} />
 
           <Text style={text}>
-            Your booking is now confirmed for the new date. The details of your specific vehicle and driver will be sent via a group chat the day before departure. If this new date does not work for you, please contact us immediately.
+            Your booking has been moved to the new date above. You will receive a final confirmation email once this new trip is full. If this new date does not work for you, please contact us immediately.
           </Text>
 
           <Text style={footer}>
