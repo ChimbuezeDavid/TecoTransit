@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, Bus, Car, ChevronsUpDown, Loader2, MessageSquare, RefreshCw, Users, Sparkles, Trash2, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -138,7 +138,25 @@ function PassengerDialog({ booking, isOpen, onClose }: { booking: Booking | null
 
 
 function ManifestDialog({ trip, passengers, allBookings, isOpen, onClose, onPassengerClick }: { trip: Trip | null, passengers: Passenger[], allBookings: Booking[], isOpen: boolean, onClose: () => void, onPassengerClick: (bookingId: string) => void }) {
+    const { toast } = useToast();
     if (!trip) return null;
+
+    const handleCopyNumbers = () => {
+        const numbers = passengers.map(p => p.phone).join(',');
+        navigator.clipboard.writeText(numbers).then(() => {
+            toast({
+                title: "Copied to Clipboard",
+                description: `${passengers.length} phone number(s) have been copied.`
+            });
+        }, (err) => {
+            toast({
+                variant: "destructive",
+                title: "Copy Failed",
+                description: "Could not copy numbers to clipboard. Please try again."
+            });
+            console.error('Could not copy text: ', err);
+        });
+    };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -186,8 +204,14 @@ function ManifestDialog({ trip, passengers, allBookings, isOpen, onClose, onPass
                         </Table>
                     )}
                 </div>
-                 <DialogFooter className="p-6 border-t">
-                    <Button onClick={onClose} variant="outline" className="w-full">Close</Button>
+                 <DialogFooter className="p-6 border-t flex-col-reverse sm:flex-row sm:justify-between w-full gap-2">
+                    <Button onClick={onClose} variant="outline" className="w-full sm:w-auto">Close</Button>
+                    {passengers.length > 0 && (
+                        <Button onClick={handleCopyNumbers} className="w-full sm:w-auto">
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy Phone Numbers
+                        </Button>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>

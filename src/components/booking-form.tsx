@@ -338,8 +338,9 @@ export default function BookingForm() {
                                 fromDate={bookingDateRange?.from}
                                 toDate={bookingDateRange?.to}
                                 disabled={(date) => {
-                                    const today = new Date(new Date().setHours(0,0,0,0));
-                                    if (date < today) return true;
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    if (date <= today) return true; // Disable today and all past dates
                                     if (bookingDateRange?.from && date < bookingDateRange.from) return true;
                                     if (bookingDateRange?.to && date > bookingDateRange.to) return true;
                                     return false;
@@ -442,7 +443,7 @@ export default function BookingForm() {
           </CardContent>
           <CardFooter className="bg-muted/50 px-6 py-4 mt-8 flex flex-col sm:flex-row items-center justify-between rounded-b-lg">
             <div className="text-center sm:text-left mb-4 sm:mb-0">
-                <p className="text-sm text-muted-foreground">Estimated Total Fare</p>
+                <p className="text-sm text-muted-foreground">Total Fare (transaction fees included)</p>
                 <p className="text-2xl font-bold text-primary">₦{totalFare.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
             <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={isProcessing || settingsLoading || totalFare <= 0}>
@@ -462,3 +463,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    
