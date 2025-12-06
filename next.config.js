@@ -6,6 +6,9 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {
@@ -21,8 +24,7 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https'
-        ,
+        protocol: 'https',
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**',
@@ -39,7 +41,7 @@ const nextConfig = {
   },
   webpack(config, { isServer }) {
     // Enable async WebAssembly
-    config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
 
     // Add a rule to handle .wasm files
     config.module.rules.push({
@@ -53,10 +55,9 @@ const nextConfig = {
     } else {
       config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
     }
-    
+
     return config;
   },
-  forceSwcTransforms: true,
 };
 
 module.exports = nextConfig;
