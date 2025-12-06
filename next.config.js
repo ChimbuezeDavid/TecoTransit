@@ -6,9 +6,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {
@@ -24,7 +21,8 @@ const nextConfig = {
         pathname: '/**',
       },
       {
-        protocol: 'https',
+        protocol: 'https'
+        ,
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**',
@@ -55,6 +53,8 @@ const nextConfig = {
     } else {
       config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
     }
+    
+    config.forceSwcTransforms = true;
 
     return config;
   },
