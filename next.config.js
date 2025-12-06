@@ -54,10 +54,9 @@ const nextConfig = {
       config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
     }
     
-    config.forceSwcTransforms = true;
-
     return config;
   },
+  forceSwcTransforms: true,
 };
 
 module.exports = nextConfig;
