@@ -41,7 +41,7 @@ const nextConfig = {
   },
   webpack(config, { isServer }) {
     // Enable async WebAssembly
-    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    config.experiments = { ...config.experiments, asyncWebAssembly: true, layers: true };
 
     // Add a rule to handle .wasm files
     config.module.rules.push({
