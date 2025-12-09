@@ -20,7 +20,7 @@ const paymentSettingsDocRef = doc(db, "settings", "payment");
 const bookingSettingsDocRef = doc(db, "settings", "booking");
 
 export default function AdminSettingsPage() {
-  const [isPaymentGatewayEnabled, setIsPaymentGatewayEnabled] = useState(true);
+  const [isPaystackEnabled, setIsPaystackEnabled] = useState(true);
   const [bookingDateRange, setBookingDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -29,10 +29,9 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     const unsubPayment = onSnapshot(paymentSettingsDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setIsPaymentGatewayEnabled(docSnap.data().isPaymentGatewayEnabled);
+        setIsPaystackEnabled(docSnap.data().isPaystackEnabled);
       } else {
-        // Default to enabled if not set
-        setDoc(paymentSettingsDocRef, { isPaymentGatewayEnabled: true });
+        setDoc(paymentSettingsDocRef, { isPaystackEnabled: true });
       }
       setLoading(false);
     }, (error) => {
@@ -70,10 +69,10 @@ export default function AdminSettingsPage() {
 
   const handleTogglePayment = async (enabled: boolean) => {
     try {
-      await setDoc(paymentSettingsDocRef, { isPaymentGatewayEnabled: enabled });
+      await setDoc(paymentSettingsDocRef, { isPaystackEnabled: enabled });
       toast({
         title: "Settings Updated",
-        description: `Online payment integration is now ${enabled ? "enabled" : "disabled"}.`,
+        description: `Paystack integration is now ${enabled ? "enabled" : "disabled"}.`,
       });
     } catch (error) {
       console.error("Error updating settings:", error);
@@ -178,25 +177,25 @@ export default function AdminSettingsPage() {
         <CardContent>
           <div className="flex items-center justify-between space-x-4 rounded-lg border p-4">
             <div className="space-y-1">
-              <Label htmlFor="payment-toggle" className="text-base font-semibold">
-                Enable Online Payments
+              <Label htmlFor="paystack-toggle" className="text-base font-semibold">
+                Enable Paystack Payments
               </Label>
               <p className="text-sm text-muted-foreground">
-                When disabled, the booking form will bypass the payment gateway and create a 'Pending' booking for testing.
+                When disabled, the booking form will bypass Paystack and create a 'Pending' booking for testing.
               </p>
             </div>
             {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
                 <div className="flex items-center space-x-2">
-                {isPaymentGatewayEnabled ? (
+                {isPaystackEnabled ? (
                     <CreditCard className="h-5 w-5 text-primary" />
                 ) : (
                     <TestTube2 className="h-5 w-5 text-amber-500" />
                 )}
                 <Switch
-                    id="payment-toggle"
-                    checked={isPaymentGatewayEnabled}
+                    id="paystack-toggle"
+                    checked={isPaystackEnabled}
                     onCheckedChange={handleTogglePayment}
                 />
                 </div>

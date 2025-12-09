@@ -22,7 +22,7 @@ import { CalendarIcon, User, Mail, Phone, Loader2, MessageCircle, HelpCircle, Cr
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import BookingConfirmationDialog from './booking-confirmation-dialog';
-import { initializeTransaction } from '@/app/actions/opay';
+import { initializeTransaction } from '@/app/actions/paystack';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '@/context/settings-context';
 import { createPendingBooking } from '@/app/actions/create-booking-and-assign-trip';
@@ -62,7 +62,7 @@ export default function BookingForm() {
   const { toast } = useToast();
   const [prices, setPrices] = useState<PriceRule[]>([]);
   const [pricesLoading, setPricesLoading] = useState(true);
-  const { isPaystackEnabled: isPaymentGatewayEnabled, bookingDateRange, loading: settingsLoading } = useSettings();
+  const { isPaystackEnabled, bookingDateRange, loading: settingsLoading } = useSettings();
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -154,8 +154,8 @@ export default function BookingForm() {
     try {
         const priceRuleId = `${formData.pickup}_${formData.destination}_${formData.vehicleType}`.toLowerCase().replace(/\s+/g, '-');
         
-        if (isPaymentGatewayEnabled) {
-            // Live Mode: Proceed to OPay
+        if (isPaystackEnabled) {
+            // Live Mode: Proceed to Paystack
             const bookingDataWithFare = { ...formData, totalFare };
             const cleanBookingData = {
               name: bookingDataWithFare.name,
@@ -172,7 +172,7 @@ export default function BookingForm() {
 
             const result = await initializeTransaction({
                 email: cleanBookingData.email,
-                amount: cleanBookingData.totalFare, // Amount in Naira
+                amount: cleanBookingData.totalFare * 100, // Amount in kobo
                 metadata: {
                     priceRuleId,
                     booking_details: JSON.stringify(cleanBookingData),
@@ -183,13 +183,13 @@ export default function BookingForm() {
                 }
             });
             
-            if (result.status && result.data?.cashierUrl) {
-                router.push(result.data.cashierUrl);
+            if (result.status && result.data?.authorization_url) {
+                router.push(result.data.authorization_url);
             } else {
                 throw new Error(result.message || 'Failed to initialize transaction.');
             }
         } else {
-            // Test Mode: Bypass payment gateway and create a pending booking
+            // Test Mode: Bypass Paystack and create a pending booking
             await createPendingBooking({ ...formData, totalFare });
             setIsConfirmationOpen(true);
             form.reset();
@@ -215,8 +215,8 @@ export default function BookingForm() {
 
    const renderSubmitButtonContent = () => {
     const isLoading = isProcessing || settingsLoading;
-    const buttonText = settingsLoading ? 'Loading...' : isProcessing ? 'Processing...' : isPaymentGatewayEnabled ? 'Proceed to Payment' : 'Submit Booking';
-    const Icon = isLoading ? Loader2 : isPaymentGatewayEnabled ? CreditCard : Send;
+    const buttonText = settingsLoading ? 'Loading...' : isProcessing ? 'Processing...' : isPaystackEnabled ? 'Proceed to Payment' : 'Submit Booking';
+    const Icon = isLoading ? Loader2 : isPaystackEnabled ? CreditCard : Send;
     
     return (
         <>
@@ -463,3 +463,5 @@ export default function BookingForm() {
     </>
   );
 }
+
+    

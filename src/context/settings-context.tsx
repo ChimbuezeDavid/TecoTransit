@@ -7,7 +7,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { DateRange } from 'react-day-picker';
 
 interface SettingsContextType {
-  isPaymentGatewayEnabled: boolean;
+  isPaystackEnabled: boolean;
   bookingDateRange?: DateRange;
   loading: boolean;
 }
@@ -15,7 +15,7 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isPaymentGatewayEnabled, setIsPaymentGatewayEnabled] = useState(true);
+  const [isPaystackEnabled, setIsPaystackEnabled] = useState(true);
   const [bookingDateRange, setBookingDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +25,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
 
     const unsubPayment = onSnapshot(paymentSettingsDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setIsPaymentGatewayEnabled(docSnap.data().isPaymentGatewayEnabled);
+        setIsPaystackEnabled(docSnap.data().isPaystackEnabled);
       }
       setLoading(false); // Consider loading complete when primary setting is loaded
     }, (error) => {
@@ -53,7 +53,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   }, []);
 
   const value = {
-    isPaymentGatewayEnabled,
+    isPaystackEnabled,
     bookingDateRange,
     loading,
   };

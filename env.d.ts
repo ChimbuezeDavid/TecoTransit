@@ -13,9 +13,8 @@ declare namespace NodeJS {
     
     RESEND_API_KEY: string;
     
-    NEXT_PUBLIC_OPAY_MERCHANT_ID: string;
-    OPAY_PUBLIC_KEY: string;
-    OPAY_SECRET_KEY: string;
+    NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: string;
+    PAYSTACK_SECRET_KEY: string;
     
     NEXT_PUBLIC_BASE_URL: string;
     VERCEL_URL?: string;
