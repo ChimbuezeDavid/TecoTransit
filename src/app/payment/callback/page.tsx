@@ -3,7 +3,7 @@
 
 import { Suspense, useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { verifyTransactionAndCreateBooking } from '@/app/actions/paystack';
+import { verifyTransactionAndCreateBooking } from '@/app/actions/opay';
 import { CheckCircle, AlertCircle, Loader2, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -13,10 +13,10 @@ function PaymentCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your payment, please wait...');
   
-  // Use a ref to ensure verification only runs once
   const verificationStarted = useRef(false);
 
   useEffect(() => {
+    // OPay returns the reference in the 'reference' query parameter
     const reference = searchParams.get('reference');
 
     if (!reference) {
@@ -25,7 +25,6 @@ function PaymentCallback() {
       return;
     }
     
-    // Prevent the effect from running twice in React Strict Mode (development)
     if (verificationStarted.current) {
         return;
     }

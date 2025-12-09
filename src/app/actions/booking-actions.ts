@@ -8,13 +8,6 @@ import type { Booking } from '@/lib/types';
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { assignBookingToTrip } from './create-booking-and-assign-trip';
-import Paystack from 'paystack';
-
-if (!process.env.PAYSTACK_SECRET_KEY) {
-  throw new Error('PAYSTACK_SECRET_KEY is not set in environment variables.');
-}
-
-const paystack = Paystack(process.env.PAYSTACK_SECRET_KEY);
 
 
 export async function updateBookingStatus(bookingId: string, status: 'Cancelled'): Promise<void> {
