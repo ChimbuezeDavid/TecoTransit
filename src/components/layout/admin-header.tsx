@@ -12,6 +12,7 @@ import { auth } from "@/lib/firebase";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "../ui/sheet";
 import { ThemeToggle } from "../theme-toggle";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { ClientOnly } from "../client-only";
 
 export default function AdminHeader() {
   const pathname = usePathname();
@@ -57,28 +58,30 @@ export default function AdminHeader() {
                     <span>{label}</span>
                 </Link>
              ))}
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                   <Button variant="ghost" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
-                        <Settings className="h-4 w-4" />
-                        <span>Manage</span>
-                        <ChevronDown className="h-4 w-4" />
-                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    {settingsNavLinks.map(({ href, icon: Icon, label }) => (
-                         <DropdownMenuItem key={href} asChild>
-                            <Link href={href} className={cn(
-                                "flex items-center gap-2",
-                                pathname.startsWith(href) ? "text-primary" : ""
-                                )}>
-                                <Icon className="h-4 w-4" />
-                                <span>{label}</span>
-                            </Link>
-                         </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-             </DropdownMenu>
+             <ClientOnly>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary">
+                            <Settings className="h-4 w-4" />
+                            <span>Manage</span>
+                            <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        {settingsNavLinks.map(({ href, icon: Icon, label }) => (
+                            <DropdownMenuItem key={href} asChild>
+                                <Link href={href} className={cn(
+                                    "flex items-center gap-2",
+                                    pathname.startsWith(href) ? "text-primary" : ""
+                                    )}>
+                                    <Icon className="h-4 w-4" />
+                                    <span>{label}</span>
+                                </Link>
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+             </ClientOnly>
           </nav>
            <div className="hidden md:flex items-center gap-2">
              <ThemeToggle />
@@ -91,47 +94,49 @@ export default function AdminHeader() {
           {/* Mobile Navigation */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle />
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[240px]">
-                 <div className="flex flex-col h-full">
-                    <div className="flex-grow">
-                        <SheetClose asChild>
-                            <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
-                                <Route className="h-6 w-6" />
-                                <span className="font-headline">TecoTransit Admin</span>
-                            </Link>
-                        </SheetClose>
-                        <nav className="flex flex-col gap-6">
-                            {allNavLinks.map(({ href, icon: Icon, label }) => (
-                                <SheetClose asChild key={href}>
-                                    <Link href={href} className={cn(
-                                        "flex items-center gap-3 text-base font-medium transition-colors hover:text-primary",
-                                        pathname.startsWith(href) ? "text-primary" : "text-muted-foreground"
-                                    )}>
-                                        <Icon className="h-5 w-5" />
-                                        <span>{label}</span>
-                                    </Link>
-                                </SheetClose>
-                            ))}
-                        </nav>
+            <ClientOnly>
+                <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="outline" size="icon">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open menu</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[240px]">
+                    <div className="flex flex-col h-full">
+                        <div className="flex-grow">
+                            <SheetClose asChild>
+                                <Link href="/admin/dashboard" className="flex items-center gap-2 font-bold text-lg text-primary mb-8">
+                                    <Route className="h-6 w-6" />
+                                    <span className="font-headline">TecoTransit Admin</span>
+                                </Link>
+                            </SheetClose>
+                            <nav className="flex flex-col gap-6">
+                                {allNavLinks.map(({ href, icon: Icon, label }) => (
+                                    <SheetClose asChild key={href}>
+                                        <Link href={href} className={cn(
+                                            "flex items-center gap-3 text-base font-medium transition-colors hover:text-primary",
+                                            pathname.startsWith(href) ? "text-primary" : "text-muted-foreground"
+                                        )}>
+                                            <Icon className="h-5 w-5" />
+                                            <span>{label}</span>
+                                        </Link>
+                                    </SheetClose>
+                                ))}
+                            </nav>
+                        </div>
+                        <div className="mt-auto">
+                            <SheetClose asChild>
+                                <Button variant="ghost" className="w-full justify-start" size="sm" onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Logout
+                                </Button>
+                            </SheetClose>
+                        </div>
                     </div>
-                     <div className="mt-auto">
-                        <SheetClose asChild>
-                            <Button variant="ghost" className="w-full justify-start" size="sm" onClick={handleLogout}>
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Logout
-                            </Button>
-                        </SheetClose>
-                    </div>
-                 </div>
-              </SheetContent>
-            </Sheet>
+                </SheetContent>
+                </Sheet>
+            </ClientOnly>
           </div>
 
         </div>
